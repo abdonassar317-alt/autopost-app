@@ -459,9 +459,8 @@ window.wzMeta=(step=1,st={})=>{
 // ---- Instagram (Instagram Login — no Facebook Page needed)
 window.wzInstagram=()=>{const b=brands[curBrand];
  sheet(`<div class="wz"><h3>ربط إنستجرام</h3><div class="sub">الحساب لازم يكون Creator أو Business — مرة واحدة بس</div><ol class="steps">
-  <li>افتح <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">تطبيقك على Meta for Developers</a> ← <b>حالات الاستخدام</b> ← Instagram API ← <b>تخصيص</b></li>
-  <li>اختار <b>API setup with Instagram login</b></li>
-  <li>في قسم <b>Generate access tokens</b> اضغط <b>Add account</b> وسجّل بحساب الإنستجرام</li>
+  <li>افتح <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">تطبيقك على Meta for Developers</a> ← <b>حالات الاستخدام</b> ← Instagram API ← <b>تخصيص</b> ← <b>API setup with Unified login</b></li>
+  <li>في <b>2. إنشاء رموز الوصول</b> اضغط <b>إضافة حساب</b> وسجّل بحساب الإنستجرام (لو شخصي هيطلب منك تحوّله احترافي)</li>
   <li>اضغط <b>Generate token</b> جنب الحساب ← انسخ التوكن</li></ol>
   <div class="lbl">التوكن</div><input id="i-tok" dir="ltr" placeholder="IG…">
   <div class="nav"><button class="btn pri" id="i-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
