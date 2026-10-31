@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AutoPost</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>
+@font-face{font-family:Plex;font-weight:400;src:url(fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2)}
+@font-face{font-family:Plex;font-weight:500;src:url(fonts/ibm-plex-sans-arabic-arabic-500-normal.woff2)}
+@font-face{font-family:Plex;font-weight:600;src:url(fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2)}
+@font-face{font-family:Plex;font-weight:700;src:url(fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2)}
+@font-face{font-family:PlexL;font-weight:400;src:url(fonts/ibm-plex-sans-arabic-latin-400-normal.woff2)}
+@font-face{font-family:PlexL;font-weight:500;src:url(fonts/ibm-plex-sans-arabic-latin-500-normal.woff2)}
+@font-face{font-family:PlexL;font-weight:600;src:url(fonts/ibm-plex-sans-arabic-latin-600-normal.woff2)}
+@font-face{font-family:PlexL;font-weight:700;src:url(fonts/ibm-plex-sans-arabic-latin-700-normal.woff2)}
+:root{--bg:#f5f5f3;--s:#fff;--ink:#1c1c1e;--mut:#76767a;--line:#e6e5e1;--soft:#efeeea;--acc:#1c1c1e;--ok:#1f7a4d;--bad:#c2410c;--warn:#a16207}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:PlexL,Plex,system-ui,sans-serif;font-size:15px;line-height:1.5}
+svg.i{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.top{position:sticky;top:0;z-index:5;background:rgba(245,245,243,.92);backdrop-filter:blur(10px);padding:14px 18px 10px;padding-top:max(14px,env(safe-area-inset-top))}
+.top .row1{display:flex;align-items:center;justify-content:space-between}
+.word{font-weight:700;font-size:15px;letter-spacing:.2px;direction:ltr}
+.word i{display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--ink);margin-right:6px;vertical-align:1px}
+.acct{font-size:13px;color:var(--mut);direction:ltr}
+h1{font-size:26px;font-weight:700;margin:10px 0 0;letter-spacing:-.2px}
+main{max-width:640px;margin:0 auto;padding:4px 16px 150px}
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:6;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:6px 6px max(8px,env(safe-area-inset-bottom))}
+.tabs button{flex:1;background:none;border:0;color:var(--mut);font:inherit;font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer}
+.tabs button.on{color:var(--ink);font-weight:600}
+.tabs svg.i{width:23px;height:23px}
+.box{background:var(--s);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px}
+.lbl{font-size:13px;font-weight:600;color:var(--ink);margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline}
+.lbl span{font-weight:400;color:var(--mut)}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--s);border:1px solid var(--line);border-radius:10px;padding:11px 12px;outline:none;appearance:none}
+input:focus,textarea:focus,select:focus{border-color:#a8a7a2}
+textarea{min-height:140px;resize:vertical}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2376767a' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 12px center;background-size:16px;padding-left:36px}
+.drop{border:1.5px dashed #cfcdc7;border-radius:12px;padding:22px 12px;text-align:center;color:var(--mut);cursor:pointer;display:block}
+.drop b{color:var(--ink);font-weight:600;display:block;margin-top:6px}
+.drop input{display:none}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.th{position:relative;aspect-ratio:4/5;border-radius:8px;overflow:hidden;background:#ddd}
+.th img,.th video{width:100%;height:100%;object-fit:cover;display:block}
+.th .n{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.65);color:#fff;font-size:11px;font-weight:600;border-radius:5px;padding:0 6px;font-family:PlexL}
+.th .ctl{position:absolute;inset:auto 0 0 0;display:flex;justify-content:space-between;padding:4px;background:linear-gradient(transparent,rgba(0,0,0,.55))}
+.th .ctl button{background:rgba(255,255,255,.9);border:0;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:var(--ink)}
+.th .ctl svg.i{width:14px;height:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px 7px 14px;cursor:pointer;user-select:none;background:var(--s);font-size:14px}
+.chip .d{width:9px;height:9px;border-radius:50%}
+.chip small{color:var(--mut);font-size:11.5px}
+.chip.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.hint{font-size:12.5px;color:var(--mut);margin:10px 0 0}
+.act{position:fixed;left:0;right:0;bottom:64px;bottom:calc(64px + env(safe-area-inset-bottom));z-index:5;padding:10px 16px;background:linear-gradient(transparent,var(--bg) 30%)}
+.act .in{max-width:640px;margin:0 auto;display:flex;gap:10px}
+.btn{font:inherit;font-weight:600;border-radius:10px;padding:12px 16px;border:1px solid var(--line);background:var(--s);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.pri{background:var(--ink);color:#fff;border-color:var(--ink);flex:1}
+.btn.sm{padding:7px 11px;font-size:13.5px;font-weight:500}
+.btn:disabled{opacity:.5}
+.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:8px;display:none}.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .2s}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;margin-top:10px}
+.seg button{border:0;background:none;font:inherit;font-size:13.5px;padding:6px 14px;border-radius:8px;color:var(--mut);cursor:pointer}
+.seg button.on{background:var(--s);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.dayh{font-size:13px;font-weight:600;color:var(--mut);margin:22px 2px 8px}
+.item{display:flex;gap:12px;background:var(--s);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:8px}
+.item .tm{width:52px;flex:none;font-weight:600;font-size:14px;font-family:PlexL;direction:ltr;text-align:right}
+.item .tm small{display:block;color:var(--mut);font-weight:400;font-size:12px}
+.item img,.item .vid{width:56px;height:70px;border-radius:7px;object-fit:cover;flex:none;background:#ddd;display:flex;align-items:center;justify-content:center;color:#fff}
+.item .vid{background:#2a2a2c}
+.item .body{flex:1;min-width:0}
+.item .cap{font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.item .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+.st{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--mut)}
+.st span{display:inline-flex;align-items:center;gap:5px}
+.st i{width:7px;height:7px;border-radius:50%;background:#c9c8c3}
+.st .ok i{background:var(--ok)}.st .bad{color:var(--bad)}.st .bad i{background:var(--bad)}.st .man i{background:var(--warn)}
+.more{background:none;border:0;color:var(--mut);padding:2px;height:28px;cursor:pointer;align-self:flex-start}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35);display:none;align-items:flex-end}
+.sheet.show{display:flex}
+.sheet .p{background:var(--s);width:100%;max-width:640px;margin:0 auto;border-radius:16px 16px 0 0;padding:8px 8px max(14px,env(safe-area-inset-bottom))}
+.sheet .p>button{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;font:inherit;font-size:15px;color:var(--ink);padding:14px 12px;border-radius:10px;cursor:pointer;text-align:right}
+.sheet .p>button:active{background:var(--soft)}
+.sheet .p>.red{color:var(--bad)}
+.sheet .err{font-size:12.5px;color:var(--bad);padding:4px 12px 8px;direction:ltr;text-align:left;word-break:break-word}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:150px;z-index:30;background:var(--ink);color:#fff;border-radius:10px;padding:10px 16px;font-size:14px;display:none;max-width:90%}
+.empty{text-align:center;color:var(--mut);padding:50px 0}
+.hide{display:none!important}
+.bcard .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bcard .head b{font-size:16px}
+.f{margin-top:12px}
+.note{font-size:13px;color:var(--mut);line-height:1.6}
+.conn{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line)}
+.conn:first-child{border-top:0;padding-top:2px}
+.conn .lg{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;font-family:PlexL;flex:none}
+.conn .tx{flex:1;min-width:0}.conn .tx b{display:block;font-weight:600}.conn .tx small{color:var(--mut);font-size:12.5px}
+.pill{font-size:12px;border-radius:999px;padding:2px 9px;background:var(--soft);color:var(--mut)}.pill.ok{background:#e3f1e9;color:var(--ok)}
+.steps{counter-reset:s;padding:0;margin:6px 0 4px;list-style:none}
+.steps li{counter-increment:s;position:relative;padding:0 34px 12px 0;font-size:14px;line-height:1.7}
+.steps li:before{content:counter(s);position:absolute;right:0;top:1px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;font-family:PlexL}
+.wz{padding:10px 10px 4px;max-height:80vh;overflow:auto}
+.wz h3{margin:4px 0 2px;font-size:18px}
+.wz .sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.wz .nav{display:flex;gap:10px;margin-top:14px}.wz .nav .pri{flex:1}
+.pick{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px;cursor:pointer}
+.pick.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+#b-tabs{margin:6px 0 2px}
+a{color:var(--ink)}
+code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;direction:ltr;unicode-bidi:isolate}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+ <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.5V5a1.5 1.5 0 0 1 1.5-1.5h7.5l8 8a1.5 1.5 0 0 1 0 2.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8.5" cy="8.5" r="1.3"/></symbol>
+ <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+ <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 19v-3"/></symbol>
+ <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+ <symbol id="i-r" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+ <symbol id="i-l" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+ <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+ <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></symbol>
+ <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6 7l1 13h10l1-13"/></symbol>
+ <symbol id="i-retry" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></symbol>
+ <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10-6.5z"/></symbol>
+</svg>
+
+<div class="top">
+ <div class="row1"><div class="word"><i></i>AutoPost</div><div class="acct" id="who"></div></div>
+ <h1 id="ttl">بوست جديد</h1>
+</div>
+
+<main>
+<section id="compose">
+ <div class="box">
+  <div class="lbl">الحساب</div>
+  <select id="c-brand"></select>
+ </div>
+ <div class="box">
+  <div class="lbl">الميديا <span>الترتيب هو ترتيب الكاروسيل</span></div>
+  <label class="drop"><input type="file" id="c-files" accept="image/*,video/*" multiple><svg class="i"><use href="#i-up"/></svg><b>اختار صور أو فيديو</b>لحد 10 صور، أو فيديو واحد</label>
+  <div class="grid" id="c-thumbs"></div>
+ </div>
+ <div class="box">
+  <div class="lbl">الكابشن <span id="c-count">0</span></div>
+  <textarea id="c-caption" placeholder="اكتب الكابشن هنا"></textarea>
+  <div id="c-title-wrap" class="f hide"><div class="lbl">عنوان الفيديو على يوتيوب</div><input id="c-title"></div>
+ </div>
+ <div class="box">
+  <div class="lbl">الميعاد</div>
+  <div class="two"><input type="date" id="c-date"><input type="time" id="c-hour"></div>
+ </div>
+ <div class="box">
+  <div class="lbl">المنصات</div>
+  <div class="chips" id="c-plats"></div>
+  <p class="hint">المنصات المكتوب جنبها «تذكير» هيوصلك على تليجرام في الميعاد الصور والكابشن جاهزين تنزلهم بنفسك.</p>
+ </div>
+ <div class="prog" id="c-bar"><i></i></div>
+</section>
+
+<section id="list" class="hide">
+ <div class="seg" id="l-seg"><button data-v="upcoming" class="on">الجاي</button><button data-v="past">اتنشر</button><button data-v="all">الكل</button></div>
+ <div id="l-items"></div>
+</section>
+
+<section id="brands" class="hide">
+ <div class="chips" id="b-tabs"></div>
+ <div id="b-panel"></div>
+</section>
+
+<section id="settings" class="hide">
+ <div class="box" id="install-box">
+  <div class="lbl">تثبيت التطبيق</div>
+  <p class="note">ثبّت AutoPost على جهازك عشان يفتح زي أي تطبيق — أندرويد، آيفون، ويندوز وماك.</p>
+  <button class="btn" id="install-btn" style="width:100%">تثبيت على الجهاز ده</button>
+ </div>
+ <div class="box">
+  <div class="lbl">الربط بـ GitHub</div>
+  <p class="note">البوستات بتتحفظ في ريبو خاص بيك على GitHub. <a href="#" id="gh-help">إزاي أعمل التوكن؟</a></p>
+  <div class="lbl f">اسم حسابك على GitHub</div><input id="s-owner" placeholder="username" dir="ltr">
+  <div class="lbl f">اسم الريبو الخاص</div><input id="s-repo" placeholder="autopost-data" dir="ltr">
+  <div class="lbl f">التوكن <span>بيتحفظ على الجهاز ده بس</span></div><input id="s-token" type="password" placeholder="github_pat_…" dir="ltr">
+ </div>
+</section>
+</main>
+
+<div class="act" id="act">
+ <div class="in" id="act-compose"><button class="btn pri" id="c-save">جدولة</button><button class="btn" id="c-now">نشر الآن</button></div>
+ 
+ <div class="in hide" id="act-settings"><button class="btn pri" id="s-save">حفظ واختبار الاتصال</button></div>
+</div>
+
+<nav class="tabs">
+ <button data-tab="compose" class="on"><svg class="i"><use href="#i-plus"/></svg>جديد</button>
+ <button data-tab="list"><svg class="i"><use href="#i-cal"/></svg>المجدول</button>
+ <button data-tab="brands"><svg class="i"><use href="#i-tag"/></svg>الحسابات</button>
+ <button data-tab="settings"><svg class="i"><use href="#i-gear"/></svg>الإعدادات</button>
+</nav>
+
+<div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor-nacl.js"></script>
+<script src="vendor-blake.js"></script>
+<script>
+const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
+const MANUAL=new Set(["tiktok","snapchat","x"]);
+const NAMES=Object.fromEntries(PLATS.map(p=>[p[0],p[1]]));
+const TITLES={compose:"بوست جديد",list:"المجدول",brands:"الحسابات",settings:"الإعدادات"};
+const $=s=>document.querySelector(s);
+const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const store={get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let cfg=window.DEMO_CFG||{owner:store.get("owner",""),repo:store.get("repo",""),branch:store.get("branch","main"),token:store.get("token","")};
+let brands={},files=[],items=[],filter="upcoming",sel=new Set(["instagram","facebook"]);
+
+function toast(t,ms=3000){const m=$("#toast");m.textContent=t;m.style.display="block";clearTimeout(m._t);m._t=setTimeout(()=>m.style.display="none",ms)}
+function tab(name){
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));
+ document.querySelectorAll("main section").forEach(s=>s.classList.toggle("hide",s.id!==name));
+ ["compose","settings"].forEach(k=>$("#act-"+k).classList.toggle("hide",k!==name));
+ $("#act").classList.toggle("hide",name==="list"||name==="brands");$("#ttl").textContent=TITLES[name];scrollTo(0,0);
+ if(name==="list")loadList();if(name==="brands")renderBrands();
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+
+// ---------- GitHub
+async function gh(path,opt={}){
+ const r=await fetch(`https://api.github.com${path}`,{...opt,headers:{Authorization:`Bearer ${cfg.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+ if(!r.ok){const t=await r.text();throw new Error(`GitHub ${r.status}: ${t.slice(0,160)}`)}
+ return r.status===204?null:(opt.raw?r.text():r.json());
+}
+const R=()=>`/repos/${cfg.owner}/${cfg.repo}`;
+const readFile=p=>gh(`${R()}/contents/${encodeURI(p)}?ref=${cfg.branch}&t=${Date.now()}`,{raw:true,headers:{Accept:"application/vnd.github.raw"}});
+async function commit(changes,message,onP){
+ const blobs=[];let i=0;
+ for(const c of changes){
+  if(c.del)blobs.push({path:c.path,mode:"100644",type:"blob",sha:null});
+  else{const b=await gh(`${R()}/git/blobs`,{method:"POST",body:JSON.stringify({content:c.b64,encoding:"base64"})});blobs.push({path:c.path,mode:"100644",type:"blob",sha:b.sha})}
+  onP&&onP(++i/changes.length);
+ }
+ for(let a=0;a<4;a++){
+  const ref=await gh(`${R()}/git/ref/heads/${cfg.branch}`);
+  const head=await gh(`${R()}/git/commits/${ref.object.sha}`);
+  const tree=await gh(`${R()}/git/trees`,{method:"POST",body:JSON.stringify({base_tree:head.tree.sha,tree:blobs})});
+  const cm=await gh(`${R()}/git/commits`,{method:"POST",body:JSON.stringify({message,tree:tree.sha,parents:[ref.object.sha]})});
+  try{await gh(`${R()}/git/refs/heads/${cfg.branch}`,{method:"PATCH",body:JSON.stringify({sha:cm.sha})});return}catch(e){if(a===3)throw e;await new Promise(r=>setTimeout(r,1500))}
+ }
+}
+const utf8b64=s=>btoa(unescape(encodeURIComponent(s)));
+const thumbCache={};
+async function thumbSrc(pid,f){if(window.DEMO_RAW)return window.DEMO_RAW(pid,f);const k=pid+"/"+f;if(thumbCache[k])return thumbCache[k];
+ const r=await fetch(`https://api.github.com${R()}/contents/posts/${pid}/${f}?ref=${cfg.branch}`,{headers:{Authorization:`Bearer ${cfg.token}`,Accept:"application/vnd.github.raw"}});
+ if(!r.ok)return "";return thumbCache[k]=URL.createObjectURL(await r.blob())}
+function fillThumbs(){document.querySelectorAll("img[data-pid]").forEach(async im=>{im.src=await thumbSrc(im.dataset.pid,im.dataset.f)})}
+async function runNow(){try{await gh(`${R()}/actions/workflows/publish.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch})});return true}catch(e){return false}}
+
+// ---------- compose
+$("#c-plats").innerHTML=PLATS.map(([k,n,c])=>`<div class="chip${sel.has(k)?" on":""}" data-k="${k}"><span class="d" style="background:${c}"></span>${n}${MANUAL.has(k)?" <small>تذكير</small>":""}</div>`).join("");
+document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on")});
+function setDefaultTime(){const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);const p=n=>String(n).padStart(2,"0");$("#c-date").value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;$("#c-hour").value=`${p(d.getHours())}:00`}
+setDefaultTime();
+$("#c-caption").oninput=e=>$("#c-count").textContent=e.target.value.length;
+$("#c-files").onchange=e=>{for(const f of e.target.files)files.push({file:f,url:URL.createObjectURL(f),video:f.type.startsWith("video")});e.target.value="";renderThumbs()};
+function renderThumbs(){
+ $("#c-thumbs").innerHTML=files.map((f,i)=>`<div class="th">${f.video?`<video src="${f.url}" muted></video>`:`<img src="${f.url}">`}<span class="n">${i+1}</span>
+  <div class="ctl"><button onclick="mv(${i},-1)" aria-label="قبل">${ic("r")}</button><button onclick="rm(${i})" aria-label="حذف">${ic("x")}</button><button onclick="mv(${i},1)" aria-label="بعد">${ic("l")}</button></div></div>`).join("");
+ $("#c-title-wrap").classList.toggle("hide",!files.some(f=>f.video));
+}
+window.mv=(i,d)=>{const j=i+d;if(j<0||j>=files.length)return;[files[i],files[j]]=[files[j],files[i]];renderThumbs()};
+window.rm=i=>{files.splice(i,1);renderThumbs()};
+function toJpeg(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1440/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);res({b64:c.toDataURL("image/jpeg",.92).split(",")[1],ratio:img.width/img.height})};img.onerror=rej;img.src=URL.createObjectURL(file)})}
+function fileB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file)})}
+async function save(now){
+ if(!cfg.token){tab("settings");return toast("اربط حساب GitHub الأول")}
+ const plats=PLATS.map(p=>p[0]).filter(k=>sel.has(k));
+ const hasVid=files.some(f=>f.video);
+ if(!files.length)return toast("ضيف صور أو فيديو");
+ if(!plats.length)return toast("اختار منصة واحدة على الأقل");
+ if(hasVid&&files.length>1)return toast("الفيديو لازم يبقى لوحده في البوست");
+ if(files.length>10&&plats.includes("instagram"))return toast("إنستجرام بيقبل لحد 10 صور");
+ if(plats.includes("youtube")&&!hasVid)return toast("يوتيوب محتاج فيديو");
+ const when=now?new Date(Date.now()-60e3):new Date(`${$("#c-date").value}T${$("#c-hour").value||"00:00"}`);
+ if(isNaN(when))return toast("اختار الميعاد");
+ if(!now&&when<Date.now()-60e3)return toast("الميعاد ده فات");
+ const pid=when.toISOString().replace(/[-:]/g,"").slice(0,13).replace("T","-")+"-"+Math.random().toString(36).slice(2,7);
+ const bar=$("#c-bar"),setP=p=>bar.firstElementChild.style.width=(p*100)+"%";bar.style.display="block";
+ $("#c-save").disabled=$("#c-now").disabled=true;
+ try{
+  const changes=[],media=[];let warn="";
+  for(let i=0;i<files.length;i++){
+   const f=files[i];
+   if(f.video){if(f.file.size>95e6)throw new Error("الفيديو أكبر من 95 ميجا");const ext=(f.file.name.split(".").pop()||"mp4").toLowerCase(),name=`${i+1}.${ext}`;changes.push({path:`posts/${pid}/${name}`,b64:await fileB64(f.file)});media.push(name)}
+   else{const j=await toJpeg(f.file);if(j.ratio<.79||j.ratio>1.92)warn=" — مقاس صورة خارج نسب إنستجرام";const name=`${i+1}.jpg`;changes.push({path:`posts/${pid}/${name}`,b64:j.b64});media.push(name)}
+   setP((i+1)/(files.length*2));
+  }
+  const post={brand:$("#c-brand").value,time:when.toISOString().replace(/\.\d+Z$/,"Z"),kind:hasVid?"video":"images",media,platforms:plats,caption:$("#c-caption").value};
+  if(hasVid&&$("#c-title").value)post.title=$("#c-title").value;
+  changes.push({path:`posts/${pid}/post.json`,b64:utf8b64(JSON.stringify(post,null,2))});
+  await commit(changes,`schedule ${pid}`,p=>setP(.5+p/2));
+  if(now&&!(await runNow()))warn=" — هينزل في أول دورة خلال 15 دقيقة";
+  toast((now?"بيتنشر دلوقتي":"اتجدول")+warn,5000);
+  files=[];renderThumbs();$("#c-caption").value="";$("#c-title").value="";$("#c-count").textContent="0";
+ }catch(e){toast(e.message,8000)}finally{bar.style.display="none";setP(0);$("#c-save").disabled=$("#c-now").disabled=false}
+}
+$("#c-save").onclick=()=>save(false);$("#c-now").onclick=()=>save(true);
+
+// ---------- list
+document.querySelectorAll("#l-seg button").forEach(b=>b.onclick=()=>{filter=b.dataset.v;document.querySelectorAll("#l-seg button").forEach(x=>x.classList.toggle("on",x===b));renderList()});
+async function loadList(){
+ if(!cfg.token)return;
+ if(!items.length)$("#l-items").innerHTML='<div class="empty">جاري التحميل…</div>';
+ try{
+  const tree=await gh(`${R()}/git/trees/${cfg.branch}?recursive=1&t=${Date.now()}`);
+  const ids=[...new Set(tree.tree.filter(t=>/^posts\/[^/]+\/post\.json$/.test(t.path)).map(t=>t.path.split("/")[1]))];
+  const hasS=new Set(tree.tree.filter(t=>/^posts\/[^/]+\/status\.json$/.test(t.path)).map(t=>t.path.split("/")[1]));
+  items=await Promise.all(ids.map(async id=>({id,p:JSON.parse(await readFile(`posts/${id}/post.json`)),s:hasS.has(id)?JSON.parse(await readFile(`posts/${id}/status.json`)):{}})));
+  renderList();
+ }catch(e){$("#l-items").innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+}
+const finished=x=>x.p.platforms.every(k=>x.s[k]?.ok||x.s[k]?.skipped);
+function renderList(){
+ let list=items.filter(x=>filter==="all"||(filter==="upcoming"?!finished(x):finished(x)));
+ list.sort((a,b)=>(filter==="past"?-1:1)*(new Date(a.p.time)-new Date(b.p.time)));
+ let last="",h="";
+ for(const x of list){
+  const {id,p,s}=x,d=new Date(p.time);
+  const day=d.toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
+  if(day!==last){h+=`<div class="dayh">${day}</div>`;last=day}
+  const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  const st=p.platforms.map(k=>{const v=s[k];let c="",t=NAMES[k]||k;if(v?.ok&&v.manual){c="man";t+=" · تذكير"}else if(v?.ok)c="ok";else if(v?.skipped){t+=" · اتلغى"}else if(v){c="bad";t+=" · فشل"}return`<span class="${c}"><i></i>${t}</span>`}).join("");
+  const th=p.kind==="video"?`<div class="vid">${ic("play")}</div>`:`<img data-pid="${id}" data-f="${p.media[0]}" alt="">`;
+  h+=`<div class="item"><div class="tm">${hm}</div>${th}<div class="body"><div class="cap">${esc(p.label||p.caption||"بدون كابشن")}</div>
+   <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div></div>
+   <button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
+ }
+ $("#l-items").innerHTML=h||'<div class="empty">مفيش بوستات هنا</div>';fillThumbs();
+}
+function sheet(html){$("#sheet-p").innerHTML=html;$("#sheet").classList.add("show")}
+$("#sheet").onclick=e=>{if(e.target.id==="sheet")$("#sheet").classList.remove("show")};
+window.menu=id=>{const x=items.find(i=>i.id===id);const failed=Object.entries(x.s).filter(([k,v])=>!v.ok&&!v.skipped);
+ sheet(`${failed.map(([k,v])=>`<div class="err">${esc(NAMES[k])}: ${esc(v.error||"")}</div>`).join("")}
+ ${failed.length?`<button onclick="retry('${id}')">${ic("retry")}إعادة المحاولة</button>`:""}
+ <button onclick="editTime('${id}')">${ic("clock")}تغيير الميعاد</button><button onclick="editCap('${id}')">${ic("edit")}تعديل الكابشن</button>
+ <button class="red" onclick="del('${id}')">${ic("trash")}حذف البوست</button>`)};
+const closeSheet=()=>$("#sheet").classList.remove("show");
+async function updatePost(id,fn,msg){const x=items.find(i=>i.id===id);fn(x.p);await commit([{path:`posts/${id}/post.json`,b64:utf8b64(JSON.stringify(x.p,null,2))}],msg);renderList();toast("اتعدل")}
+window.editTime=id=>{const x=items.find(i=>i.id===id),d=new Date(x.p.time),p=n=>String(n).padStart(2,"0");
+ sheet(`<div style="padding:10px"><div class="lbl">الميعاد الجديد</div><div class="two"><input type="date" id="e-d" value="${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}"><input type="time" id="e-h" value="${p(d.getHours())}:${p(d.getMinutes())}"></div>
+ <div class="two" style="margin-top:12px"><button class="btn pri" id="e-ok" style="justify-content:center">حفظ</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#e-ok").onclick=()=>{const nd=new Date(`${$("#e-d").value}T${$("#e-h").value}`);if(isNaN(nd))return toast("ميعاد غلط");closeSheet();updatePost(id,p=>p.time=nd.toISOString().replace(/\.\d+Z$/,"Z"),"reschedule "+id).catch(e=>toast(e.message))}};
+window.editCap=id=>{const x=items.find(i=>i.id===id);
+ sheet(`<div style="padding:10px"><div class="lbl">الكابشن</div><textarea id="e-c">${esc(x.p.caption)}</textarea><div class="two" style="margin-top:12px"><button class="btn pri" id="e-ok" style="justify-content:center">حفظ</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#e-ok").onclick=()=>{const v=$("#e-c").value;closeSheet();updatePost(id,p=>p.caption=v,"edit caption "+id).catch(e=>toast(e.message))}};
+window.retry=async id=>{closeSheet();const x=items.find(i=>i.id===id);for(const k in x.s)if(!x.s[k].ok&&!x.s[k].skipped)delete x.s[k];try{await commit([{path:`posts/${id}/status.json`,b64:utf8b64(JSON.stringify(x.s,null,2))}],"retry "+id);await runNow();renderList();toast("هيتجرب تاني خلال دقايق")}catch(e){toast(e.message)}};
+window.del=id=>{sheet(`<div style="padding:12px"><div class="lbl">تحذف البوست ده؟</div><p class="note">مش هتقدر ترجّعه بعد الحذف.</p><div class="two"><button class="btn" id="e-ok" style="background:var(--bad);color:#fff;border-color:var(--bad)">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);$("#e-ok").onclick=()=>reallyDel(id)};
+async function reallyDel(id){closeSheet();try{const tree=await gh(`${R()}/git/trees/${cfg.branch}?recursive=1`);await commit(tree.tree.filter(t=>t.type==="blob"&&t.path.startsWith(`posts/${id}/`)).map(t=>({path:t.path,del:true})),"delete "+id);items=items.filter(i=>i.id!==id);renderList();toast("اتحذف")}catch(e){toast(e.message)}}
+
+// ---------- brands / connections
+let secretNames=null,curBrand="default";
+const GV="v23.0";
+async function loadBrands(){
+ try{brands=JSON.parse(await readFile("config/brands.json")).brands}catch(e){brands={default:{name:"حسابي"}}}
+ if(!brands[curBrand])curBrand=Object.keys(brands)[0];
+ $("#c-brand").innerHTML=Object.entries(brands).map(([k,b])=>`<option value="${esc(k)}">${esc(b.name||k)}</option>`).join("");
+}
+async function loadSecrets(){
+ if(window.DEMO_SECRETS){secretNames=window.DEMO_SECRETS;return}
+ try{const r=await gh(`${R()}/actions/secrets?per_page=100`);secretNames=new Set(r.secrets.map(s=>s.name))}catch(e){secretNames=null}
+}
+const pre=b=>(b.secret_prefix||"").toUpperCase();
+const sname=(b,n)=>pre(b)?`${pre(b)}_${n}`:n;
+const hasSecret=(b,n)=>!!secretNames&&(secretNames.has(sname(b,n))||(!pre(b)&&secretNames.has(n)));
+async function saveBrands(msg){await commit([{path:"config/brands.json",b64:utf8b64(JSON.stringify({brands},null,2))}],msg||"update accounts");await loadBrands()}
+async function putSecret(name,value){
+ if(window.DEMO_SECRETS){window.DEMO_SECRETS.add(name);return}
+ const k=await gh(`${R()}/actions/secrets/public-key`);
+ const pk=Uint8Array.from(atob(k.key),c=>c.charCodeAt(0)),epk=nacl.box.keyPair();
+ const nonce=blake2b(new Uint8Array([...epk.publicKey,...pk]),null,24);
+ const boxed=nacl.box(new TextEncoder().encode(value),nonce,pk,epk.secretKey);
+ const sealed=new Uint8Array([...epk.publicKey,...boxed]);let bin="";sealed.forEach(x=>bin+=String.fromCharCode(x));
+ await gh(`${R()}/actions/secrets/${name}`,{method:"PUT",body:JSON.stringify({encrypted_value:btoa(bin),key_id:k.key_id})});
+ secretNames&&secretNames.add(name);
+}
+async function renderBrands(){
+ if(!cfg.token){$("#b-panel").innerHTML='<div class="empty">اربط GitHub من الإعدادات الأول</div>';return}
+ if(secretNames===null)await loadSecrets();
+ $("#b-tabs").innerHTML=Object.entries(brands).map(([k,b])=>`<div class="chip${k===curBrand?" on":""}" onclick="curBrand='${esc(k)}';renderBrands()">${esc(b.name||k)}</div>`).join("")+`<div class="chip" onclick="addBrand()">${ic("plus")} عميل جديد</div>`;
+ const b=brands[curBrand]||{};const tg=hasSecret(b,"TELEGRAM_BOT_TOKEN")||(secretNames&&secretNames.has("TELEGRAM_BOT_TOKEN"));
+ const meta=hasSecret(b,"META_TOKEN")&&b.facebook?.page_id;
+ const li=hasSecret(b,"LINKEDIN_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
+ const liExp=b.linkedin?.connected_at?new Date(new Date(b.linkedin.connected_at).getTime()+59*864e5):null;
+ const row=(lg,col,name,sub,ok,btn)=>`<div class="conn"><div class="lg" style="background:${col}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${ok?'<span class="pill ok">متصل</span>':""}${btn}</div>`;
+ $("#b-panel").innerHTML=`${secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
+ <div class="box"><div class="lbl">اسم العميل / البراند</div><div class="two"><input id="bn" value="${esc(b.name||"")}"><button class="btn" onclick="renameBrand()">حفظ الاسم</button></div></div>
+ <div class="box">
+  ${row("f","#1877f2","فيسبوك وإنستجرام",meta?`${esc(b.facebook.name||"صفحة")}${b.instagram?.username?" · @"+esc(b.instagram.username):""}`:"صفحة فيسبوك وحساب إنستجرام المربوط بيها",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"اربط"}</button>`)}
+  ${row("in","#0a66c2","لينكدإن",li?(liExp?`جدّد قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="wzLinkedIn()">${li?"تجديد":"اربط"}</button>`)}
+  ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"هنربطه سوا لما تحتاجه",yt,"")}
+ </div>
+ <div class="box">
+  ${row("tg","#229ed9","تليجرام",tg?"التقارير والتذكير شغالين":"تقارير النشر + تذكير المنصات اليدوي",tg,`<button class="btn sm" onclick="wzTelegram()">${tg?"تغيير":"اربط"}</button>`)}
+  ${row("tt","#111","تيك توك، سناب، X","بيوصلك الملفات والكابشن على تليجرام في الميعاد",false,"")}
+ </div>
+ ${curBrand!=="default"?`<button class="btn sm" style="color:var(--bad)" onclick="delBrand()">${ic("trash")} حذف العميل ده</button>`:""}`;
+}
+window.renameBrand=async()=>{brands[curBrand].name=$("#bn").value.trim()||curBrand;try{await saveBrands("rename account");renderBrands();toast("اتحفظ")}catch(e){toast(e.message)}};
+window.addBrand=()=>{sheet(`<div class="wz"><h3>عميل جديد</h3><div class="sub">كل عميل ليه صفحاته وتوكناته لوحده.</div><div class="lbl">الاسم</div><input id="nb"><div class="nav"><button class="btn pri" id="nb-ok">إضافة</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#nb-ok").onclick=async()=>{const name=$("#nb").value.trim();if(!name)return;let i=Object.keys(brands).length;let key="client"+i;while(brands[key])key="client"+(++i);
+  brands[key]={name,secret_prefix:key.toUpperCase(),instagram:{},facebook:{},linkedin:{},youtube:{privacy:"public"}};curBrand=key;closeSheet();try{await saveBrands("add account");renderBrands()}catch(e){toast(e.message)}}};
+window.delBrand=()=>{sheet(`<div class="wz"><h3>حذف ${esc(brands[curBrand].name)}؟</h3><div class="sub">البوستات المتجدولة للعميل ده مش هتتنشر.</div><div class="nav"><button class="btn" style="background:var(--bad);color:#fff;border-color:var(--bad);flex:1" id="db-ok">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#db-ok").onclick=async()=>{delete brands[curBrand];curBrand="default";closeSheet();try{await saveBrands("delete account");renderBrands()}catch(e){toast(e.message)}}};
+
+// ---- Meta wizard
+const META_PERMS="pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish, business_management";
+window.wzMeta=(step=1,st={})=>{
+ const b=brands[curBrand];
+ if(step===1)sheet(`<div class="wz"><h3>ربط فيسبوك وإنستجرام</h3><div class="sub">خطوة 1 من 3 — مرة واحدة بس</div><ol class="steps">
+  <li>اتأكد إن حساب إنستجرام <b>Professional</b> (Business أو Creator) ومربوط بصفحة الفيسبوك</li>
+  <li>افتح <a href="https://developers.facebook.com/apps/create/" target="_blank" rel="noopener">Meta for Developers ← Create App</a> وسجّل بحساب الفيسبوك اللي أدمن على الصفحة</li>
+  <li>اكتب اسم التطبيق مثلاً <code>AutoPost</code>، واختار Use case: <b>Other</b> ← نوع التطبيق <b>Business</b> ← Create</li>
+  <li>من القايمة: <b>App settings ← Basic</b> انسخ <b>App ID</b> و <b>App Secret</b></li></ol>
+  <div class="lbl">App ID</div><input id="m-id" dir="ltr" value="${esc(st.id||"")}"><div class="lbl f">App Secret <span>مش بيتحفظ</span></div><input id="m-sec" dir="ltr" type="password" value="${esc(st.sec||"")}">
+  <div class="nav"><button class="btn pri" id="m-n">التالي</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`),
+  $("#m-n").onclick=()=>{const id=$("#m-id").value.trim(),sec=$("#m-sec").value.trim();if(!id||!sec)return toast("حط App ID و App Secret");wzMeta(2,{id,sec})};
+ if(step===2)sheet(`<div class="wz"><h3>ربط فيسبوك وإنستجرام</h3><div class="sub">خطوة 2 من 3</div><ol class="steps">
+  <li>افتح <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a></li>
+  <li>من <b>Meta App</b> على اليمين اختار تطبيقك</li>
+  <li>من <b>Permissions</b> ضيف دول: <code style="display:block;white-space:normal;margin-top:6px">${META_PERMS}</code><button class="btn sm" style="margin-top:6px" onclick="navigator.clipboard.writeText('${META_PERMS}').then(()=>toast('اتنسخ'),()=>{})">نسخ الصلاحيات</button></li>
+  <li>اضغط <b>Generate Access Token</b> ← وافق واختار الصفحة وحساب الإنستجرام ← انسخ التوكن</li></ol>
+  <div class="lbl">التوكن</div><input id="m-tok" dir="ltr" placeholder="EAA…">
+  <div class="nav"><button class="btn pri" id="m-n">التالي</button><button class="btn" onclick="wzMeta(1,${esc(JSON.stringify(st))})">رجوع</button></div></div>`),
+  $("#m-n").onclick=async()=>{const t=$("#m-tok").value.trim();if(!t)return toast("حط التوكن");$("#m-n").disabled=true;$("#m-n").textContent="بيتأكد…";
+   try{
+    const ex=await (await fetch(`https://graph.facebook.com/${GV}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(st.id)}&client_secret=${encodeURIComponent(st.sec)}&fb_exchange_token=${encodeURIComponent(t)}`)).json();
+    if(ex.error)throw new Error(ex.error.message);
+    const pg=await (await fetch(`https://graph.facebook.com/${GV}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${encodeURIComponent(ex.access_token)}`)).json();
+    if(pg.error)throw new Error(pg.error.message);
+    if(!pg.data?.length)throw new Error("مفيش صفحات — اتأكد إنك اخترت الصفحة لما وافقت على الصلاحيات");
+    wzMeta(3,{pages:pg.data});
+   }catch(e){toast(e.message,8000);$("#m-n").disabled=false;$("#m-n").textContent="التالي"}};
+ if(step===3){let sel=0;sheet(`<div class="wz"><h3>اختار الصفحة</h3><div class="sub">خطوة 3 من 3</div>${st.pages.map((p,i)=>`<div class="pick${i?"":" on"}" data-i="${i}"><b style="flex:1">${esc(p.name)}</b><small class="mut">${p.instagram_business_account?"@"+esc(p.instagram_business_account.username||"إنستجرام"):"مفيش إنستجرام مربوط"}</small></div>`).join("")}
+  <div class="nav"><button class="btn pri" id="m-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+  document.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{sel=+el.dataset.i;document.querySelectorAll(".pick").forEach(x=>x.classList.toggle("on",x===el))});
+  $("#m-ok").onclick=async()=>{const p=st.pages[sel];$("#m-ok").disabled=true;try{
+   await putSecret(sname(b,"META_TOKEN"),p.access_token);
+   b.facebook={page_id:p.id,name:p.name};b.instagram=p.instagram_business_account?{user_id:p.instagram_business_account.id,username:p.instagram_business_account.username||""}:{};
+   await saveBrands("connect facebook/instagram");closeSheet();renderBrands();toast(p.instagram_business_account?"فيسبوك وإنستجرام اتربطوا":"فيسبوك اتربط — مفيش إنستجرام على الصفحة دي",6000)}catch(e){toast(e.message,8000);$("#m-ok").disabled=false}}}
+};
+
+// ---- LinkedIn wizard
+window.wzLinkedIn=()=>{const b=brands[curBrand];
+ sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">التوكن بيعيش 60 يوم، وهنفكّرك تجدده</div><ol class="steps">
+  <li>افتح <a href="https://www.linkedin.com/developers/apps/new" target="_blank" rel="noopener">LinkedIn Developers ← Create app</a> (محتاج صفحة شركة؛ اعمل واحدة باسمك لو مش موجودة)</li>
+  <li>من تاب <b>Products</b> اطلب: <b>Share on LinkedIn</b> و <b>Sign In with LinkedIn using OpenID Connect</b> (الموافقة فورية)</li>
+  <li>افتح <a href="https://www.linkedin.com/developers/tools/oauth/token-generator" target="_blank" rel="noopener">Token Generator</a> ← اختار تطبيقك ← علّم <code>openid</code> <code>profile</code> <code>w_member_social</code> ← Request access token ← انسخه</li></ol>
+  <div class="lbl">التوكن</div><input id="l-tok" dir="ltr" placeholder="AQ…">
+  <div class="nav"><button class="btn pri" id="l-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#l-ok").onclick=async()=>{const t=$("#l-tok").value.trim();if(!t)return toast("حط التوكن");$("#l-ok").disabled=true;
+  try{await putSecret(sname(b,"LINKEDIN_TOKEN"),t);b.linkedin={author:"",connected_at:new Date().toISOString()};await saveBrands("connect linkedin");closeSheet();renderBrands();toast("لينكدإن اتربط")}catch(e){toast(e.message,8000);$("#l-ok").disabled=false}}};
+
+// ---- Telegram wizard
+window.wzTelegram=(step=1,st={})=>{const b=brands[curBrand];
+ if(step===1){sheet(`<div class="wz"><h3>ربط تليجرام</h3><div class="sub">هيوصلك عليه تقرير كل بوست، وملفات تيك توك وسناب وX في ميعادها</div><ol class="steps">
+  <li>افتح <a href="https://t.me/BotFather" target="_blank" rel="noopener">BotFather</a> في تليجرام ← ابعت <code>/newbot</code></li>
+  <li>اكتب اسم للبوت، وبعدين يوزر بينتهي بـ <code>bot</code></li>
+  <li>هيبعتلك توكن شكله <code dir="ltr">123456:ABC…</code> انسخه</li></ol>
+  <div class="lbl">توكن البوت</div><input id="t-tok" dir="ltr">
+  <div class="nav"><button class="btn pri" id="t-n">التالي</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+  $("#t-n").onclick=async()=>{const t=$("#t-tok").value.trim();try{const me=await (await fetch(`https://api.telegram.org/bot${t}/getMe`)).json();if(!me.ok)throw new Error("التوكن مش صح");wzTelegram(2,{t,u:me.result.username})}catch(e){toast(e.message)}}}
+ if(step===2){sheet(`<div class="wz"><h3>آخر خطوة</h3><ol class="steps"><li>افتح البوت بتاعك: <a href="https://t.me/${esc(st.u)}" target="_blank" rel="noopener">@${esc(st.u)}</a></li><li>دوس <b>Start</b> أو ابعتله أي رسالة</li><li>ارجع هنا ودوس «تمام»</li></ol>
+  <div class="nav"><button class="btn pri" id="t-ok">تمام، بعتله</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+  $("#t-ok").onclick=async()=>{try{const up=await (await fetch(`https://api.telegram.org/bot${st.t}/getUpdates`)).json();const m=(up.result||[]).reverse().find(u=>u.message);if(!m)throw new Error("لسه مفيش رسالة — ابعت للبوت وجرب تاني");
+   const chat=String(m.message.chat.id);await putSecret("TELEGRAM_BOT_TOKEN",st.t);await putSecret("TELEGRAM_CHAT_ID",chat);b.telegram_chat_id=chat;await saveBrands("connect telegram");
+   await fetch(`https://api.telegram.org/bot${st.t}/sendMessage?chat_id=${chat}&text=${encodeURIComponent("AutoPost اتربط. هيوصلك هنا تقرير كل بوست.")}`).catch(()=>{});
+   closeSheet();renderBrands();toast("تليجرام اتربط — بص على البوت")}catch(e){toast(e.message,6000)}}}
+};
+
+// ---------- settings
+["owner","repo","token"].forEach(k=>$("#s-"+k).value=cfg[k]||"");
+$("#s-save").onclick=async()=>{["owner","repo","token"].forEach(k=>{cfg[k]=$("#s-"+k).value.trim();store.set(k,cfg[k])});cfg.branch="main";store.set("branch","main");secretNames=null;
+ try{const r=await gh(R());toast(r.private?"متصل بـ "+r.full_name:"تنبيه: الريبو ده Public — خليه Private من إعداداته على GitHub",7000);await init();tab("brands")}catch(e){toast(e.message,8000)}};
+$("#gh-help").onclick=e=>{e.preventDefault();sheet(`<div class="wz"><h3>توكن GitHub</h3><div class="sub">مرة واحدة على كل جهاز</div><ol class="steps">
+ <li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء التوكن</a></li>
+ <li>Token name: <code>AutoPost</code> — و Expiration: <b>No expiration</b> أو سنة</li>
+ <li>Repository access: <b>Only select repositories</b> ← اختار الريبو الخاص</li>
+ <li>Repository permissions ← <b>Read and write</b> لـ <code>Contents</code> و <code>Actions</code> و <code>Secrets</code></li>
+ <li>Generate token ← انسخه وحطه هنا</li></ol><button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
+let deferredPrompt=null;
+const isStandalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e});
+if(isStandalone)$("#install-box").classList.add("hide");
+$("#install-btn").onclick=async()=>{
+ if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;return}
+ sheet(`<div class="wz"><h3>تثبيت التطبيق</h3><ol class="steps">${isIOS?
+  `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
+  `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
+  <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands()}
+init();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
