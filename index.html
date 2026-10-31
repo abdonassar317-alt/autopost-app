@@ -394,13 +394,15 @@ async function renderBrands(){
  $("#b-tabs").innerHTML=Object.entries(brands).map(([k,b])=>`<div class="chip${k===curBrand?" on":""}" onclick="curBrand='${esc(k)}';renderBrands()">${esc(b.name||k)}</div>`).join("")+`<div class="chip" onclick="addBrand()">${ic("plus")} عميل جديد</div>`;
  const b=brands[curBrand]||{};const tg=hasSecret(b,"TELEGRAM_BOT_TOKEN")||(secretNames&&secretNames.has("TELEGRAM_BOT_TOKEN"));
  const meta=hasSecret(b,"META_TOKEN")&&b.facebook?.page_id;
+ const igOk=(b.instagram?.login==="instagram"&&hasSecret(b,"IG_TOKEN"))||(meta&&b.instagram?.user_id);
  const li=hasSecret(b,"LINKEDIN_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
  const liExp=b.linkedin?.connected_at?new Date(new Date(b.linkedin.connected_at).getTime()+59*864e5):null;
  const row=(lg,col,name,sub,ok,btn)=>`<div class="conn"><div class="lg" style="background:${col}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${ok?'<span class="pill ok">متصل</span>':""}${btn}</div>`;
  $("#b-panel").innerHTML=`${secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
  <div class="box"><div class="lbl">اسم العميل / البراند</div><div class="two"><input id="bn" value="${esc(b.name||"")}"><button class="btn" onclick="renameBrand()">حفظ الاسم</button></div></div>
  <div class="box">
-  ${row("f","#1877f2","فيسبوك وإنستجرام",meta?`${esc(b.facebook.name||"صفحة")}${b.instagram?.username?" · @"+esc(b.instagram.username):""}`:"صفحة فيسبوك وحساب إنستجرام المربوط بيها",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"اربط"}</button>`)}
+  ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده":"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
+  ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها`:"البروفايل الشخصي: بيوصلك على تليجرام تنشره بضغطة",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
   ${row("in","#0a66c2","لينكدإن",li?(liExp?`جدّد قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="wzLinkedIn()">${li?"تجديد":"اربط"}</button>`)}
   ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"هنربطه سوا لما تحتاجه",yt,"")}
  </div>
@@ -421,7 +423,7 @@ window.delBrand=()=>{sheet(`<div class="wz"><h3>حذف ${esc(brands[curBrand].na
 const META_PERMS="pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish, business_management";
 window.wzMeta=(step=1,st={})=>{
  const b=brands[curBrand];
- if(step===1)sheet(`<div class="wz"><h3>ربط فيسبوك وإنستجرام</h3><div class="sub">خطوة 1 من 3 — مرة واحدة بس</div><ol class="steps">
+ if(step===1)sheet(`<div class="wz"><h3>ربط صفحة فيسبوك</h3><div class="sub">للصفحات بس — البروفايل الشخصي Meta مش بتسمح بالنشر عليه، فبيوصلك على تليجرام</div><ol class="steps">
   <li>اتأكد إن حساب إنستجرام <b>Professional</b> (Business أو Creator) ومربوط بصفحة الفيسبوك</li>
   <li>افتح <a href="https://developers.facebook.com/apps/create/" target="_blank" rel="noopener">Meta for Developers ← Create App</a> وسجّل بحساب الفيسبوك اللي أدمن على الصفحة</li>
   <li>اكتب اسم التطبيق مثلاً <code>AutoPost</code>، واختار Use case: <b>Other</b> ← نوع التطبيق <b>Business</b> ← Create</li>
@@ -450,9 +452,29 @@ window.wzMeta=(step=1,st={})=>{
   document.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{sel=+el.dataset.i;document.querySelectorAll(".pick").forEach(x=>x.classList.toggle("on",x===el))});
   $("#m-ok").onclick=async()=>{const p=st.pages[sel];$("#m-ok").disabled=true;try{
    await putSecret(sname(b,"META_TOKEN"),p.access_token);
-   b.facebook={page_id:p.id,name:p.name};b.instagram=p.instagram_business_account?{user_id:p.instagram_business_account.id,username:p.instagram_business_account.username||""}:{};
+   b.facebook={page_id:p.id,name:p.name};if(b.instagram?.login!=="instagram")b.instagram=p.instagram_business_account?{user_id:p.instagram_business_account.id,username:p.instagram_business_account.username||""}:{};
    await saveBrands("connect facebook/instagram");closeSheet();renderBrands();toast(p.instagram_business_account?"فيسبوك وإنستجرام اتربطوا":"فيسبوك اتربط — مفيش إنستجرام على الصفحة دي",6000)}catch(e){toast(e.message,8000);$("#m-ok").disabled=false}}}
 };
+
+// ---- Instagram (Instagram Login — no Facebook Page needed)
+window.wzInstagram=()=>{const b=brands[curBrand];
+ sheet(`<div class="wz"><h3>ربط إنستجرام</h3><div class="sub">الحساب لازم يكون Creator أو Business — مرة واحدة بس</div><ol class="steps">
+  <li>افتح <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">تطبيقك على Meta for Developers</a> ← <b>حالات الاستخدام</b> ← Instagram API ← <b>تخصيص</b></li>
+  <li>اختار <b>API setup with Instagram login</b></li>
+  <li>في قسم <b>Generate access tokens</b> اضغط <b>Add account</b> وسجّل بحساب الإنستجرام</li>
+  <li>اضغط <b>Generate token</b> جنب الحساب ← انسخ التوكن</li></ol>
+  <div class="lbl">التوكن</div><input id="i-tok" dir="ltr" placeholder="IG…">
+  <div class="nav"><button class="btn pri" id="i-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#i-ok").onclick=async()=>{const t=$("#i-tok").value.trim();if(!t)return toast("حط التوكن");const btn=$("#i-ok");btn.disabled=true;btn.textContent="بيتأكد…";
+  try{let me={};
+   try{me=await (await fetch(`https://graph.instagram.com/${GV}/me?fields=user_id,username,account_type&access_token=${encodeURIComponent(t)}`)).json()}catch(e){me={}}
+   if(me.error)throw new Error(me.error.message);
+   if(me.account_type&&me.account_type==="PERSONAL")throw new Error("الحساب لسه شخصي — حوّله Creator من إعدادات إنستجرام");
+   await putSecret(sname(b,"IG_TOKEN"),t);
+   if(!window.DEMO_SECRETS&&cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+   b.instagram={login:"instagram",user_id:me.user_id||"",username:me.username||"",connected_at:new Date().toISOString()};
+   await saveBrands("connect instagram");closeSheet();renderBrands();toast(me.username?`إنستجرام @${me.username} اتربط`:"إنستجرام اتربط",6000)}
+  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
 
 // ---- LinkedIn wizard
 window.wzLinkedIn=()=>{const b=brands[curBrand];
