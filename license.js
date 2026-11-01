@@ -8,8 +8,8 @@ const PUBLIC_KEY = "Sbg09MltEUuNOc+7mUIOBjW2ZjQFTBkCYu3KuU/tuIY=";
 const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
-const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", bank: "" };
-const VERSION = "28";
+const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", bank: "" };
+const VERSION = "29";
 const CHANGES = [
   ["26", "اشتراكات (فترة مجانية + شهري/سنوي) · المساعدة والاقتراحات · الجديد في التطبيق", "Subscriptions (free trial + monthly/yearly) · Help & feedback · What's new"],
   ["25", "تحليل المحتوى: أحسن وقت، التنوّع، مراجعة المعلومات، تجارب A/B · كشف الصور المكررة · وسوم الملفات · تصدير حزمة محتوى", "Content insights: best time, mix, info review dates, A/B tests · already-posted check · media tags · content pack export"],
@@ -65,6 +65,7 @@ function paySheet() {
    ${Object.entries(PLANS).map(([k, p]) => `<div class="lrow"><b style="flex:1">${planName(k)}</b><span>${p.price} ${L("جنيه", "EGP")}${k === "year" ? ` <small class="mut">(${L("بدل", "instead of")} ${PLANS.month.price * 12} — ${L("خصم 50%", "50% off")})</small>` : ""}</span></div>`).join("")}
    <div class="lbl f">${L("طرق الدفع", "How to pay")}</div>
    ${CONTACT.instapay ? `<div class="lrow"><span style="flex:1">InstaPay: <b>${esc(CONTACT.instapay)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.instapay)}">${L("نسخ", "Copy")}</button></div>` : ""}
+   ${CONTACT.instapay_phone ? `<div class="lrow"><span style="flex:1">${L("أو InstaPay على رقم", "Or InstaPay to mobile")}: <b style="direction:ltr;unicode-bidi:embed">${esc(CONTACT.instapay_phone)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.instapay_phone)}">${L("نسخ", "Copy")}</button></div>` : ""}
    ${CONTACT.instapay ? `<img src="instapay-qr.jpg" alt="InstaPay QR" style="display:block;width:180px;margin:6px auto;border-radius:8px;background:#fff"><p class="hint" style="text-align:center">${L("أو امسح الكود من تطبيق InstaPay", "Or scan with the InstaPay app")}</p>` : ""}
    ${CONTACT.bank ? `<div class="lrow"><span style="flex:1">${L("تحويل بنكي", "Bank transfer")}: <b>${esc(CONTACT.bank)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.bank)}">${L("نسخ", "Copy")}</button></div>` : ""}
    ${!CONTACT.instapay && !CONTACT.bank ? `<p class="hint">${L("بيانات الدفع هتتضاف قريب.", "Payment details coming soon.")}</p>` : ""}
