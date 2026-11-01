@@ -425,7 +425,7 @@ async function renderBrands(){
   ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده":"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
   ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها`:"البروفايل الشخصي: بيوصلك على تليجرام تنشره بضغطة",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
   ${row("in","#0a66c2","لينكدإن",li?(liExp?`بيتجدد تلقائي · آخر ميعاد ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="${li?"liRenew()":"wzLinkedIn()"}">${li?"تجديد":"اربط"}</button>`)}
-  ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="wzYouTube()">${yt?"تغيير":"اربط"}</button>`)}
+  ${row("▶","#ff0000","يوتيوب",yt?(b.youtube?.channel?`قناة ${esc(b.youtube.channel)} · بينزل لوحده`:"بينزل لوحده"):"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="${yt?"ytSwitch()":"wzYouTube()"}">${yt?"تغيير القناة":"اربط"}</button>`)}
  </div>
  <div class="box">
   ${row("tg","#229ed9","تليجرام",tg?"التقارير والتذكير شغالين":"تقارير النشر + تذكير المنصات اليدوي",tg,`<button class="btn sm" onclick="wzTelegram()">${tg?"تغيير":"اربط"}</button>`)}
@@ -523,6 +523,27 @@ async function finishYouTube(){
   await putSecret(sname(b,"YT_CLIENT_ID"),st.id);await putSecret(sname(b,"YT_CLIENT_SECRET"),st.sec);await putSecret(sname(b,"YT_REFRESH_TOKEN"),r.refresh_token);
   b.youtube={...(b.youtube||{}),privacy:b.youtube?.privacy||"public",channel:ch,connected_at:new Date().toISOString()};
   await saveBrands("connect youtube");tab("brands");renderBrands();toast(ch?`يوتيوب (${ch}) اتربط ✅`:"يوتيوب اتربط ✅",8000)}
+ catch(e){toast("يوتيوب: "+e.message,10000)}}
+
+// ---- YouTube: switch channel without pasting anything (client id comes from GitHub, code exchanged in a GitHub Action)
+async function ytWait(t0,step){for(let i=0;i<25;i++){await new Promise(r=>setTimeout(r,5000));try{const t=JSON.parse(await readFile("state/youtube.json"));if(t.at>=t0-60000&&t.step===step)return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
+window.ytSwitch=async()=>{const b=brands[curBrand];if(!hasSecret(b,"YT_CLIENT_SECRET"))return wzYouTube();
+ try{toast("بيجهّز… ثواني",30000);const t0=Date.now();
+  await gh(`${R()}/actions/workflows/youtube-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:"",redirect:YT_REDIRECT,prefix:pre(b)}})});
+  const t=await ytWait(t0,"id");if(!t.client_id)throw new Error("مفيش Client ID محفوظ");
+  sessionStorage.setItem("ytw_pending",JSON.stringify({brand:curBrand}));
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:t.client_id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"select_account consent",state:"ytw",scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}
+ catch(e){toast("يوتيوب: "+e.message,8000)}};
+async function finishYtSwitch(){
+ const q=new URLSearchParams(location.search);if(q.get("state")!=="ytw")return;
+ history.replaceState(null,"",YT_REDIRECT);
+ const st=JSON.parse(sessionStorage.getItem("ytw_pending")||"null");sessionStorage.removeItem("ytw_pending");
+ if(q.get("error")||!q.get("code")){toast("اتلغى",6000);return}
+ try{toast("بيربط القناة… ثواني",60000);curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
+  await gh(`${R()}/actions/workflows/youtube-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
+  const t=await ytWait(t0,"code");if(!t.connected)throw new Error(t.error||"فشل");
+  b.youtube={...(b.youtube||{}),privacy:b.youtube?.privacy||"public",channel:t.channel,connected_at:new Date().toISOString()};
+  await saveBrands("switch youtube channel");tab("brands");renderBrands();toast(`يوتيوب بقى على قناة ${t.channel} ✅`,8000)}
  catch(e){toast("يوتيوب: "+e.message,10000)}}
 
 // ---- TikTok wizard: Login Kit -> code comes back here -> GitHub Action exchanges it (client secret never leaves GitHub)
@@ -624,7 +645,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();liAutoRenew()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
