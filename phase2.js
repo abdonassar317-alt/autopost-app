@@ -71,6 +71,7 @@ const scheduleChecks = () => { clearTimeout(checkT); checkT = setTimeout(renderC
 
 // ------------------------------------------------------------------ per-platform captions
 const perCap = {};
+window.setPerCap = (k, v) => { perCap[k] = v; renderPer(); const d = $("#c-per-wrap"); if (d) d.open = true; scheduleChecks(); autosave(); };
 window.perCaps = plats => { const o = {}; for (const k of plats) if ((perCap[k] || "").trim()) o[k] = perCap[k]; return o; };
 function renderPer() {
   const el = $("#c-per"); if (!el) return;
