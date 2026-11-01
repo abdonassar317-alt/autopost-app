@@ -201,16 +201,18 @@ function settingsBoxes() {
     const b = document.createElement("div"); b.className = "box"; b.id = "host-box"; b.setAttribute("data-i18n-skip", "");
     b.innerHTML = `<div class="lbl">${L("حسابات جوه التطبيق (للعملاء)", "Accounts inside the app (clients)")}</div>
       <p class="note">${L("العميل يسجّل بإيميل وباسورد بس، وبياناته تتحفظ في فولدر لوحده في الريبو الخاص بتاعك. إنت مش محتاج تعمل حاجة غير قبول الدفع.", "Clients sign up with e-mail + password only; their data lives in its own folder in your private repo. You only approve payments.")}</p>
-      <div id="host-st" class="hint">…</div><div class="two f"><button class="btn sm pri" id="host-on">${L("تشغيل / تحديث", "Turn on / refresh")}</button><button class="btn sm" id="host-users">${L("الحسابات", "Accounts")}</button></div>`;
+      <div id="host-st" class="hint">…</div>
+      <div id="host-k" class="f" style="display:none"><div class="lbl">${L("مفتاح صندوق المدفوعات (ADMIN_KEY)", "Payment-inbox key (ADMIN_KEY)")}</div><input id="host-kin" dir="ltr" autocomplete="off" placeholder="ADMIN_KEY"></div><div class="two f"><button class="btn sm pri" id="host-on">${L("تشغيل / تحديث", "Turn on / refresh")}</button><button class="btn sm" id="host-users">${L("الحسابات", "Accounts")}</button></div>`;
     const anchor = document.getElementById("sub-box"); if (anchor) anchor.after(b); else set.appendChild(b);
-    const key = () => ls.get("ap_inbox_key") || "";
+    const key = () => { const v = b.querySelector("#host-kin")?.value.trim(); if (v) ls.set("ap_inbox_key", v); return ls.get("ap_inbox_key") || ""; };
+    if (!ls.get("ap_inbox_key")) b.querySelector("#host-k").style.display = "";
     const st = async () => { const el = b.querySelector("#host-st");
       try { const r = await api({ action: "hello" }); el.textContent = r.version ? (r.hosted ? L("✓ شغال — العملاء يقدروا يسجّلوا", "✓ On — clients can sign up") : L("مقفول — دوس «تشغيل»", "Off — press Turn on"))
         : L("محتاج تحدّث كود Apps Script الأول (tools/payments-inbox.gs) وتعمل New version", "Update the Apps Script code first (tools/payments-inbox.gs) and deploy a New version"); }
       catch (e) { el.textContent = L("مش قادر أوصل للسيرفر", "Can't reach the server"); } };
     st();
     b.querySelector("#host-on").onclick = async (ev) => { const btn = ev.target;
-      if (!key()) return toast(L("الصق مفتاح صندوق المدفوعات الأول (الإعدادات ← العملاء والمدفوعات)", "Paste the payment-inbox key first (Settings → Customers & payments)"), 7000);
+      if (!key()) { b.querySelector("#host-k").style.display = ""; return toast(L("الصق مفتاح صندوق المدفوعات في الخانة الأول", "Paste the payment-inbox key in the box first"), 7000); }
       btn.disabled = true;
       try {
         // the vault: clients' tokens are sealed to this key; the private half lives only in your GitHub Secrets (VAULT_KEY)
