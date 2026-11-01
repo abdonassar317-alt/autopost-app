@@ -8,7 +8,7 @@
  *
  * Only Abdo's app knows ADMIN_KEY. Codes are signed in Abdo's app — this script never holds the signing key.
  *
- * Setup (once): Extensions ▸ Apps Script ▸ paste this file ▸ Services (+) ▸ Drive API ▸ Add
+ * Setup (once): script.google.com ▸ New project ▸ paste this file ▸ save
  *   ▸ run setup() once and allow ▸ Deploy ▸ New deployment ▸ Web app ▸ Execute as: Me ▸ Who has access: Anyone ▸ Deploy.
  *   Copy the web-app URL and the admin key printed by setup() into AutoPost (Settings ▸ Customers & payments ▸ Inbox).
  */
@@ -16,6 +16,7 @@ const PRICES = { month: 200, year: 1200 };
 const FOLDER = "AutoPost payments";
 
 function setup() {
+  DriveApp.getRootFolder(); UrlFetchApp; // asks for the Drive + fetch permissions once
   const p = PropertiesService.getScriptProperties();
   if (!p.getProperty("ADMIN_KEY")) p.setProperty("ADMIN_KEY", Utilities.getUuid().replace(/-/g, ""));
   folder_();
@@ -35,15 +36,18 @@ const admin_ = (k) => k && k === db_().getProperty("ADMIN_KEY");
 const clean_ = (u) => String(u || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 39);
 
 function ocr_(blob) {
-  try { // Drive API v3
-    const f = Drive.Files.create({ name: "ocr-tmp", mimeType: "application/vnd.google-apps.document" }, blob, { ocrLanguage: "ar" });
-    const t = DocumentApp.openById(f.id).getBody().getText(); DriveApp.getFileById(f.id).setTrashed(true); return t;
-  } catch (e) {
-    try { // Drive API v2
-      const f = Drive.Files.insert({ title: "ocr-tmp", mimeType: "application/vnd.google-apps.document" }, blob, { ocr: true, ocrLanguage: "ar" });
-      const t = DocumentApp.openById(f.id).getBody().getText(); DriveApp.getFileById(f.id).setTrashed(true); return t;
-    } catch (e2) { return ""; }
-  }
+  // Google Drive's free OCR through its REST API — no extra "Services" needed
+  try {
+    const token = ScriptApp.getOAuthToken(), bd = "ap" + Date.now();
+    const meta = JSON.stringify({ name: "ocr-tmp", mimeType: "application/vnd.google-apps.document" });
+    const payload = Utilities.newBlob("--" + bd + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n" + meta + "\r\n--" + bd + "\r\nContent-Type: " + blob.getContentType() + "\r\n\r\n").getBytes()
+      .concat(blob.getBytes()).concat(Utilities.newBlob("\r\n--" + bd + "--").getBytes());
+    const r = JSON.parse(UrlFetchApp.fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&ocrLanguage=ar",
+      { method: "post", contentType: "multipart/related; boundary=" + bd, payload, headers: { Authorization: "Bearer " + token } }).getContentText());
+    const text = UrlFetchApp.fetch("https://www.googleapis.com/drive/v3/files/" + r.id + "/export?mimeType=text/plain", { headers: { Authorization: "Bearer " + token } }).getContentText();
+    DriveApp.getFileById(r.id).setTrashed(true);
+    return text;
+  } catch (e) { return ""; }
 }
 
 // read what the screenshot says: amounts, the AP- reference, InstaPay words
