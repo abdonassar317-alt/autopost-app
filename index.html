@@ -76,7 +76,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .item .cap{font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .item .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
 .st{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--mut)}
-.st span{display:inline-flex;align-items:center;gap:5px}
+.st span,.st a{display:inline-flex;align-items:center;gap:5px;color:inherit;text-decoration:none}
 .st i{width:7px;height:7px;border-radius:50%;background:#c9c8c3}
 .st .ok i{background:var(--ok)}.st .bad{color:var(--bad)}.st .bad i{background:var(--bad)}.st .man i{background:var(--warn)}
 .more{background:none;border:0;color:var(--mut);padding:2px;height:28px;cursor:pointer;align-self:flex-start}
@@ -209,7 +209,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <script src="vendor-nacl.js"></script>
 <script src="vendor-blake.js"></script>
 <script>
-const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
+const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
 const NAMES=Object.fromEntries(PLATS.map(p=>[p[0],p[1]]));
 const TITLES={compose:"بوست جديد",list:"المجدول",brands:"الحسابات",settings:"الإعدادات"};
@@ -231,9 +231,16 @@ function tab(name){
 document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 
 // ---------- GitHub
+function ghMsg(st,t,path){
+ if(st===401)return "توكن GitHub غلط أو انتهت صلاحيته. افتح الإعدادات ← اعمل توكن جديد والصقه (GitHub 401)";
+ if(st===403&&/rate limit/i.test(t))return "GitHub بيقول استخدامك كتير دلوقتي — استنى دقايق وجرب تاني (GitHub 403)";
+ if(st===403)return "التوكن مش معاه الصلاحية المطلوبة (Contents / Secrets / Actions: Read and write) — عدّله من GitHub (GitHub 403)";
+ if(st===404)return "المستودع أو الملف مش موجود، أو التوكن مش مسموحله يشوفه — اتأكد من اسم المستودع في الإعدادات (GitHub 404)";
+ if(st===422&&/fast forward/i.test(t))return "حصل تعديل في نفس اللحظة من عملية تانية — جرّب تاني (GitHub 422)";
+ return `GitHub ${st}: ${t.slice(0,160)}`}
 async function gh(path,opt={}){
- const r=await fetch(`https://api.github.com${path}`,{...opt,headers:{Authorization:`Bearer ${cfg.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
- if(!r.ok){const t=await r.text();throw new Error(`GitHub ${r.status}: ${t.slice(0,160)}`)}
+ const r=await fetch(`https://api.github.com${path}`,{cache:"no-store",...opt,headers:{Authorization:`Bearer ${cfg.token}`,Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(opt.headers||{})}});
+ if(!r.ok){const t=await r.text();const e=new Error(ghMsg(r.status,t,path));e.status=r.status;e.raw=t;throw e}
  return r.status===204?null:(opt.raw?r.text():r.json());
 }
 const R=()=>`/repos/${cfg.owner}/${cfg.repo}`;
@@ -245,12 +252,14 @@ async function commit(changes,message,onP){
   else{const b=await gh(`${R()}/git/blobs`,{method:"POST",body:JSON.stringify({content:c.b64,encoding:"base64"})});blobs.push({path:c.path,mode:"100644",type:"blob",sha:b.sha})}
   onP&&onP(++i/changes.length);
  }
- for(let a=0;a<4;a++){
-  const ref=await gh(`${R()}/git/ref/heads/${cfg.branch}`);
+ // another process (the publisher bot) may push at the same moment: rebuild on the newest commit and retry — never force
+ for(let a=0;a<7;a++){
+  const ref=await gh(`${R()}/git/ref/heads/${cfg.branch}?t=${Date.now()}`);
   const head=await gh(`${R()}/git/commits/${ref.object.sha}`);
   const tree=await gh(`${R()}/git/trees`,{method:"POST",body:JSON.stringify({base_tree:head.tree.sha,tree:blobs})});
   const cm=await gh(`${R()}/git/commits`,{method:"POST",body:JSON.stringify({message,tree:tree.sha,parents:[ref.object.sha]})});
-  try{await gh(`${R()}/git/refs/heads/${cfg.branch}`,{method:"PATCH",body:JSON.stringify({sha:cm.sha})});return}catch(e){if(a===3)throw e;await new Promise(r=>setTimeout(r,1500))}
+  try{await gh(`${R()}/git/refs/heads/${cfg.branch}`,{method:"PATCH",body:JSON.stringify({sha:cm.sha})});return}
+  catch(e){if(e.status!==422||a===6)throw e;await new Promise(r=>setTimeout(r,800*2**a+Math.random()*500))}
  }
 }
 const utf8b64=s=>btoa(unescape(encodeURIComponent(s)));
@@ -262,8 +271,20 @@ function fillThumbs(){document.querySelectorAll("img[data-pid]").forEach(async i
 async function runNow(){try{await gh(`${R()}/actions/workflows/publish.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch})});return true}catch(e){return false}}
 
 // ---------- compose
-$("#c-plats").innerHTML=PLATS.map(([k,n,c])=>`<div class="chip${sel.has(k)?" on":""}" data-k="${k}"><span class="d" style="background:${c}"></span>${n}${MANUAL.has(k)?" <small>تذكير</small>":""}</div>`).join("");
-document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on")});
+// what each platform can REALLY do for this account right now: "auto" (publishes itself), "manual" (Telegram + one-tap), "off" (not connected)
+function capOf(b,k){b=b||{};const has=n=>hasSecret(b,n);
+ if(k==="instagram")return((b.instagram?.login==="instagram"&&has("IG_TOKEN"))||(has("META_TOKEN")&&b.instagram?.user_id))?"auto":"off";
+ if(k==="facebook")return has("META_TOKEN")&&b.facebook?.page_id?"auto":"off";
+ if(k==="linkedin")return has("LINKEDIN_TOKEN")?"auto":"off";
+ if(k==="youtube")return has("YT_REFRESH_TOKEN")?"auto":"off";
+ if(k==="tiktok")return has("TT_REFRESH_TOKEN")&&b.tiktok?.audited?"auto":"manual";
+ if(k==="pinterest")return has("PIN_REFRESH_TOKEN")&&b.pinterest?.board_id&&b.pinterest?.approved?"auto":"manual";
+ return "manual"}
+const CAPTXT={auto:"",manual:"تذكير",off:"مش متصل"};
+function renderChips(){const b=brands[$("#c-brand")?.value||curBrand];
+ $("#c-plats").innerHTML=PLATS.map(([k,n,c])=>{const cp=secretNames?capOf(b,k):(MANUAL.has(k)?"manual":"");return `<div class="chip${sel.has(k)?" on":""}" data-k="${k}" title="${cp==="auto"?"بينزل لوحده":cp==="manual"?"بيوصلك على تليجرام تنشره بضغطة":cp==="off"?"اربطه من الحسابات":""}"><span class="d" style="background:${c}"></span>${n}${CAPTXT[cp]?` <small>${CAPTXT[cp]}</small>`:""}</div>`}).join("");
+ document.querySelectorAll("#c-plats .chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on")})}
+setTimeout(renderChips,0);
 function setDefaultTime(){const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);const p=n=>String(n).padStart(2,"0");$("#c-date").value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;$("#c-hour").value=`${p(d.getHours())}:00`}
 setDefaultTime();
 $("#c-caption").oninput=e=>$("#c-count").textContent=e.target.value.length;
@@ -334,7 +355,8 @@ function renderList(){
   const day=d.toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
   if(day!==last){h+=`<div class="dayh">${day}</div>`;last=day}
   const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
-  const st=p.platforms.map(k=>{const v=s[k];let c="",t=NAMES[k]||k;if(v?.ok&&v.manual){c="man";t+=" · تذكير"}else if(v?.ok)c="ok";else if(v?.skipped){t+=" · اتلغى"}else if(v){c="bad";t+=" · فشل"}return`<span class="${c}"><i></i>${t}</span>`}).join("");
+  const st=p.platforms.map(k=>{const v=s[k];let c="",t=NAMES[k]||k;if(v?.ok&&v.manual){c="man";t+=" · تذكير"}else if(v?.ok)c="ok";else if(v?.skipped){t+=" · اتلغى"}else if(v?.needs_action){c="bad";t+=" · محتاج تدخل"}else if(v){c="bad";t+=(v.attempts>=3?" · فشل":" · هيتجرب تاني")}
+   return v?.ok&&v.url?`<a class="${c}" href="${esc(v.url)}" target="_blank" rel="noopener"><i></i>${t} ↗</a>`:`<span class="${c}"><i></i>${t}</span>`}).join("");
   const th=p.kind==="video"?`<div class="vid">${ic("play")}</div>`:`<img data-pid="${id}" data-f="${p.media[0]}" alt="">`;
   h+=`<div class="item"><div class="tm">${hm}</div>${th}<div class="body"><div class="cap">${esc(p.label||p.caption||"بدون كابشن")}</div>
    <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div></div>
@@ -390,6 +412,7 @@ async function loadBrands(){
  try{brands=JSON.parse(await readFile("config/brands.json")).brands}catch(e){brands={default:{name:"حسابي"}}}
  if(!brands[curBrand])curBrand=Object.keys(brands)[0];
  $("#c-brand").innerHTML=Object.entries(brands).map(([k,b])=>`<option value="${esc(k)}">${esc(b.name||k)}</option>`).join("");
+ $("#c-brand").onchange=renderChips;if(secretNames===null)loadSecrets().then(renderChips);else renderChips();
 }
 async function loadSecrets(){
  if(window.DEMO_SECRETS){secretNames=window.DEMO_SECRETS;return}
@@ -416,21 +439,23 @@ async function renderBrands(){
  const b=brands[curBrand]||{};const tg=hasSecret(b,"TELEGRAM_BOT_TOKEN")||(secretNames&&secretNames.has("TELEGRAM_BOT_TOKEN"));
  const meta=hasSecret(b,"META_TOKEN")&&b.facebook?.page_id;
  const igOk=(b.instagram?.login==="instagram"&&hasSecret(b,"IG_TOKEN"))||(meta&&b.instagram?.user_id);
- const li=hasSecret(b,"LINKEDIN_TOKEN");const ttOk=hasSecret(b,"TT_REFRESH_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
+ const li=hasSecret(b,"LINKEDIN_TOKEN");const ttOk=hasSecret(b,"TT_REFRESH_TOKEN");const pinOk=hasSecret(b,"PIN_REFRESH_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
  const liExp=b.linkedin?.connected_at?new Date(new Date(b.linkedin.connected_at).getTime()+59*864e5):null;
  const row=(lg,col,name,sub,ok,btn)=>`<div class="conn"><div class="lg" style="background:${col}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${ok?'<span class="pill ok">متصل</span>':""}${btn}</div>`;
  $("#b-panel").innerHTML=`${secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
  <div class="box"><div class="lbl">اسم العميل / البراند</div><div class="two"><input id="bn" value="${esc(b.name||"")}"><button class="btn" onclick="renameBrand()">حفظ الاسم</button></div></div>
  <div class="box">
-  ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده":"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
-  ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها`:"البروفايل الشخصي: بيوصلك على تليجرام تنشره بضغطة",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
-  ${row("in","#0a66c2","لينكدإن",li?(liExp?`بيتجدد تلقائي · آخر ميعاد ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="${li?"liRenew()":"wzLinkedIn()"}">${li?"تجديد":"اربط"}</button>`)}
+  ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده"+(b.ig_to_fb===false?" · ميتا بتشيّره على بروفايلك في فيسبوك":""):"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
+  ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها لو اخترت «صفحة فيسبوك» في البوست`:"البروفايل الشخصي: بينزل عن طريق مشاركة إنستجرام التلقائية",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
+  ${row("in","#0a66c2","لينكدإن",li?(liExp?`بينزل لوحده · بيتجدد لما تفتح الأداة قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="${li?"liRenew()":"wzLinkedIn()"}">${li?"تجديد":"اربط"}</button>`)}
   ${row("▶","#ff0000","يوتيوب",yt?(b.youtube?.channel?`قناة ${esc(b.youtube.channel)} · بينزل لوحده`:"بينزل لوحده"):"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="${yt?"ytSwitch()":"wzYouTube()"}">${yt?"تغيير القناة":"اربط"}</button>`)}
  </div>
  <div class="box">
   ${row("tg","#229ed9","تليجرام",tg?"التقارير والتذكير شغالين":"تقارير النشر + تذكير المنصات اليدوي",tg,`<button class="btn sm" onclick="wzTelegram()">${tg?"تغيير":"اربط"}</button>`)}
-  ${row("tt","#111","تيك توك",ttOk?`${esc(b.tiktok?.name||"متصل")} · بينزل لوحده`:"اربطه عشان ينزل لوحده",ttOk,`<button class="btn sm" onclick="wzTikTok()">${ttOk?"تغيير":"اربط"}</button>`)}
-  ${row("sc","#fffc00;color:#111","سناب، X","زرار نشر بضغطة في الميعاد",false,"")}
+  ${row("tt","#111","تيك توك",ttOk?(b.tiktok?.audited?`${esc(b.tiktok?.name||"متصل")} · بينزل لوحده`:`${esc(b.tiktok?.name||"متصل")} · تذكير على تليجرام لحد ما تيك توك يوافق على التطبيق`):"تذكير على تليجرام + زرار نشر بضغطة",ttOk&&b.tiktok?.audited,`<button class="btn sm" onclick="wzTikTok()">${ttOk?"تغيير":"اربط"}</button>`)}
+  ${row("P","#e60023","بنترست",pinOk?(b.pinterest?.approved?`${esc(b.pinterest.username||"")} · لوحة ${esc(b.pinterest.board_name||"؟")} · بينزل لوحده`:`${esc(b.pinterest.username||"متصل")} · تذكير لحد ما بنترست يوافق (Standard access)`):"تذكير على تليجرام · أو اربطه",pinOk&&b.pinterest?.approved,`<button class="btn sm" onclick="wzPinterest()">${pinOk?"تغيير":"اربط"}</button>`)}
+  ${row("sc","#fffc00;color:#111","سناب شات","تذكير على تليجرام + زرار نشر بضغطة (سناب مش بيسمح بالنشر الأوتوماتيك من غير موافقته)",false,"")}
+  ${row("X","#111","X (تويتر)","تذكير على تليجرام + زرار نشر بضغطة · النشر الأوتوماتيك مدفوع من X (~0.015$ للبوست)",false,"")}
  </div>
  ${curBrand!=="default"?`<button class="btn sm" style="color:var(--bad)" onclick="delBrand()">${ic("trash")} حذف العميل ده</button>`:""}`;
 }
@@ -498,6 +523,11 @@ window.wzInstagram=()=>{const b=brands[curBrand];
    await saveBrands("connect instagram");closeSheet();renderBrands();toast(me.username?`إنستجرام @${me.username} اتربط`:"إنستجرام اتربط",6000)}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
 
+// ---- OAuth state: random nonce per sign-in, checked when the platform sends you back
+function oState(kind){const n=kind+"."+[...crypto.getRandomValues(new Uint8Array(12))].map(b=>b.toString(16).padStart(2,"0")).join("");try{sessionStorage.setItem("oauth_state_"+kind,n)}catch(e){}return n}
+function oCheck(kind){const q=new URLSearchParams(location.search),st=q.get("state")||"";if(!st.startsWith(kind+"."))return null;
+ let ok=false;try{ok=sessionStorage.getItem("oauth_state_"+kind)===st;sessionStorage.removeItem("oauth_state_"+kind)}catch(e){}
+ history.replaceState(null,"",YT_REDIRECT);if(!ok){toast("رابط الرجوع ده مش من الجلسة دي — اعمل الربط تاني من الأداة",8000);return null}return q}
 // ---- YouTube wizard: paste Client ID + secret once, then Google sign-in returns here and we exchange the code
 const YT_REDIRECT=location.origin+location.pathname;
 window.wzYouTube=()=>{
@@ -508,10 +538,9 @@ window.wzYouTube=()=>{
   <div class="nav"><button class="btn pri" id="y-ok">ربط بجوجل</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#y-ok").onclick=()=>{const id=$("#y-id").value.trim(),sec=$("#y-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");
   sessionStorage.setItem("yt_pending",JSON.stringify({id,sec,brand:curBrand}));
-  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"consent",state:"yt",scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}};
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"consent",state:oState("yt"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}};
 async function finishYouTube(){
- const q=new URLSearchParams(location.search);if(q.get("state")!=="yt")return;
- history.replaceState(null,"",YT_REDIRECT);
+ const q=oCheck("yt");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("yt_pending")||"null");sessionStorage.removeItem("yt_pending");
  if(q.get("error")||!q.get("code")||!st){toast("ربط يوتيوب اتلغى",6000);return}
  try{toast("بيربط يوتيوب…",20000);
@@ -532,11 +561,10 @@ window.ytSwitch=async()=>{const b=brands[curBrand];if(!hasSecret(b,"YT_CLIENT_SE
   await gh(`${R()}/actions/workflows/youtube-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:"",redirect:YT_REDIRECT,prefix:pre(b)}})});
   const t=await ytWait(t0,"id");if(!t.client_id)throw new Error("مفيش Client ID محفوظ");
   sessionStorage.setItem("ytw_pending",JSON.stringify({brand:curBrand}));
-  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:t.client_id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"select_account consent",state:"ytw",scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:t.client_id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"select_account consent",state:oState("ytw"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}
  catch(e){toast("يوتيوب: "+e.message,8000)}};
 async function finishYtSwitch(){
- const q=new URLSearchParams(location.search);if(q.get("state")!=="ytw")return;
- history.replaceState(null,"",YT_REDIRECT);
+ const q=oCheck("ytw");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("ytw_pending")||"null");sessionStorage.removeItem("ytw_pending");
  if(q.get("error")||!q.get("code")){toast("اتلغى",6000);return}
  try{toast("بيربط القناة… ثواني",60000);curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
@@ -557,11 +585,10 @@ window.wzTikTok=()=>{
  $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
-   location.href="https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:"tt"})}
+   location.href="https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")})}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
 async function finishTikTok(){
- const q=new URLSearchParams(location.search);if(q.get("state")!=="tt")return;
- history.replaceState(null,"",YT_REDIRECT);
+ const q=oCheck("tt");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("tt_pending")||"null");sessionStorage.removeItem("tt_pending");
  if(q.get("error")||!q.get("code")){toast("ربط تيك توك اتلغى: "+(q.get("error_description")||q.get("error")||""),8000);return}
  try{toast("بيربط تيك توك… ثواني",60000);
@@ -575,7 +602,7 @@ async function finishTikTok(){
 // ---- LinkedIn wizard: sign in on LinkedIn -> code comes back here -> GitHub Action exchanges it (secret stays in GitHub)
 const LI_CLIENT_ID_DEFAULT="78ozcr6ezgdlyu";
 function liGo(id){sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
- location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:"li",scope:"openid profile w_member_social"})}
+ location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"})}
 // one-tap renew: secret already in GitHub, and LinkedIn skips the consent screen for scopes you already approved
 window.liRenew=()=>{const b=brands[curBrand];const id=b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT;if(hasSecret(b,"LI_CLIENT_SECRET"))liGo(id);else wzLinkedIn()};
 // auto-renew when the token is 50+ days old (at most once a day, only when you open the app)
@@ -591,11 +618,10 @@ window.wzLinkedIn=()=>{
  $("#l-ok").onclick=async()=>{const id=$("#l-id").value.trim(),sec=$("#l-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#l-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"LI_CLIENT_ID"),id);await putSecret(sname(b,"LI_CLIENT_SECRET"),sec);
    sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
-   location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:"li",scope:"openid profile w_member_social"})}
+   location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"})}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بلينكدإن"}}};
 async function finishLinkedIn(){
- const q=new URLSearchParams(location.search);if(q.get("state")!=="li")return;
- history.replaceState(null,"",YT_REDIRECT);
+ const q=oCheck("li");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("li_pending")||"null");sessionStorage.removeItem("li_pending");
  if(q.get("error")||!q.get("code")){toast("ربط لينكدإن اتلغى: "+(q.get("error_description")||q.get("error")||""),8000);return}
  try{toast("بيربط لينكدإن… ثواني",60000);
@@ -606,6 +632,39 @@ async function finishLinkedIn(){
   b.linkedin={...(b.linkedin||{}),author:"",name,client_id:st?.id||b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT,connected_at:new Date().toISOString()};await saveBrands("connect linkedin");secretNames&&secretNames.add(sname(b,"LINKEDIN_TOKEN"));
   tab("brands");renderBrands();toast(ok?`لينكدإن (${name||"بروفايلك"}) اتربط ✅`:"لينكدإن بيتربط — حدّث الصفحة بعد دقيقة",8000)}
  catch(e){toast("لينكدإن: "+e.message,10000)}}
+
+// ---- Pinterest wizard
+window.wzPinterest=()=>{const b=brands[curBrand];const pinOk=hasSecret(b,"PIN_REFRESH_TOKEN");
+ if(pinOk&&b.pinterest?.boards?.length)return pinBoards();
+ sheet(`<div class="wz"><h3>ربط بنترست</h3><div class="sub">مجاني. بس البنات بتفضل مخفية لحد ما بنترست يوافق على تطبيقك (Standard access) — لحد كده هيوصلك تذكير.</div><ol class="steps">
+  <li>افتح <a href="https://developers.pinterest.com/apps/" target="_blank" rel="noopener">Pinterest Developers ← My apps</a> واعمل تطبيق (حساب بنترست Business)</li>
+  <li>في التطبيق ضيف Redirect URI: <code dir="ltr">${esc(YT_REDIRECT)}</code></li>
+  <li>انسخ <b>App ID</b> و <b>App secret key</b> والصقهم هنا ← <b>ربط</b> ← وافق</li></ol>
+  <div class="lbl">App ID</div><input id="p-id" dir="ltr" autocomplete="off"><div class="lbl">App secret key</div><input id="p-sec" dir="ltr" type="password" autocomplete="new-password">
+  <div class="nav"><button class="btn pri" id="p-ok">ربط ببنترست</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#p-ok").onclick=async()=>{const id=$("#p-id").value.trim(),sec=$("#p-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#p-ok");btn.disabled=true;btn.textContent="بيحفظ…";
+  try{await putSecret(sname(b,"PIN_CLIENT_ID"),id);await putSecret(sname(b,"PIN_CLIENT_SECRET"),sec);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+   sessionStorage.setItem("pin_pending",JSON.stringify({brand:curBrand}));
+   location.href="https://www.pinterest.com/oauth/?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",scope:"boards:read,pins:read,pins:write,user_accounts:read",state:oState("pin")})}
+  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط ببنترست"}}};
+async function finishPinterest(){const q=oCheck("pin");if(!q)return;
+ const st=JSON.parse(sessionStorage.getItem("pin_pending")||"null");sessionStorage.removeItem("pin_pending");
+ if(q.get("error")||!q.get("code")){toast("ربط بنترست اتلغى",8000);return}
+ try{toast("بيربط بنترست… ثواني",60000);curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
+  await gh(`${R()}/actions/workflows/pinterest-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
+  let t=null;for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const x=JSON.parse(await readFile("state/pinterest.json"));if(x.at>=t0-60000){t=x;break}}catch(e){}}
+  if(!t)throw new Error("GitHub اتأخر — حدّث الصفحة بعد دقيقة");if(!t.connected)throw new Error(t.error||"فشل");
+  b.pinterest={...(b.pinterest||{}),username:t.username,boards:t.boards,connected_at:new Date().toISOString()};secretNames&&secretNames.add(sname(b,"PIN_REFRESH_TOKEN"));
+  await saveBrands("connect pinterest");tab("brands");renderBrands();pinBoards()}
+ catch(e){toast("بنترست: "+e.message,10000)}}
+window.pinBoards=()=>{const b=brands[curBrand],bs=b.pinterest?.boards||[];
+ sheet(`<div class="wz"><h3>تنزل على أنهي لوحة؟</h3>${bs.length?"":'<p class="note">مفيش لوحات — اعمل لوحة في بنترست وارجع اضغط ربط تاني.</p>'}
+  ${bs.map(x=>`<button class="btn" style="width:100%;justify-content:flex-start;margin:4px 0" onclick="pinPick('${esc(x.id)}')">${esc(x.name)}${b.pinterest?.board_id===x.id?" ✓":""}</button>`).join("")}
+  <label style="display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="p-app" ${b.pinterest?.approved?"checked":""} style="width:auto"> بنترست وافق على التطبيق (Standard access) — انشر أوتوماتيك</label>
+  <div class="nav"><button class="btn" onclick="closeSheet()">تمام</button></div></div>`);
+ $("#p-app").onchange=async e=>{b.pinterest.approved=e.target.checked;try{await saveBrands("pinterest approval flag");renderBrands();toast(e.target.checked?"بنترست هينزل أوتوماتيك":"بنترست هيبقى تذكير")}catch(x){toast(x.message)}}};
+window.pinPick=async id=>{const b=brands[curBrand];const x=(b.pinterest.boards||[]).find(y=>y.id===id);b.pinterest.board_id=id;b.pinterest.board_name=x?.name||"";
+ try{await saveBrands("pinterest board");closeSheet();renderBrands();toast(`هينزل على لوحة ${x?.name||""}`)}catch(e){toast(e.message)}};
 
 // ---- Telegram wizard
 window.wzTelegram=(step=1,st={})=>{const b=brands[curBrand];
@@ -645,7 +704,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();liAutoRenew()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
