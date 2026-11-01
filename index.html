@@ -404,7 +404,7 @@ async function renderBrands(){
   ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده":"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
   ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها`:"البروفايل الشخصي: بيوصلك على تليجرام تنشره بضغطة",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
   ${row("in","#0a66c2","لينكدإن",li?(liExp?`جدّد قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="wzLinkedIn()">${li?"تجديد":"اربط"}</button>`)}
-  ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"هنربطه سوا لما تحتاجه",yt,"")}
+  ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="wzYouTube()">${yt?"تغيير":"اربط"}</button>`)}
  </div>
  <div class="box">
   ${row("tg","#229ed9","تليجرام",tg?"التقارير والتذكير شغالين":"تقارير النشر + تذكير المنصات اليدوي",tg,`<button class="btn sm" onclick="wzTelegram()">${tg?"تغيير":"اربط"}</button>`)}
@@ -474,6 +474,25 @@ window.wzInstagram=()=>{const b=brands[curBrand];
    if(!window.DEMO_SECRETS&&cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    b.instagram={login:"instagram",user_id:me.user_id||"",username:me.username||"",connected_at:new Date().toISOString()};
    await saveBrands("connect instagram");closeSheet();renderBrands();toast(me.username?`إنستجرام @${me.username} اتربط`:"إنستجرام اتربط",6000)}
+  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
+
+// ---- YouTube wizard (Google OAuth via OAuth Playground — no server needed)
+window.wzYouTube=()=>{const b=brands[curBrand];
+ sheet(`<div class="wz"><h3>ربط يوتيوب</h3><div class="sub">مرة واحدة بس — بعدها الفيديوهات تنزل لوحدها</div><ol class="steps">
+  <li>افتح <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud ← New project</a> باسم <code>AutoPost</code> ← Create</li>
+  <li>فعّل <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">YouTube Data API v3</a> ← Enable</li>
+  <li>من <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">Google Auth Platform</a> ← Get started ← اسم التطبيق وإيميلك ← <b>External</b> ← Create. وبعدين من <b>Audience</b> اضغط <b>Publish app</b> (عشان الربط مايقفش بعد أسبوع)</li>
+  <li>من <a href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noopener">Clients ← Create client</a> اختار <b>Web application</b> وفي Authorized redirect URIs حط:<code style="display:block;margin-top:6px">https://developers.google.com/oauthplayground</code> ← Create ← انسخ Client ID و Client secret</li>
+  <li>افتح <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener">OAuth Playground</a> ← ⚙️ فوق ← علّم <b>Use your own OAuth credentials</b> وحط الاتنين ← في الخانة على الشمال اكتب <code>https://www.googleapis.com/auth/youtube.upload</code> ← Authorize APIs ← اختار قناتك ووافق ← <b>Exchange authorization code for tokens</b> ← انسخ <b>Refresh token</b></li></ol>
+  <div class="lbl">Client ID</div><input id="y-id" dir="ltr"><div class="lbl">Client secret</div><input id="y-sec" dir="ltr" type="password"><div class="lbl">Refresh token</div><input id="y-rt" dir="ltr" type="password" placeholder="1//…">
+  <div class="nav"><button class="btn pri" id="y-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#y-ok").onclick=async()=>{const id=$("#y-id").value.trim(),sec=$("#y-sec").value.trim(),rt=$("#y-rt").value.trim();if(!id||!sec||!rt)return toast("حط التلاتة");const btn=$("#y-ok");btn.disabled=true;btn.textContent="بيتأكد…";
+  try{const r=await (await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:id,client_secret:sec,refresh_token:rt,grant_type:"refresh_token"})})).json();
+   if(r.error)throw new Error(r.error_description||r.error);
+   let ch="";try{const c=await (await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",{headers:{Authorization:"Bearer "+r.access_token}})).json();ch=c.items?.[0]?.snippet?.title||""}catch(e){}
+   await putSecret(sname(b,"YT_CLIENT_ID"),id);await putSecret(sname(b,"YT_CLIENT_SECRET"),sec);await putSecret(sname(b,"YT_REFRESH_TOKEN"),rt);
+   b.youtube={...(b.youtube||{}),privacy:b.youtube?.privacy||"public",channel:ch,connected_at:new Date().toISOString()};
+   await saveBrands("connect youtube");closeSheet();renderBrands();toast(ch?`يوتيوب (${ch}) اتربط`:"يوتيوب اتربط",6000)}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
 
 // ---- LinkedIn wizard
