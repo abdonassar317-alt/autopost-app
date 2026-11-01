@@ -430,7 +430,7 @@ window.wzMeta=(step=1,st={})=>{
   <li>من القايمة: <b>App settings ← Basic</b> انسخ <b>App ID</b> و <b>App Secret</b></li></ol>
   <div class="lbl">App ID</div><input id="m-id" dir="ltr" value="${esc(st.id||"")}"><div class="lbl f">App Secret <span>مش بيتحفظ</span></div><input id="m-sec" dir="ltr" type="password" value="${esc(st.sec||"")}">
   <div class="nav"><button class="btn pri" id="m-n">التالي</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`),
-  $("#m-n").onclick=()=>{const id=$("#m-id").value.trim(),sec=$("#m-sec").value.trim();if(!id||!sec)return toast("حط App ID و App Secret");wzMeta(2,{id,sec})};
+  $("#m-n").onclick=()=>{const id=$("#m-id").value.trim(),sec=$("#m-sec").value.trim();if(!id)return toast("حط App ID");wzMeta(2,{id,sec})};
  if(step===2)sheet(`<div class="wz"><h3>ربط فيسبوك وإنستجرام</h3><div class="sub">خطوة 2 من 3</div><ol class="steps">
   <li>افتح <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener">Graph API Explorer</a></li>
   <li>من <b>Meta App</b> على اليمين اختار تطبيقك</li>
@@ -440,8 +440,9 @@ window.wzMeta=(step=1,st={})=>{
   <div class="nav"><button class="btn pri" id="m-n">التالي</button><button class="btn" onclick="wzMeta(1,${esc(JSON.stringify(st))})">رجوع</button></div></div>`),
   $("#m-n").onclick=async()=>{const t=$("#m-tok").value.trim();if(!t)return toast("حط التوكن");$("#m-n").disabled=true;$("#m-n").textContent="بيتأكد…";
    try{
-    const ex=await (await fetch(`https://graph.facebook.com/${GV}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(st.id)}&client_secret=${encodeURIComponent(st.sec)}&fb_exchange_token=${encodeURIComponent(t)}`)).json();
-    if(ex.error)throw new Error(ex.error.message);
+    let ex={access_token:t};
+    if(st.sec){ex=await (await fetch(`https://graph.facebook.com/${GV}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(st.id)}&client_secret=${encodeURIComponent(st.sec)}&fb_exchange_token=${encodeURIComponent(t)}`)).json();
+    if(ex.error)throw new Error(ex.error.message);}
     const pg=await (await fetch(`https://graph.facebook.com/${GV}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${encodeURIComponent(ex.access_token)}`)).json();
     if(pg.error)throw new Error(pg.error.message);
     if(!pg.data?.length)throw new Error("مفيش صفحات — اتأكد إنك اخترت الصفحة لما وافقت على الصلاحيات");
