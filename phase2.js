@@ -113,6 +113,7 @@ $("#c-brand")?.addEventListener("change", autosave);
 
 // ------------------------------------------------------------------ drafts & duplicates
 window.schedDraft = id => { const x = items.find(i => i.id === id); closeSheet();
+  if (!x.p.media?.length) return toast("المسودة دي من غير صور — اختار «نسخة في بوست جديد» وضيف الصور", 7000);
   sheet(`<div style="padding:10px"><div class="lbl">ميعاد النشر</div><div class="two"><input type="date" id="d-d"><input type="time" id="d-h" value="20:00"></div>
    <div class="two" style="margin-top:12px"><button class="btn pri" id="d-ok" style="justify-content:center">جدولة</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
   $("#d-d").valueAsDate = new Date(Date.now() + DAY);
