@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>مراجعة البوستات</title>
+<style>
+:root{--ink:#1c1c1e;--mut:#6b6b70;--line:#e6e6e8;--bg:#f5f5f3;--ok:#1a7f37;--bad:#b42318;--s:#fff}
+*{box-sizing:border-box}body{margin:0;font:15px/1.6 system-ui,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:640px;margin:0 auto;padding:20px 16px 140px}h1{font-size:20px;margin:0 0 4px}.mut{color:var(--mut);font-size:13px}
+.post{background:var(--s);border:1px solid var(--line);border-radius:14px;padding:14px;margin:14px 0}
+.when{font-weight:600}.pl{font-size:12.5px;color:var(--mut)}
+.imgs{display:flex;gap:6px;overflow-x:auto;margin:10px 0;scroll-snap-type:x mandatory}.imgs img{height:260px;border-radius:8px;scroll-snap-align:start;flex-shrink:0;background:#eee}
+.vid{height:120px;width:120px;border-radius:8px;background:#ddd;display:grid;place-items:center;flex-shrink:0;font-size:12px}
+.cap{white-space:pre-wrap;font-size:14px;background:#fafafa;border-radius:8px;padding:10px;max-height:220px;overflow:auto}
+.alt{font-size:12.5px;margin-top:6px}.alt b{font-weight:600}
+.act{display:flex;gap:8px;margin-top:10px}button,.btn{font:inherit;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+button.on.ok{background:var(--ok);color:#fff;border-color:var(--ok)}button.on.fix{background:#9a6700;color:#fff;border-color:#9a6700}
+textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px}
+.bar{position:fixed;bottom:0;inset-inline:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px}.bar .in{max-width:640px;margin:0 auto;display:flex;gap:8px;align-items:center}
+.pri{background:var(--ink);color:#fff;border-color:var(--ink)}.err{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:30px}
+</style>
+</head>
+<body>
+<main id="m"><p class="mut">بيفتح…</p></main>
+<div class="bar" id="bar" hidden><div class="in"><span id="cnt" class="mut" style="flex:1"></span><button id="all">موافق على الكل</button><button class="pri" id="send">ابعت ردّي</button></div></div>
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ub64=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+const b64u=a=>btoa(String.fromCharCode(...a)).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const fail=t=>{$("#m").innerHTML=`<div class="err"><h1>مش قادر أفتح المراجعة</h1><p class="mut">${esc(t)}</p></div>`};
+(async()=>{
+ const rid=new URLSearchParams(location.search).get("r"),k=location.hash.slice(1);
+ if(!/^[0-9a-f]{18}$/.test(rid||"")||!k)return fail("الرابط ناقص — اطلب الرابط تاني.");
+ history.replaceState(null,"",location.pathname+location.search); // hide the key from the address bar / screenshots
+ let key;try{key=await crypto.subtle.importKey("raw",ub64(k),"AES-GCM",false,["decrypt"])}catch(e){return fail("الرابط ناقص — اطلب الرابط تاني.")}
+ const dec=async buf=>{const u=new Uint8Array(buf);return crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(0,12)},key,u.slice(12))};
+ const get=async f=>{for(let i=0;i<20;i++){const r=await fetch(`r/${rid}/${f}?t=${Date.now()}`,{cache:"no-store"});if(r.ok)return r.arrayBuffer();if(r.status!==404)break;$("#m").innerHTML='<p class="mut">بيتجهّز… (أول مرة بتاخد دقيقة)</p>';await new Promise(z=>setTimeout(z,8000))}throw new Error("الرابط انتهى أو اتمسح.")};
+ let d;try{d=JSON.parse(new TextDecoder().decode(await dec(await get("data.bin"))))}catch(e){return fail(e.message.includes("انتهى")?e.message:"الرابط مش صحيح أو اتغيّر.")}
+ if(new Date(d.expires)<new Date())return fail("مدة الرابط خلصت — اطلب رابط جديد.");
+ const st={};
+ $("#m").innerHTML=`<h1>مراجعة البوستات${d.brand?" — "+esc(d.brand):""}</h1><p class="mut">وافق أو اطلب تعديل على كل بوست، وبعدين «ابعت ردّي». البوستات مش هتتنشر غير بعد موافقتك. الرابط شغال لحد ${new Date(d.expires).toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}.</p>`+
+  d.posts.map((p,i)=>`<div class="post" id="p${i}"><div class="when">${new Date(p.time).toLocaleString("ar-EG",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}</div>
+   <div class="pl">${esc(p.platforms.join(" · "))}</div><div class="imgs">${p.media.map((m,j)=>m.video?'<div class="vid">فيديو</div>':`<img data-f="${esc(m.f)}" alt="صورة ${j+1}">`).join("")}</div>
+   <div class="cap">${esc(p.caption)}</div>${Object.entries(p.captions||{}).map(([k,v])=>`<div class="alt"><b>${esc(k)}:</b> ${esc(v)}</div>`).join("")}
+   <div class="act"><button class="ok" data-i="${i}" data-a="1">✓ موافق</button><button class="fix" data-i="${i}" data-a="0">طلب تعديل</button></div><textarea id="c${i}" rows="2" placeholder="اكتب التعديل المطلوب" hidden></textarea></div>`).join("");
+ $("#bar").hidden=false;
+ const count=()=>{const a=Object.values(st).filter(v=>v.a===1).length,f=Object.values(st).filter(v=>v.a===0).length;$("#cnt").textContent=`${a} موافق · ${f} تعديل · ${d.posts.length-a-f} لسه`};count();
+ document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i,a=+b.dataset.a;st[i]={a};b.parentElement.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));$("#c"+i).hidden=a===1;if(!a)$("#c"+i).focus();count()});
+ $("#all").onclick=()=>{d.posts.forEach((_,i)=>{st[i]={a:1};const p=$("#p"+i);p.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.a==="1"));$("#c"+i).hidden=true});count()};
+ for(const im of document.querySelectorAll("img[data-f]")){try{im.src=URL.createObjectURL(new Blob([await dec(await get(im.dataset.f))],{type:"image/jpeg"}))}catch(e){}}
+ $("#send").onclick=()=>{const out={};let lines=[];d.posts.forEach((p,i)=>{const s=st[i];if(!s)return;const c=s.a?"":($("#c"+i).value||"").trim().slice(0,300);out[p.id]=s.a?{a:1}:{a:0,c};
+   lines.push(`${s.a?"✓":"✎"} ${new Date(p.time).toLocaleDateString("ar-EG",{day:"numeric",month:"short"})} ${(p.label||p.caption.split("\n")[0]).slice(0,40)}${c?" — "+c:""}`)});
+  if(!lines.length)return alert("اختار موافق أو تعديل على بوست واحد على الأقل");
+  const code="AP1:"+d.rid+":"+b64u(new TextEncoder().encode(JSON.stringify(out)));
+  const msg=`ردّي على البوستات:\n${lines.join("\n")}\n\n${code}`;
+  const wa=d.wa?`https://wa.me/${d.wa}?text=${encodeURIComponent(msg)}`:`https://wa.me/?text=${encodeURIComponent(msg)}`;
+  $("#m").insertAdjacentHTML("beforeend",`<div class="post"><b>ردّك جاهز</b><p class="mut">ابعته على واتساب، أو انسخه وابعته بأي طريقة.</p><textarea rows="6" readonly>${esc(msg)}</textarea><div class="act"><a class="btn pri" href="${esc(wa)}" target="_blank" rel="noopener">ابعت واتساب</a><button id="cp">نسخ</button></div></div>`);
+  $("#cp").onclick=()=>navigator.clipboard.writeText(msg).then(()=>alert("اتنسخ"));scrollTo(0,document.body.scrollHeight)};
+})();
+</script>
+</body>
+</html>

@@ -224,6 +224,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <script src="phase2.js" defer></script>
 <script src="library.js" defer></script>
 <script src="plan.js" defer></script>
+<script src="approval.js" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -379,7 +380,7 @@ function renderList(){
    return v?.ok&&v.url?`<a class="${c}" href="${esc(v.url)}" target="_blank" rel="noopener"><i></i>${t} ↗</a>`:`<span class="${c}"><i></i>${t}</span>`}).join("");
   const th=p.kind==="video"?`<div class="vid">${ic("play")}</div>`:`<img data-pid="${id}" data-f="${p.media[0]}" alt="">`;
   h+=`<div class="item"><div class="tm">${hm}</div>${th}<div class="body"><div class="cap">${esc(p.label||p.caption||"بدون كابشن")}</div>
-   <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div></div>
+   <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div>${window.metricsLine?metricsLine(x):""}</div>
    ${manualBtn(x)}<button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
  }
  $("#l-items").innerHTML=h||'<div class="empty">مفيش بوستات هنا</div>';fillThumbs();

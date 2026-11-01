@@ -34,7 +34,7 @@ window.commit = commit = async function (changes, message, onP) {
 // campaign filter on the list
 let campFilter = "";
 const seg = $("#l-seg");
-if (seg) { const s = document.createElement("div"); s.className = "two f"; s.id = "l-tools";
+if (seg) { const s = document.createElement("div"); s.className = "f"; s.id = "l-tools";
   s.innerHTML = `<select id="l-camp"><option value="">كل الحملات</option></select><div style="display:flex;gap:6px"><button class="btn sm" id="l-exp">تصدير</button><button class="btn sm" id="l-imp">استيراد</button><button class="btn sm" id="l-rep">تقرير شهري</button></div>`;
   seg.after(s); $("#l-camp").onchange = e => { campFilter = e.target.value; renderList(); };
   $("#l-exp").onclick = exportCSV; $("#l-imp").onclick = importCSV; $("#l-rep").onclick = openReport; }
@@ -121,15 +121,35 @@ async function openReport() {
     const rows = list.map(x => { const cells = x.p.platforms.map(k => { const v = x.s[k] || {}; per[k] ||= { ok: 0, all: 0 }; per[k].all++;
         if (v.ok && !v.manual) { ok++; per[k].ok++; return v.url ? `<a href="${esc(v.url)}">${esc(NM(k))} ↗</a>` : esc(NM(k)) + " ✓"; }
         if (v.ok && v.manual) { man++; return `${esc(NM(k))} (يدوي)`; } if (v.ok === false) { fail++; return `<span style="color:#b42318">${esc(NM(k))} ✕</span>`; } return `${esc(NM(k))} …`; }).join(" · ");
-      return `<tr><td>${new Date(x.p.time).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td><td>${esc(x.p.label || (x.p.caption || "").split("\n")[0].slice(0, 70))}</td><td>${cells}</td></tr>`; }).join("");
+      return `<tr><td>${new Date(x.p.time).toLocaleString("ar-EG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</td><td>${esc(x.p.label || (x.p.caption || "").split("\n")[0].slice(0, 70))}</td><td>${cells}</td><td>${window.metricsCells ? metricsCells(x) : ""}</td></tr>`; }).join("");
     const title = `تقرير ${brands[b]?.name || b} — ${new Date(m + "-01").toLocaleDateString("ar-EG", { month: "long", year: "numeric" })}${c ? " — " + c : ""}`;
     const html = `<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><title>${esc(title)}</title><style>body{font-family:system-ui,"Segoe UI",Tahoma;margin:32px;color:#1c1c1e}h1{font-size:22px}
       .k{display:flex;gap:16px;margin:16px 0}.k div{border:1px solid #ddd;border-radius:10px;padding:10px 14px}.k b{display:block;font-size:22px}table{width:100%;border-collapse:collapse;font-size:13px}
       td,th{border-bottom:1px solid #eee;padding:8px;text-align:start;vertical-align:top}a{color:#0a66c2}small{color:#777}@media print{button{display:none}}</style>
       <h1>${esc(title)}</h1><div class="k"><div><b>${list.length}</b>بوست</div><div><b>${ok}</b>نشر تلقائي</div><div><b>${man}</b>نشر يدوي</div>${fail ? `<div><b>${fail}</b>فشل</div>` : ""}</div>
       <p><small>${Object.entries(per).map(([k, v]) => `${esc(NM(k))}: ${v.ok}/${v.all}`).join(" · ")}</small></p>
-      <table><tr><th>الميعاد</th><th>البوست</th><th>المنصات</th></tr>${rows || '<tr><td colspan="3">مفيش بوستات في الشهر ده</td></tr>'}</table>
-      <p><small>أرقام المشاهدات والتفاعل هتتضاف لما نربط التحليلات (المرحلة 3). التقرير ده بيعرض اللي اتنشر فعلاً بس.</small></p><button onclick="print()">طباعة / حفظ PDF</button></html>`;
+      <table><tr><th>الميعاد</th><th>البوست</th><th>المنصات</th><th>الأرقام (من المنصة نفسها)</th></tr>${rows || '<tr><td colspan="3">مفيش بوستات في الشهر ده</td></tr>'}</table>
+      <p><small>الأرقام جاية من المنصات نفسها ومتحدّثة يوميًا. كل رقم بنوعه (مشاهدة غير وصول غير إعجاب) ومش متجمّعين. «مش متاح» يعني المنصة مش بتدّي الرقم ده لصلاحيات الحساب الحالية. مفيش أي رقم متقدّر أو تجريبي.</small></p><button onclick="print()">طباعة / حفظ PDF</button></html>`;
     const w = window.open("", "_blank"); if (!w) return toast("المتصفح منع الصفحة — اسمح بالنوافذ المنبثقة"); w.document.write(html); w.document.close(); closeSheet(); };
 }
+})();
+
+// ------------------------------------------------------------------ real metrics (each number keeps its own name; nothing summed across different metrics)
+(() => {
+const NM = k => (typeof NAMES !== "undefined" && NAMES[k]) || k;
+const LBL = { views: "مشاهدة", reach: "وصول", likes: "إعجاب", reactions: "تفاعل (رياكت)", comments: "تعليق", saves: "حفظ", shares: "مشاركة", interactions: "تفاعلات" };
+window.metricsLine = x => {
+  const parts = [];
+  for (const [k, v] of Object.entries(x.s || {})) { const m = v?.metrics; if (!m || !NAMES[k]) continue;
+    const nums = Object.entries(LBL).filter(([f]) => typeof m[f] === "number").map(([f, l]) => `${m[f]} ${l}`);
+    if (nums.length) parts.push(`<b>${esc(NM(k))}:</b> ${nums.join(" · ")}`); }
+  if (!parts.length) return "";
+  const at = Object.values(x.s).map(v => v?.metrics?.at).filter(Boolean).sort().pop();
+  return `<div class="mt">${parts.join(" &nbsp; ")}<small> — آخر تحديث ${new Date(at).toLocaleDateString("ar-EG", { day: "numeric", month: "short" })}</small></div>`;
+};
+window.metricsCells = x => x.p.platforms.map(k => { const m = x.s[k]?.metrics; if (!m) return "";
+  if (m.unavailable) return `<small>${esc(NM(k))}: مش متاح</small>`;
+  const nums = Object.entries(LBL).filter(([f]) => typeof m[f] === "number").map(([f, l]) => `${m[f]} ${l}`);
+  return nums.length ? `<small><b>${esc(NM(k))}</b>: ${nums.join("، ")}</small>` : ""; }).filter(Boolean).join("<br>");
+const css = document.createElement("style"); css.textContent = `#l-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#l-tools select{flex:1 1 160px;width:auto}#l-tools>div{display:flex;flex-wrap:wrap;gap:6px}.mt{font-size:12px;color:var(--mut);margin-top:6px;line-height:1.7}.mt b{color:var(--ink);font-weight:600}`; document.head.appendChild(css);
 })();
