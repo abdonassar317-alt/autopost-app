@@ -551,16 +551,32 @@ async function finishTikTok(){
   tab("brands");renderBrands();toast(name?`تيك توك (${name}) اتربط ✅`:"تيك توك اتربط ✅ — لو ماظهرش، حدّث الصفحة بعد دقيقة",8000)}
  catch(e){toast("تيك توك: "+e.message,10000)}}
 
-// ---- LinkedIn wizard
-window.wzLinkedIn=()=>{const b=brands[curBrand];
- sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">التوكن بيعيش 60 يوم، وهنفكّرك تجدده</div><ol class="steps">
-  <li>افتح <a href="https://www.linkedin.com/developers/apps/new" target="_blank" rel="noopener">LinkedIn Developers ← Create app</a> (محتاج صفحة شركة؛ اعمل واحدة باسمك لو مش موجودة)</li>
-  <li>من تاب <b>Products</b> اطلب: <b>Share on LinkedIn</b> و <b>Sign In with LinkedIn using OpenID Connect</b> (الموافقة فورية)</li>
-  <li>افتح <a href="https://www.linkedin.com/developers/tools/oauth/token-generator" target="_blank" rel="noopener">Token Generator</a> ← اختار تطبيقك ← علّم <code>openid</code> <code>profile</code> <code>w_member_social</code> ← Request access token ← انسخه</li></ol>
-  <div class="lbl">التوكن</div><input id="l-tok" dir="ltr" placeholder="AQ…">
-  <div class="nav"><button class="btn pri" id="l-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
- $("#l-ok").onclick=async()=>{const t=$("#l-tok").value.trim();if(!t)return toast("حط التوكن");$("#l-ok").disabled=true;
-  try{await putSecret(sname(b,"LINKEDIN_TOKEN"),t);b.linkedin={author:"",connected_at:new Date().toISOString()};await saveBrands("connect linkedin");closeSheet();renderBrands();toast("لينكدإن اتربط")}catch(e){toast(e.message,8000);$("#l-ok").disabled=false}}};
+// ---- LinkedIn wizard: sign in on LinkedIn -> code comes back here -> GitHub Action exchanges it (secret stays in GitHub)
+const LI_CLIENT_ID_DEFAULT="78ozcr6ezgdlyu";
+window.wzLinkedIn=()=>{
+ sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">بينشر على بروفايلك الشخصي — التوكن بيعيش 60 يوم وهنفكّرك تجدده</div><ol class="steps">
+  <li>من <a href="https://www.linkedin.com/developers/apps/266690519/auth" target="_blank" rel="noopener">تطبيقك ← المصادقة</a> انسخ <b>سر العميل الأساسي</b> (زرار النسخ) والصقه هنا</li>
+  <li>اضغط <b>ربط بلينكدإن</b> ← <b>سماح</b> ← هترجع هنا لوحدك</li></ol>
+  <div class="lbl">Client ID</div><input id="l-id" dir="ltr" value="${esc(LI_CLIENT_ID_DEFAULT)}"><div class="lbl">Client secret</div><input id="l-sec" dir="ltr" type="password" placeholder="WPL_AP1.…">
+  <div class="nav"><button class="btn pri" id="l-ok">ربط بلينكدإن</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#l-ok").onclick=async()=>{const id=$("#l-id").value.trim(),sec=$("#l-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#l-ok");btn.disabled=true;btn.textContent="بيحفظ…";
+  try{const b=brands[curBrand];await putSecret(sname(b,"LI_CLIENT_ID"),id);await putSecret(sname(b,"LI_CLIENT_SECRET"),sec);
+   sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand}));
+   location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:"li",scope:"openid profile w_member_social"})}
+  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بلينكدإن"}}};
+async function finishLinkedIn(){
+ const q=new URLSearchParams(location.search);if(q.get("state")!=="li")return;
+ history.replaceState(null,"",YT_REDIRECT);
+ const st=JSON.parse(sessionStorage.getItem("li_pending")||"null");sessionStorage.removeItem("li_pending");
+ if(q.get("error")||!q.get("code")){toast("ربط لينكدإن اتلغى: "+(q.get("error_description")||q.get("error")||""),8000);return}
+ try{toast("بيربط لينكدإن… ثواني",60000);
+  curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
+  await gh(`${R()}/actions/workflows/linkedin-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
+  let name="",ok=false,err="";for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const t=JSON.parse(await readFile("state/linkedin.json"));if(t.at&&t.at>=t0-60000){if(t.connected){ok=true;name=t.name||""}else err=t.error||"فشل";break}}catch(e){}}
+  if(err)throw new Error(err);
+  b.linkedin={...(b.linkedin||{}),author:"",name,connected_at:new Date().toISOString()};await saveBrands("connect linkedin");secretNames&&secretNames.add(sname(b,"LINKEDIN_TOKEN"));
+  tab("brands");renderBrands();toast(ok?`لينكدإن (${name||"بروفايلك"}) اتربط ✅`:"لينكدإن بيتربط — حدّث الصفحة بعد دقيقة",8000)}
+ catch(e){toast("لينكدإن: "+e.message,10000)}}
 
 // ---- Telegram wizard
 window.wzTelegram=(step=1,st={})=>{const b=brands[curBrand];
@@ -600,7 +616,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
