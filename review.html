@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<title>مراجعة البوستات</title>
+<title>AutoPost — Review</title>
 <style>
 :root{--ink:#1c1c1e;--mut:#6b6b70;--line:#e6e6e8;--bg:#f5f5f3;--ok:#1a7f37;--bad:#b42318;--s:#fff}
 @media (prefers-color-scheme:dark){:root{--ink:#f1f1f3;--mut:#a3a3aa;--line:#2d2d32;--bg:#111113;--s:#1b1b1e;color-scheme:dark}.cap{background:#242428!important}button,.btn{background:#1b1b1e!important;color:var(--ink)!important}.pri{background:#f1f1f3!important;color:#111113!important}.bar{background:#1b1b1e!important}}
@@ -44,7 +44,7 @@ const fail=t=>{$("#m").innerHTML=`<div class="err"><h1>${L("مش قادر أفت
  const dec=async buf=>{const u=new Uint8Array(buf);return crypto.subtle.decrypt({name:"AES-GCM",iv:u.slice(0,12)},key,u.slice(12))};
  const get=async f=>{for(let i=0;i<20;i++){const r=await fetch(`r/${rid}/${f}?t=${Date.now()}`,{cache:"no-store"});if(r.ok)return r.arrayBuffer();if(r.status!==404)break;$("#m").innerHTML=`<p class="mut">${L("بيتجهّز… (أول مرة بتاخد دقيقة)","Preparing… (the first time takes a minute)")}</p>`;await new Promise(z=>setTimeout(z,8000))}throw new Error(L("الرابط انتهى أو اتمسح.","This link has expired or was removed."))};
  let d;try{d=JSON.parse(new TextDecoder().decode(await dec(await get("data.bin"))))}catch(e){return fail(/انتهى|expired/.test(e.message)?e.message:L("الرابط مش صحيح أو اتغيّر.","This link is invalid or was changed."))}
- if(d.lang==="en")EN=true;if(EN){document.documentElement.lang="en";document.documentElement.dir="ltr";document.title="Review posts"}
+ if(d.lang==="en")EN=true;if(EN){document.documentElement.lang="en";document.documentElement.dir="ltr";document.title="AutoPost — Review"}
  if(new Date(d.expires)<new Date())return fail(L("مدة الرابط خلصت — اطلب رابط جديد.","This link has expired — ask for a new one."));
  const st={};const LOC=EN?"en-GB":"ar-EG";
  $("#m").innerHTML=`<h1>${L("مراجعة البوستات","Review posts")}${d.brand?" — "+esc(d.brand):""}</h1><p class="mut">${L("وافق أو اطلب تعديل على كل بوست، وبعدين «ابعت ردّي». البوستات مش هتتنشر غير بعد موافقتك. الرابط شغال لحد ","Approve or request a change on each post, then “Send my reply”. Nothing is published before you approve. This link works until ")}${new Date(d.expires).toLocaleDateString(LOC,{day:"numeric",month:"long"})}.</p>`+
