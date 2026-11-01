@@ -16,7 +16,7 @@ function addToggle() {
   }
   const hdr = document.getElementById("who")?.parentElement;
   if (hdr && !document.getElementById("lang-mini")) { const m = document.createElement("button"); m.id = "lang-mini"; m.setAttribute("data-i18n-skip", "");
-    m.textContent = lang === "en" ? "ع" : "EN"; m.title = lang === "en" ? "العربي" : "English"; m.style.cssText = "border:1px solid var(--line);background:var(--s);border-radius:8px;padding:2px 8px;font:inherit;font-size:12px;cursor:pointer;margin-inline-start:8px";
+    m.textContent = lang === "en" ? "ع" : "EN"; m.title = lang === "en" ? "العربي" : "English"; m.style.cssText = "border:1px solid var(--line);background:var(--s);color:var(--ink);border-radius:8px;padding:2px 8px;font:inherit;font-size:12px;cursor:pointer;margin-inline-start:8px";
     m.onclick = () => { try { localStorage.setItem(KEY, lang === "en" ? "ar" : "en"); } catch (e) {} location.reload(); }; hdr.appendChild(m); }
 }
 addToggle(); document.addEventListener("DOMContentLoaded", addToggle); setTimeout(addToggle, 500);
@@ -132,7 +132,7 @@ const D = {
 "منبّه النشر في ميعاده (مجاني)": "On-time publishing wake-up (free)", "إعداد المنبّه": "Set up wake-up", "منبّه النشر": "Publishing wake-up", "انسخ الكود": "Copy code", "قفل": "Close", "الكود اتنسخ ✓": "Code copied ✓",
 "GitHub لوحده ممكن يتأخر ساعات. منبّه جوجل بيشيّك كل 5 دقايق وبيشغّل النشر في ميعاده بالظبط.": "GitHub alone can be hours late. A Google wake-up checks every 5 minutes and publishes exactly on time.",
 "الذكاء الاصطناعي": "AI", "اختياري وببلاش": "optional, free", "مفتاح Gemini (اختياري)": "Gemini key (optional)", "حفظ واختبار": "Save & test",
-"اللغة · Language": "Language · اللغة",
+"اللغة · Language": "Language · اللغة", "المظهر": "Appearance", "فاتح": "Light", "غامق": "Dark", "تلقائي": "Auto",
 // AI
 "✨ مساعد الكتابة": "✨ Writing assistant", "اكتب كابشن من الفكرة": "Write caption from idea", "حسّن الكابشن الحالي": "Improve current caption", "اختصره": "Shorten",
 "5 بدايات (هوك)": "5 hooks", "نداء للتفاعل": "Call to action", "راجع الكابشن (أخطاء/وضوح)": "Review caption (errors/clarity)", "أسلوبي": "My style", "🎙 سجّل ملاحظة صوتية": "🎙 Record a voice note",

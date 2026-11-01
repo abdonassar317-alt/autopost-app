@@ -96,7 +96,7 @@ window.updatePost = updatePost = async function (id, fn, msg) {
 
 // show approval state in the list + "needs you now"
 const _ml = window.metricsLine;
-window.metricsLine = x => (x.p.needs_approval ? `<div class="mt" style="color:#9a6700">⏳ ${x.p.review_note ? "تعديل مطلوب: " + esc(x.p.review_note) : "مستني موافقة العميل"}</div>` : x.p.approved_at ? `<div class="mt" style="color:var(--ok)">✓ العميل وافق</div>` : "") + (_ml ? _ml(x) : "");
+window.metricsLine = x => (x.p.needs_approval ? `<div class="mt" style="color:var(--warn)">⏳ ${x.p.review_note ? "تعديل مطلوب: " + esc(x.p.review_note) : "مستني موافقة العميل"}</div>` : x.p.approved_at ? `<div class="mt" style="color:var(--ok)">✓ العميل وافق</div>` : "") + (_ml ? _ml(x) : "");
 const _rn = window.renderNow;
 window.renderNow = () => { _rn && _rn(); const el = $("#now-panel .now"); if (!el) return;
   const waiting = items.filter(x => x.p.needs_approval && !x.p.review_note).length, fixes = items.filter(x => x.p.needs_approval && x.p.review_note);

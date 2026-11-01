@@ -221,9 +221,9 @@ async function setupFromLink() {
 
 // ------------------------------------------------------------------ styles + start
 const css = document.createElement("style");
-css.textContent = `.ck{font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}.ck.bad{color:var(--bad)}.ck.warn{color:#9a6700}
+css.textContent = `.ck{font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}.ck.bad{color:var(--bad)}.ck.warn{color:var(--warn)}
 .now .lbl span{background:var(--bad);color:#fff;border-radius:999px;padding:0 8px;font-size:12px}.nrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--line);font-size:13.5px}
-.nrow.bad{color:var(--bad)}.nrow.warn{color:#9a6700}.nrow .na{display:flex;gap:6px;flex-shrink:0}
+.nrow.bad{color:var(--bad)}.nrow.warn{color:var(--warn)}.nrow .na{display:flex;gap:6px;flex-shrink:0}
 .calh{display:flex;align-items:center;justify-content:space-between;margin:6px 0 10px}.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
 .cwd{font-size:11.5px;color:var(--mut);text-align:center;padding:4px 0}.cd{min-height:92px;background:var(--s);border:1px solid var(--line);border-radius:10px;padding:4px;overflow:hidden}
 .cd.out{opacity:.45}.cd.today{border-color:var(--ink)}.cd.over{background:#eef4ff}.cn{font-size:11.5px;color:var(--mut)}
