@@ -8,8 +8,8 @@ const PUBLIC_KEY = "Sbg09MltEUuNOc+7mUIOBjW2ZjQFTBkCYu3KuU/tuIY=";
 const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
-const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwu2V7yH1eqBudF_XDDjlLDBmvE79T9KVxlujrzPWF-V598GsUfpIglVG5ZPvVw8UN2/exec", bank: "" };
-const VERSION = "33";
+const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
+const VERSION = "34";
 const CHANGES = [
   ["32", "ارفع صورة التحويل جوه التطبيق والاشتراك يتفعّل لوحده بعد المراجعة", "Upload your transfer screenshot in the app — activates automatically after review"],
   ["30", "صفحة أسعار ودفع جديدة", "New pricing & payment screens"],
