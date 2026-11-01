@@ -173,6 +173,7 @@ window.renderCal = () => {
   document.querySelectorAll(".cd").forEach(el => { el.ondragover = e => { e.preventDefault(); el.classList.add("over"); }; el.ondragleave = () => el.classList.remove("over");
     el.ondrop = e => { e.preventDefault(); el.classList.remove("over"); moveTo(e.dataTransfer.getData("text"), el.dataset.day); }; });
 };
+window.moveTo = (id, day) => moveTo(id, day);
 function moveTo(id, day) {
   const x = items.find(i => i.id === id); if (!x) return;
   const old = new Date(x.p.time), [Y, M, D] = day.split("-").map(Number), nd = new Date(old); nd.setFullYear(Y, M - 1, D);
