@@ -1,0 +1,110 @@
+/**
+ * AutoPost — payment inbox (Google Apps Script web app, free, runs on Abdo's Google account).
+ *
+ * Client app  → POST {action:"submit"}  : transfer screenshot + plan → saved to Drive (private), OCR'd, Abdo gets an email.
+ * Client app  → GET  ?action=status     : pending / approved (+ code) / rejected (+ reason).
+ * Abdo's app  → GET  ?action=list&key=… : pending requests with the screenshot + what the OCR found.
+ * Abdo's app  → POST {action:"decide"}  : approve (with the code signed in his app) or reject.
+ *
+ * Only Abdo's app knows ADMIN_KEY. Codes are signed in Abdo's app — this script never holds the signing key.
+ *
+ * Setup (once): Extensions ▸ Apps Script ▸ paste this file ▸ Services (+) ▸ Drive API ▸ Add
+ *   ▸ run setup() once and allow ▸ Deploy ▸ New deployment ▸ Web app ▸ Execute as: Me ▸ Who has access: Anyone ▸ Deploy.
+ *   Copy the web-app URL and the admin key printed by setup() into AutoPost (Settings ▸ Customers & payments ▸ Inbox).
+ */
+const PRICES = { month: 200, year: 1200 };
+const FOLDER = "AutoPost payments";
+
+function setup() {
+  const p = PropertiesService.getScriptProperties();
+  if (!p.getProperty("ADMIN_KEY")) p.setProperty("ADMIN_KEY", Utilities.getUuid().replace(/-/g, ""));
+  folder_();
+  Logger.log("ADMIN_KEY = " + p.getProperty("ADMIN_KEY"));
+}
+
+function folder_() {
+  const it = DriveApp.getFoldersByName(FOLDER);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER);
+}
+const out_ = (o) => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+const db_ = () => PropertiesService.getScriptProperties();
+const get_ = (id) => { const v = db_().getProperty("r_" + id); return v ? JSON.parse(v) : null; };
+const put_ = (r) => db_().setProperty("r_" + r.id, JSON.stringify(r));
+const all_ = () => Object.entries(db_().getProperties()).filter(([k]) => k.startsWith("r_")).map(([, v]) => JSON.parse(v));
+const admin_ = (k) => k && k === db_().getProperty("ADMIN_KEY");
+const clean_ = (u) => String(u || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 39);
+
+function ocr_(blob) {
+  try { // Drive API v3
+    const f = Drive.Files.create({ name: "ocr-tmp", mimeType: "application/vnd.google-apps.document" }, blob, { ocrLanguage: "ar" });
+    const t = DocumentApp.openById(f.id).getBody().getText(); DriveApp.getFileById(f.id).setTrashed(true); return t;
+  } catch (e) {
+    try { // Drive API v2
+      const f = Drive.Files.insert({ title: "ocr-tmp", mimeType: "application/vnd.google-apps.document" }, blob, { ocr: true, ocrLanguage: "ar" });
+      const t = DocumentApp.openById(f.id).getBody().getText(); DriveApp.getFileById(f.id).setTrashed(true); return t;
+    } catch (e2) { return ""; }
+  }
+}
+
+// read what the screenshot says: amounts, the AP- reference, InstaPay words
+function check_(text, user, plan) {
+  const t = String(text).replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)).replace(/[,٬]/g, "").replace(/٫/g, ".");
+  const nums = (t.match(/\d+(?:\.\d+)?/g) || []).map(Number);
+  const want = PRICES[plan];
+  return {
+    amount_ok: nums.some((n) => Math.abs(n - want) < 0.01),
+    ref_ok: new RegExp("AP-?\\s*" + user.replace(/-/g, "-?"), "i").test(t.replace(/\s+/g, "")),
+    instapay: /instapay|انستا ?باي|إنستاباي|تحويل|transfer/i.test(t),
+    amounts: [...new Set(nums.filter((n) => n >= 50 && n <= 100000))].slice(0, 6),
+  };
+}
+
+function doPost(e) {
+  let b = {}; try { b = JSON.parse(e.postData.contents); } catch (x) { return out_({ error: "bad request" }); }
+  if (b.action === "submit") {
+    const user = clean_(b.user), plan = PRICES[b.plan] ? b.plan : "";
+    if (!user || !plan || !b.image) return out_({ error: "missing" });
+    if (String(b.image).length > 4e6) return out_({ error: "image too large" });
+    const mine = all_().filter((r) => r.user === user && r.status === "pending");
+    if (mine.length >= 3) return out_({ error: "too many pending" });
+    const id = Utilities.getUuid().slice(0, 8);
+    const blob = Utilities.newBlob(Utilities.base64Decode(b.image), "image/jpeg", `${user}-${plan}-${id}.jpg`);
+    const file = folder_().createFile(blob);
+    const text = ocr_(blob);
+    const r = { id, user, plan, price: PRICES[plan], note: String(b.note || "").slice(0, 300), contact: String(b.contact || "").slice(0, 40),
+      file: file.getId(), at: new Date().toISOString(), status: "pending", check: check_(text, user, plan), ocr: text.slice(0, 600) };
+    put_(r);
+    try {
+      MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: `AutoPost: طلب دفع ${PRICES[plan]} جنيه من ${user}`,
+        htmlBody: `<p>${user} — ${plan} — ${PRICES[plan]} جنيه</p><p>المبلغ في الصورة: ${r.check.amount_ok ? "✓" : "✗"} · المرجع: ${r.check.ref_ok ? "✓" : "✗"}</p><p>افتح AutoPost ← الإعدادات ← العملاء والمدفوعات ← طلبات الدفع.</p><img src="cid:s" width="300">`,
+        inlineImages: { s: blob } });
+    } catch (x) {}
+    return out_({ ok: true, id, status: "pending" });
+  }
+  if (b.action === "decide") {
+    if (!admin_(b.key)) return out_({ error: "forbidden" });
+    const r = get_(b.id); if (!r) return out_({ error: "not found" });
+    r.status = b.approve ? "approved" : "rejected"; r.code = b.approve ? String(b.code || "") : ""; r.reason = String(b.reason || ""); r.decided = new Date().toISOString();
+    put_(r); return out_({ ok: true });
+  }
+  return out_({ error: "unknown action" });
+}
+
+function doGet(e) {
+  const q = e.parameter || {};
+  if (q.action === "status") {
+    const user = clean_(q.user);
+    const rs = all_().filter((r) => r.user === user).sort((a, b) => a.at < b.at ? 1 : -1);
+    const r = rs[0]; if (!r) return out_({ status: "none" });
+    return out_({ id: r.id, status: r.status, plan: r.plan, code: r.status === "approved" ? r.code : undefined, reason: r.reason || undefined, at: r.at });
+  }
+  if (q.action === "list") {
+    if (!admin_(q.key)) return out_({ error: "forbidden" });
+    const rs = all_().sort((a, b) => a.at < b.at ? 1 : -1).slice(0, 40).map((r) => {
+      let img = ""; if (r.status === "pending") { try { img = Utilities.base64Encode(DriveApp.getFileById(r.file).getBlob().getBytes()); } catch (x) {} }
+      return { ...r, img };
+    });
+    return out_({ requests: rs });
+  }
+  return out_({ ok: true, app: "AutoPost payment inbox" });
+}
