@@ -209,6 +209,24 @@ const D = {
 "نشر تلقائي": "auto-posted", "نشر يدوي": "posted manually", "بوست": "posts", "عندك": "You have", "اتضاف": "Added", "اتعمل": "Created", "يدوي": "manual",
 };
 // patterns for text with numbers/names
+Object.assign(D, {
+ "تحليل محتوايا": "My content insights", "أحسن وقت": "Best time", "تنوّع المحتوى": "Content mix", "معلومات تتراجع": "Info to review", "تجارب": "Experiments", "قفل": "Close",
+ "مبني على بوستاتك وأرقامك الحقيقية بس. الأنماط دي ملاحظات تستاهل تجربة، مش أسباب مؤكدة.": "Based only on your own posts and real numbers. Patterns are worth testing, not proven causes.",
+ "مبني على بياناتك. الفرق ممكن يكون صدفة لو العدد صغير — جرّب الميعاد ده أسبوعين وقارن.": "Based on your data. With few posts the difference may be chance — try this time for two weeks and compare.",
+ "أحسن يوم عندك:": "Your best day:", "أحسن وقت:": "Best time:", "الشكل": "Format", "الأسلوب (تقدير آلي من الكابشن)": "Style (auto-guessed from caption)", "الحملات": "Campaigns", "اقتراحات": "Suggestions",
+ "التنوّع كويس.": "Good variety.", "مفيش نسبة «صح» للكل — ده بس عشان تشوف بتكرر إيه.": "There is no single right mix — this just shows what you repeat.",
+ "فيديو": "Video", "كاروسيل": "Carousel", "صورة واحدة": "Single image", "نص": "Text", "سؤال": "Question", "قايمة/نصايح": "List/tips", "قبل/بعد": "Before/after", "قصة": "Story", "عام": "General", "من غير حملة": "No campaign",
+ "مفيش فيديو خالص في آخر 60 يوم — حتى Short قصير من الصور بيتعمل لوحده على يوتيوب.": "No video in the last 60 days — even a short made from your images is created automatically on YouTube.",
+ "لما بوست فيه معلومة ممكن تتغير (سعر، عرض، موعد، قانون) حط له «راجعها في» من ⋯ في المجدول. هيظهرلك في «محتاجك دلوقتي» لما الميعاد ييجي — من غير ما أعدّل حاجة لوحدي.": "When a post has info that can change (price, offer, date, rule), set a review date from ⋯ in Scheduled. It shows in Needs you now when due — nothing is edited automatically.",
+ "مفيش بوستات عليها ميعاد مراجعة.": "No posts have a review date.", "تعديل": "Edit", "المعلومة دي ممكن تتغير؟": "Can this info change?", "راجعها في": "Review on", "المصدر (اختياري)": "Source (optional)", "لينك أو اسم المصدر": "Link or source name",
+ "حفظ": "Save", "مسح": "Clear", "إلغاء": "Cancel", "اختار تاريخ": "Pick a date", "تمام": "Done", "معلومة ممكن تتغير؟ (ميعاد مراجعة)": "Info may change? (review date)", "ضمّه لتجربة": "Add to experiment",
+ "محتاج 5 بوستات على الأقل في كل مجموعة قبل أي استنتاج.": "Need at least 5 posts in each group before concluding anything.", "الفرق صغير — غالبًا مفيش فرق حقيقي.": "Small difference — probably no real effect.",
+ "تجربة جديدة": "New experiment", "الاسم (مثلاً: كابشن قصير ولا طويل)": "Name (e.g. short vs long caption)", "الفرضية (مثلاً: القصير بياخد إعجابات أكتر)": "Hypothesis (e.g. short gets more likes)", "A (مثلاً: قصير)": "A (e.g. short)", "B (مثلاً: طويل)": "B (e.g. long)",
+ "إنشاء": "Create", "اكتب اسم التجربة": "Name the experiment", "اعمل تجربة الأول من «تحليل محتوايا ← تجارب»": "Create an experiment first in My content insights → Experiments", "شيله من التجارب": "Remove from experiments",
+ "مثال: «هل الكابشن القصير أحسن؟» — تحط كل بوست في مجموعة A أو B من ⋯ ← «ضمّه لتجربة»، والأداة تقارن الرقم اللي تختاره.": "Example: is a short caption better? Put each post in group A or B from ⋯ → Add to experiment, and the app compares the metric you choose.",
+ "وسم (مثلاً: شقة التجمع، لوجو، داخلي)": "Tag (e.g. project name, logo, interior)", "وسّم المختار": "Tag selected", "اختار ملفات واكتب وسم": "Select files and type a tag", "اتوسموا": "Tagged",
+ "المعلومة ممكن تكون اتغيرت": "the info may have changed", "مشاهدات": "views", "إعجابات": "likes", "رياكتات": "reactions",
+});
 const P = [
   [/^عندك (\d+) مسودة$/, "You have $1 draft(s)"], [/^(\d+) بوست هيتبعت للمراجعة$/, "$1 post(s) will be sent for review"], [/^(\d+) بوست$/, "$1 posts"],
   [/^(\d+) صور$/, "$1 photos"], [/^(.+) · (\d+) صور$/, "$1 · $2 photos"], [/^اتجدول (\d+) بوست ✓$/, "Scheduled $1 posts ✓"], [/^اتضاف (\d+) فكرة$/, "Added $1 idea(s)"],

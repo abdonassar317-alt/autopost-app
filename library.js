@@ -52,7 +52,7 @@ async function openMedia() {
     if (!items.length) await loadList();
     const all = []; for (const x of items) for (const m of x.p.media || []) all.push({ id: x.id, m, text: `${x.p.label || ""} ${x.p.caption || ""}`, video: !/\.(jpe?g|png|webp)$/i.test(m), done: x.p.platforms.every(k => x.s[k]?.ok) });
     const picked = new Set();
-    const draw = () => { const q = $("#md-q").value.trim(); const list = all.filter(a => !q || a.text.includes(q)).slice(0, 120);
+    const draw = () => { const q = $("#md-q").value.trim(); const list = all.filter(a => !q || a.text.includes(q) || (window.mediaTags?.[a.id + "/" + a.m] || []).some(t => t.includes(q))).slice(0, 120);
       $("#md-g").innerHTML = list.map((a, i) => `<label class="mdi${picked.has(a.id + "/" + a.m) ? " on" : ""}" data-k="${esc(a.id + "/" + a.m)}">${a.video ? `<div class="vid">${ic("play")}</div>` : `<img data-pid="${esc(a.id)}" data-f="${esc(a.m)}" alt="">`}<small>${a.done ? "اتنشر" : "مجدول"}</small></label>`).join("") || '<p class="hint">مفيش نتايج</p>';
       fillThumbs(); document.querySelectorAll(".mdi").forEach(el => el.onclick = () => { const k = el.dataset.k; picked.has(k) ? picked.delete(k) : picked.add(k); el.classList.toggle("on"); }); };
     $("#md-q").oninput = draw; draw();
