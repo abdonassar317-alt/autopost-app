@@ -424,7 +424,7 @@ async function renderBrands(){
  <div class="box">
   ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده":"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
   ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها`:"البروفايل الشخصي: بيوصلك على تليجرام تنشره بضغطة",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
-  ${row("in","#0a66c2","لينكدإن",li?(liExp?`جدّد قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="wzLinkedIn()">${li?"تجديد":"اربط"}</button>`)}
+  ${row("in","#0a66c2","لينكدإن",li?(liExp?`بيتجدد تلقائي · آخر ميعاد ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="${li?"liRenew()":"wzLinkedIn()"}">${li?"تجديد":"اربط"}</button>`)}
   ${row("▶","#ff0000","يوتيوب",yt?"الفيديوهات بتتنشر لوحدها":"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="wzYouTube()">${yt?"تغيير":"اربط"}</button>`)}
  </div>
  <div class="box">
@@ -553,15 +553,23 @@ async function finishTikTok(){
 
 // ---- LinkedIn wizard: sign in on LinkedIn -> code comes back here -> GitHub Action exchanges it (secret stays in GitHub)
 const LI_CLIENT_ID_DEFAULT="78ozcr6ezgdlyu";
+function liGo(id){sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
+ location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:"li",scope:"openid profile w_member_social"})}
+// one-tap renew: secret already in GitHub, and LinkedIn skips the consent screen for scopes you already approved
+window.liRenew=()=>{const b=brands[curBrand];const id=b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT;if(hasSecret(b,"LI_CLIENT_SECRET"))liGo(id);else wzLinkedIn()};
+// auto-renew when the token is 50+ days old (at most once a day, only when you open the app)
+function liAutoRenew(){const b=brands[curBrand];const c=b?.linkedin?.connected_at;if(!c||!hasSecret(b,"LI_CLIENT_SECRET"))return;
+ if(Date.now()-new Date(c).getTime()<50*864e5)return;const k="li_auto_"+curBrand,d=new Date().toDateString();try{if(localStorage.getItem(k)===d)return;localStorage.setItem(k,d)}catch(e){}
+ toast("بيجدد لينكدإن تلقائي…",4000);setTimeout(()=>liGo(b.linkedin.client_id||LI_CLIENT_ID_DEFAULT),1500)}
 window.wzLinkedIn=()=>{
- sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">بينشر على بروفايلك الشخصي — التوكن بيعيش 60 يوم وهنفكّرك تجدده</div><ol class="steps">
+ sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">بينشر على بروفايلك الشخصي — بيتجدد تلقائي كل ما تفتح الأداة قبل ما يخلص</div><ol class="steps">
   <li>من <a href="https://www.linkedin.com/developers/apps/266690519/auth" target="_blank" rel="noopener">تطبيقك ← المصادقة</a> انسخ <b>سر العميل الأساسي</b> (زرار النسخ) والصقه هنا</li>
   <li>اضغط <b>ربط بلينكدإن</b> ← <b>سماح</b> ← هترجع هنا لوحدك</li></ol>
   <div class="lbl">Client ID</div><input id="l-id" dir="ltr" value="${esc(LI_CLIENT_ID_DEFAULT)}"><div class="lbl">Client secret</div><input id="l-sec" dir="ltr" type="password" placeholder="WPL_AP1.…">
   <div class="nav"><button class="btn pri" id="l-ok">ربط بلينكدإن</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#l-ok").onclick=async()=>{const id=$("#l-id").value.trim(),sec=$("#l-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#l-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"LI_CLIENT_ID"),id);await putSecret(sname(b,"LI_CLIENT_SECRET"),sec);
-   sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand}));
+   sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
    location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:"li",scope:"openid profile w_member_social"})}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بلينكدإن"}}};
 async function finishLinkedIn(){
@@ -574,7 +582,7 @@ async function finishLinkedIn(){
   await gh(`${R()}/actions/workflows/linkedin-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
   let name="",ok=false,err="";for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const t=JSON.parse(await readFile("state/linkedin.json"));if(t.at&&t.at>=t0-60000){if(t.connected){ok=true;name=t.name||""}else err=t.error||"فشل";break}}catch(e){}}
   if(err)throw new Error(err);
-  b.linkedin={...(b.linkedin||{}),author:"",name,connected_at:new Date().toISOString()};await saveBrands("connect linkedin");secretNames&&secretNames.add(sname(b,"LINKEDIN_TOKEN"));
+  b.linkedin={...(b.linkedin||{}),author:"",name,client_id:st?.id||b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT,connected_at:new Date().toISOString()};await saveBrands("connect linkedin");secretNames&&secretNames.add(sname(b,"LINKEDIN_TOKEN"));
   tab("brands");renderBrands();toast(ok?`لينكدإن (${name||"بروفايلك"}) اتربط ✅`:"لينكدإن بيتربط — حدّث الصفحة بعد دقيقة",8000)}
  catch(e){toast("لينكدإن: "+e.message,10000)}}
 
@@ -616,7 +624,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
