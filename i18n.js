@@ -197,6 +197,12 @@ const D = {
 "مفيش حاجة بتتنشر لوحدها — النتيجة بتيجي هنا تراجعها.": "Nothing is published automatically — the result comes here for you to review.",
 "من غير مفتاح: المساعد بيجهّز الطلب وانت تلصقه في أي شات مجاني. بمفتاح Gemini مجاني من": "Without a key: the assistant prepares the request and you paste it into any free chat. With a free Gemini key from",
 "بيكتب جوه الأداة على طول. المفتاح بيتحفظ على الجهاز ده بس. اللي بتبعته بيروح لجوجل، وفي الخطة المجانية جوجل ممكن تستخدمه لتحسين منتجاتها — ماتحطش بيانات سرية.": "it writes right inside the app. The key is saved on this device only. What you send goes to Google, and on the free tier Google may use it to improve its products — don't include confidential data.",
+"توكن GitHub غلط أو انتهت صلاحيته. افتح الإعدادات ← اعمل توكن جديد والصقه (GitHub 401)": "The GitHub token is wrong or expired. Open Settings ← create a new token and paste it (GitHub 401)",
+"GitHub بيقول استخدامك كتير دلوقتي — استنى دقايق وجرب تاني (GitHub 403)": "GitHub says you're making too many requests — wait a few minutes and try again (GitHub 403)",
+"التوكن مش معاه الصلاحية المطلوبة (Contents / Secrets / Actions: Read and write) — عدّله من GitHub (GitHub 403)": "The token is missing a permission (Contents / Secrets / Actions: Read and write) — edit it on GitHub (GitHub 403)",
+"المستودع أو الملف مش موجود، أو التوكن مش مسموحله يشوفه — اتأكد من اسم المستودع في الإعدادات (GitHub 404)": "The repo or file doesn't exist, or the token can't see it — check the repo name in Settings (GitHub 404)",
+"حصل تعديل في نفس اللحظة من عملية تانية — جرّب تاني (GitHub 422)": "Another process changed things at the same moment — try again (GitHub 422)",
+"فيه بوست ميعاده عدّى — شغّلت النشر دلوقتي": "A post was overdue — publishing started now",
 // generic
 "التالي": "Next", "رجوع": "Back", "افتح": "Open", "الصق": "Paste", "اختار": "Choose", "مش متاح": "not available", "آخر تحديث": "last updated",
 "مشاهدة": "views", "وصول": "reach", "إعجاب": "likes", "تعليق": "comments", "حفظ ": "saves ", "تفاعلات": "interactions", "تفاعل (رياكت)": "reactions",
