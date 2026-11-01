@@ -150,6 +150,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
  <div class="box">
   <div class="lbl">الكابشن <span id="c-count">0</span></div>
   <textarea id="c-caption" placeholder="اكتب الكابشن هنا"></textarea>
+  <details id="c-per-wrap" class="f"><summary class="hint" style="cursor:pointer">كابشن مختلف لمنصة معينة (اختياري)</summary><div id="c-per"></div></details>
   <div id="c-title-wrap" class="f hide"><div class="lbl">عنوان الفيديو على يوتيوب</div><input id="c-title"></div>
  </div>
  <div class="box">
@@ -161,11 +162,13 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
   <div class="chips" id="c-plats"></div>
   <p class="hint">المنصات المكتوب جنبها «تذكير» هيوصلك على تليجرام في الميعاد الصور والكابشن جاهزين تنزلهم بنفسك.</p>
  </div>
+ <div class="box hide" id="c-check"></div>
  <div class="prog" id="c-bar"><i></i></div>
 </section>
 
 <section id="list" class="hide">
- <div class="seg" id="l-seg"><button data-v="upcoming" class="on">الجاي</button><button data-v="past">اتنشر</button><button data-v="all">الكل</button></div>
+ <div id="now-panel"></div>
+ <div class="seg" id="l-seg"><button data-v="upcoming" class="on">الجاي</button><button data-v="cal">تقويم</button><button data-v="drafts">مسودات</button><button data-v="past">اتنشر</button><button data-v="all">الكل</button></div>
  <div id="l-items"></div>
 </section>
 
@@ -180,6 +183,16 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
   <p class="note">ثبّت AutoPost على جهازك عشان يفتح زي أي تطبيق — أندرويد، آيفون، ويندوز وماك.</p>
   <button class="btn" id="install-btn" style="width:100%">تثبيت على الجهاز ده</button>
  </div>
+ <div class="box" id="wake-box">
+  <div class="lbl">منبّه النشر في ميعاده (مجاني)</div>
+  <p class="note">GitHub لوحده ممكن يتأخر ساعات. منبّه جوجل بيشيّك كل 5 دقايق وبيشغّل النشر في ميعاده بالظبط.</p>
+  <button class="btn" id="wake-btn" style="width:100%">إعداد المنبّه</button>
+ </div>
+ <div class="box">
+  <div class="lbl">جهاز جديد</div>
+  <p class="note">اعمل رابط إعداد محمي بكلمة سر، افتحه على الجهاز التاني واكتب كلمة السر — من غير ما تعمل توكن تاني.</p>
+  <button class="btn" id="setup-link" style="width:100%">اعمل رابط إعداد</button>
+ </div>
  <div class="box">
   <div class="lbl">الربط بـ GitHub</div>
   <p class="note">البوستات بتتحفظ في ريبو خاص بيك على GitHub. <a href="#" id="gh-help">إزاي أعمل التوكن؟</a></p>
@@ -191,7 +204,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 </main>
 
 <div class="act" id="act">
- <div class="in" id="act-compose"><button class="btn pri" id="c-save">جدولة</button><button class="btn" id="c-now">نشر الآن</button></div>
+ <div class="in" id="act-compose"><button class="btn pri" id="c-save">جدولة</button><button class="btn" id="c-draft">مسودة</button><button class="btn" id="c-now">نشر الآن</button></div>
  
  <div class="in hide" id="act-settings"><button class="btn pri" id="s-save">حفظ واختبار الاتصال</button></div>
 </div>
@@ -208,6 +221,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 
 <script src="vendor-nacl.js"></script>
 <script src="vendor-blake.js"></script>
+<script src="phase2.js" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -298,7 +312,7 @@ window.mv=(i,d)=>{const j=i+d;if(j<0||j>=files.length)return;[files[i],files[j]]
 window.rm=i=>{files.splice(i,1);renderThumbs()};
 function toJpeg(file){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,1440/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);res({b64:c.toDataURL("image/jpeg",.92).split(",")[1],ratio:img.width/img.height})};img.onerror=rej;img.src=URL.createObjectURL(file)})}
 function fileB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(file)})}
-async function save(now){
+async function save(now,draft){
  if(!cfg.token){tab("settings");return toast("اربط حساب GitHub الأول")}
  const plats=PLATS.map(p=>p[0]).filter(k=>sel.has(k));
  const hasVid=files.some(f=>f.video);
@@ -306,10 +320,11 @@ async function save(now){
  if(!plats.length)return toast("اختار منصة واحدة على الأقل");
  if(hasVid&&files.length>1)return toast("الفيديو لازم يبقى لوحده في البوست");
  if(files.length>10&&plats.includes("instagram"))return toast("إنستجرام بيقبل لحد 10 صور");
- if(plats.includes("youtube")&&!hasVid)return toast("يوتيوب محتاج فيديو");
- const when=now?new Date(Date.now()-60e3):new Date(`${$("#c-date").value}T${$("#c-hour").value||"00:00"}`);
+ if(!draft&&window.checkBlock){const m=await checkBlock(plats);if(m)return toast(m,7000)}
+ let when=now?new Date(Date.now()-60e3):new Date(`${$("#c-date").value}T${$("#c-hour").value||"00:00"}`);
+ if(draft&&isNaN(when))when=new Date(Date.now()+864e5);
  if(isNaN(when))return toast("اختار الميعاد");
- if(!now&&when<Date.now()-60e3)return toast("الميعاد ده فات");
+ if(!now&&!draft&&when<Date.now()-60e3)return toast("الميعاد ده فات");
  const pid=when.toISOString().replace(/[-:]/g,"").slice(0,13).replace("T","-")+"-"+Math.random().toString(36).slice(2,7);
  const bar=$("#c-bar"),setP=p=>bar.firstElementChild.style.width=(p*100)+"%";bar.style.display="block";
  $("#c-save").disabled=$("#c-now").disabled=true;
@@ -322,15 +337,16 @@ async function save(now){
    setP((i+1)/(files.length*2));
   }
   const post={brand:$("#c-brand").value,time:when.toISOString().replace(/\.\d+Z$/,"Z"),kind:hasVid?"video":"images",media,platforms:plats,caption:$("#c-caption").value};
+  const caps=window.perCaps?perCaps(plats):{};if(Object.keys(caps).length)post.captions=caps;if(draft)post.draft=true;
   if(hasVid&&$("#c-title").value)post.title=$("#c-title").value;
   changes.push({path:`posts/${pid}/post.json`,b64:utf8b64(JSON.stringify(post,null,2))});
   await commit(changes,`schedule ${pid}`,p=>setP(.5+p/2));
   if(now&&!(await runNow()))warn=" — هينزل في أول دورة خلال 15 دقيقة";
-  toast((now?"بيتنشر دلوقتي":"اتجدول")+warn,5000);
+  toast((draft?"اتحفظت مسودة":now?"بيتنشر دلوقتي":"اتجدول")+warn,5000);window.afterSaved&&afterSaved();if(!draft&&!now&&window.bumpNext)bumpNext(post.time);
   files=[];renderThumbs();$("#c-caption").value="";$("#c-title").value="";$("#c-count").textContent="0";
  }catch(e){toast(e.message,8000)}finally{bar.style.display="none";setP(0);$("#c-save").disabled=$("#c-now").disabled=false}
 }
-$("#c-save").onclick=()=>save(false);$("#c-now").onclick=()=>save(true);
+$("#c-save").onclick=()=>save(false);$("#c-now").onclick=()=>save(true);$("#c-draft").onclick=()=>save(false,true);
 
 // ---------- list
 document.querySelectorAll("#l-seg button").forEach(b=>b.onclick=()=>{filter=b.dataset.v;document.querySelectorAll("#l-seg button").forEach(x=>x.classList.toggle("on",x===b));renderList()});
@@ -347,7 +363,9 @@ async function loadList(){
 }
 const finished=x=>x.p.platforms.every(k=>x.s[k]?.ok||x.s[k]?.skipped);
 function renderList(){
- let list=items.filter(x=>filter==="all"||(filter==="upcoming"?!finished(x):finished(x)));
+ window.renderNow&&renderNow();
+ if(filter==="cal"&&window.renderCal)return renderCal();
+ let list=items.filter(x=>filter==="all"||(filter==="drafts"?x.p.draft:filter==="upcoming"?!x.p.draft&&!finished(x):!x.p.draft&&finished(x)));
  list.sort((a,b)=>(filter==="past"?-1:1)*(new Date(a.p.time)-new Date(b.p.time)));
  let last="",h="";
  for(const x of list){
@@ -374,12 +392,12 @@ function manualBtn(x){const m=manualPending(x);if(!m.length)return"";const k=m[0
 window.shareManual=async(id,k)=>{const x=items.find(i=>i.id===id);if(!x)return;const p=x.p;
  try{toast("بيجهّز الملفات…",4000);
   const files=[];for(const f of p.media){const u=await thumbSrc(id,f);const b=await (await fetch(u)).blob();files.push(new File([b],f,{type:b.type||(p.kind==="video"?"video/mp4":"image/jpeg")}))}
-  try{await navigator.clipboard.writeText(p.caption||"")}catch(e){}
+  try{await navigator.clipboard.writeText(p.captions?.[k]||p.caption||"")}catch(e){}
   if(navigator.canShare&&navigator.canShare({files})){
    await navigator.share({files,text:p.caption||""});
   }else{
    files.forEach(f=>{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=`${id}-${f.name}`;a.click()});
-   window.open(k==="tiktok"?"https://www.tiktok.com/tiktokstudio/upload":k==="x"?"https://x.com/compose/post":"https://www.snapchat.com","_blank");
+   window.open(k==="tiktok"?"https://www.tiktok.com/tiktokstudio/upload":k==="x"?"https://x.com/intent/post?text="+encodeURIComponent((p.captions?.x||p.caption||"").slice(0,280)):"https://www.snapchat.com","_blank");
   }
   sheet(`<div class="wz"><h3>نزّلته على ${NAMES[k]||k}؟</h3><div class="sub">الكابشن اتنسخ — الصقه في خانة الوصف</div>
    <div class="nav"><button class="btn pri" id="sh-ok">أيوه اتنشر</button><button class="btn" onclick="closeSheet()">لسه</button></div></div>`);
@@ -390,10 +408,11 @@ $("#sheet").onclick=e=>{if(e.target.id==="sheet")$("#sheet").classList.remove("s
 window.menu=id=>{const x=items.find(i=>i.id===id);const failed=Object.entries(x.s).filter(([k,v])=>!v.ok&&!v.skipped);
  sheet(`${failed.map(([k,v])=>`<div class="err">${esc(NAMES[k])}: ${esc(v.error||"")}</div>`).join("")}
  ${failed.length?`<button onclick="retry('${id}')">${ic("retry")}إعادة المحاولة</button>`:""}
+ ${x.p.draft?`<button onclick="schedDraft('${id}')">${ic("clock")}جدولة المسودة</button>`:""}<button onclick="dupPost('${id}')">${ic("plus")}نسخة في بوست جديد</button>
  <button onclick="editTime('${id}')">${ic("clock")}تغيير الميعاد</button><button onclick="editCap('${id}')">${ic("edit")}تعديل الكابشن</button>
  <button class="red" onclick="del('${id}')">${ic("trash")}حذف البوست</button>`)};
 const closeSheet=()=>$("#sheet").classList.remove("show");
-async function updatePost(id,fn,msg){const x=items.find(i=>i.id===id);fn(x.p);await commit([{path:`posts/${id}/post.json`,b64:utf8b64(JSON.stringify(x.p,null,2))}],msg);renderList();toast("اتعدل")}
+async function updatePost(id,fn,msg){const x=items.find(i=>i.id===id);fn(x.p);await commit([{path:`posts/${id}/post.json`,b64:utf8b64(JSON.stringify(x.p,null,2))}],msg);renderList();toast("اتعدل");if(!x.p.draft&&window.bumpNext)bumpNext(x.p.time)}
 window.editTime=id=>{const x=items.find(i=>i.id===id),d=new Date(x.p.time),p=n=>String(n).padStart(2,"0");
  sheet(`<div style="padding:10px"><div class="lbl">الميعاد الجديد</div><div class="two"><input type="date" id="e-d" value="${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}"><input type="time" id="e-h" value="${p(d.getHours())}:${p(d.getMinutes())}"></div>
  <div class="two" style="margin-top:12px"><button class="btn pri" id="e-ok" style="justify-content:center">حفظ</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
