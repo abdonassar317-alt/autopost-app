@@ -3,7 +3,7 @@
 (() => {
 "use strict";
 const KEY = "ap_lang";
-const lang = (() => { try { return localStorage.getItem(KEY) || "ar"; } catch (e) { return "ar"; } })();
+const lang = (() => { try { return localStorage.getItem(KEY) || "en"; } catch (e) { return "en"; } })(); // English by default; Arabic when chosen
 window.apLang = lang;
 
 // ---- toggle (settings + header)
