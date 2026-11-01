@@ -25,7 +25,7 @@ async function openTemplates() {
    ${lib.templates.map((t, i) => `<div class="lrow"><button class="btn" style="flex:1;justify-content:flex-start" data-use="${i}"><b>${esc(t.name)}</b>&nbsp;<small class="mut">${esc(t.text.slice(0, 50))}…</small></button><button class="btn sm" data-del="${i}" aria-label="حذف">✕</button></div>`).join("") || '<p class="hint">مفيش قوالب لسه.</p>'}
    <div class="lbl f">احفظ الكابشن الحالي كقالب</div><div class="two"><input id="tp-n" placeholder="اسم القالب"><button class="btn pri" id="tp-s">حفظ</button></div>
    <div class="nav"><button class="btn" onclick="closeSheet()">قفل</button></div></div>`);
-  document.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { const t = lib.templates[+b.dataset.use].text.replace(/\{تاريخ\}/g, new Date().toLocaleDateString("ar-EG")); closeSheet(); insertAtCursor($("#c-caption"), t); });
+  document.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { const t = lib.templates[+b.dataset.use].text.replace(/\{(تاريخ|date)\}/g, new Date().toLocaleDateString("ar-EG")); closeSheet(); insertAtCursor($("#c-caption"), t); });
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => { lib.templates.splice(+b.dataset.del, 1); try { await saveLib("delete template"); openTemplates(); } catch (e) { toast(e.message); } });
   $("#tp-s").onclick = async () => { const n = $("#tp-n").value.trim(), t = $("#c-caption").value; if (!n || !t.trim()) return toast("اكتب اسم والكابشن مايبقاش فاضي");
     lib.templates.push({ name: n, text: t }); try { await saveLib("add template"); toast("القالب اتحفظ"); openTemplates(); } catch (e) { toast(e.message); } };
@@ -92,7 +92,7 @@ function openBatch() {
       const group = [];
       if (fs[i].type.startsWith("video")) group.push(fs[i++]);          // a video is always its own post
       else while (i < fs.length && group.length < n && !fs[i].type.startsWith("video")) group.push(fs[i++]);
-      plan.push({ files: group, when: new Date(start.getTime() + k * every * DAY), caption: (caps[k] ?? caps[caps.length - 1] ?? "").replace(/\{رقم\}/g, k + 1) }); }
+      plan.push({ files: group, when: new Date(start.getTime() + k * every * DAY), caption: (caps[k] ?? caps[caps.length - 1] ?? "").replace(/\{(رقم|n)\}/g, k + 1) }); }
     const warn = caps.length > 1 && caps.length !== plan.length ? `<p class="hint" style="color:var(--bad)">عدد الكابشنز (${caps.length}) مش زي عدد البوستات (${plan.length}) — الزيادة/الناقص هياخد آخر كابشن.</p>` : "";
     $("#bt-r").innerHTML = warn + `<div class="lbl f">${plan.length} بوست</div>` + plan.map((p, i) => `<div class="lrow" style="font-size:13px"><b>${i + 1}</b> ${p.when.toLocaleString("ar-EG", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${p.files.length} ملف · ${esc(p.caption.split("\n")[0].slice(0, 40))}</div>`).join("");
     $("#bt-s").classList.remove("hide");

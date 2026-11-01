@@ -53,7 +53,7 @@ async function openReview() {
           changes.push({ path: `reviews/${rid}/${f}`, b64: bin2b64(await enc(new Uint8Array(await small.arrayBuffer()))) }); media.push({ f }); }
         posts.push({ id: x.id, time: x.p.time, platforms: x.p.platforms.map(NM), caption: x.p.caption, captions: Object.fromEntries(Object.entries(x.p.captions || {}).map(([k, v]) => [NM(k), v])), label: x.p.label || "", media }); }
       const expires = new Date(Date.now() + (+$("#rv-e").value) * DAY).toISOString();
-      const data = { v: 1, rid, brand: brands[$("#rv-b").value]?.name || "", from: cfg.owner, expires, wa, posts };
+      const data = { v: 1, lang: window.apLang || "ar", rid, brand: brands[$("#rv-b").value]?.name || "", from: cfg.owner, expires, wa, posts };
       changes.push({ path: `reviews/${rid}/data.bin`, b64: bin2b64(await enc(new TextEncoder().encode(JSON.stringify(data)))) });
       changes.push({ path: `reviews/${rid}/meta.json`, b64: utf8b64(JSON.stringify({ expires, posts: list.map(x => x.id) })) });
       for (const x of list) { x.p.needs_approval = true; x.p.review = rid; delete x.p.approved_hash; changes.push({ path: `posts/${x.id}/post.json`, b64: utf8b64(JSON.stringify(x.p, null, 2)) }); }
