@@ -338,10 +338,31 @@ function renderList(){
   const th=p.kind==="video"?`<div class="vid">${ic("play")}</div>`:`<img data-pid="${id}" data-f="${p.media[0]}" alt="">`;
   h+=`<div class="item"><div class="tm">${hm}</div>${th}<div class="body"><div class="cap">${esc(p.label||p.caption||"بدون كابشن")}</div>
    <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div></div>
-   <button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
+   ${manualBtn(x)}<button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
  }
  $("#l-items").innerHTML=h||'<div class="empty">مفيش بوستات هنا</div>';fillThumbs();
 }
+// ---- one-tap posting for platforms without an open API (TikTok, Snapchat, X)
+const MANUAL_P=["tiktok","snapchat","x"];
+const sharedKey=(id,k)=>`shared:${id}:${k}`;
+const isShared=(id,k)=>{try{return localStorage.getItem(sharedKey(id,k))==="1"}catch(e){return false}};
+function manualPending(x){const due=new Date(x.p.time)-Date.now()<3600e3;return due?MANUAL_P.filter(k=>x.p.platforms.includes(k)&&!isShared(x.id,k)):[]}
+function manualBtn(x){const m=manualPending(x);if(!m.length)return"";const k=m[0];
+ return `<button class="btn sm pri" style="white-space:nowrap" onclick="shareManual('${x.id}','${k}')">انشر على ${NAMES[k]||k}</button>`}
+window.shareManual=async(id,k)=>{const x=items.find(i=>i.id===id);if(!x)return;const p=x.p;
+ try{toast("بيجهّز الملفات…",4000);
+  const files=[];for(const f of p.media){const u=await thumbSrc(id,f);const b=await (await fetch(u)).blob();files.push(new File([b],f,{type:b.type||(p.kind==="video"?"video/mp4":"image/jpeg")}))}
+  try{await navigator.clipboard.writeText(p.caption||"")}catch(e){}
+  if(navigator.canShare&&navigator.canShare({files})){
+   await navigator.share({files,text:p.caption||""});
+  }else{
+   files.forEach(f=>{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=`${id}-${f.name}`;a.click()});
+   window.open(k==="tiktok"?"https://www.tiktok.com/tiktokstudio/upload":k==="x"?"https://x.com/compose/post":"https://www.snapchat.com","_blank");
+  }
+  sheet(`<div class="wz"><h3>نزّلته على ${NAMES[k]||k}؟</h3><div class="sub">الكابشن اتنسخ — الصقه في خانة الوصف</div>
+   <div class="nav"><button class="btn pri" id="sh-ok">أيوه اتنشر</button><button class="btn" onclick="closeSheet()">لسه</button></div></div>`);
+  $("#sh-ok").onclick=()=>{try{localStorage.setItem(sharedKey(id,k),"1")}catch(e){}closeSheet();renderList();toast("تمام ✅")};
+ }catch(e){if(e.name!=="AbortError")toast(e.message,6000)}};
 function sheet(html){$("#sheet-p").innerHTML=html;$("#sheet").classList.add("show")}
 $("#sheet").onclick=e=>{if(e.target.id==="sheet")$("#sheet").classList.remove("show")};
 window.menu=id=>{const x=items.find(i=>i.id===id);const failed=Object.entries(x.s).filter(([k,v])=>!v.ok&&!v.skipped);
