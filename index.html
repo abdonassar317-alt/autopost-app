@@ -179,6 +179,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 
 <section id="list" class="hide">
  <div id="now-panel"></div>
+ <input id="l-search" type="search" placeholder="بحث في البوستات…" style="margin-top:12px" autocomplete="off">
  <div class="seg" id="l-seg"><button data-v="upcoming" class="on">الجاي</button><button data-v="cal">تقويم</button><button data-v="drafts">مسودات</button><button data-v="past">اتنشر</button><button data-v="all">الكل</button></div>
  <div id="l-items"></div>
 </section>
@@ -230,19 +231,21 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=35"></script>
-<script src="i18n.js?v=35"></script>
-<script src="theme.js?v=35"></script>
-<script src="vendor-nacl.js?v=35"></script>
-<script src="vendor-blake.js?v=35"></script>
-<script src="phase2.js?v=35" defer></script>
-<script src="library.js?v=35" defer></script>
-<script src="plan.js?v=35" defer></script>
-<script src="approval.js?v=35" defer></script>
-<script src="ai.js?v=35" defer></script>
-<script src="insights.js?v=35" defer></script>
-<script src="export.js?v=35" defer></script>
-<script src="license.js?v=35" defer></script>
+<script src="demo.js?v=36"></script>
+<script src="host.js?v=36"></script>
+<script src="i18n.js?v=36"></script>
+<script src="theme.js?v=36"></script>
+<script src="vendor-nacl.js?v=36"></script>
+<script src="vendor-blake.js?v=36"></script>
+<script src="phase2.js?v=36" defer></script>
+<script src="library.js?v=36" defer></script>
+<script src="plan.js?v=36" defer></script>
+<script src="approval.js?v=36" defer></script>
+<script src="ai.js?v=36" defer></script>
+<script src="insights.js?v=36" defer></script>
+<script src="export.js?v=36" defer></script>
+<script src="license.js?v=36" defer></script>
+<script src="keys.js?v=36" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -252,14 +255,14 @@ const $=s=>document.querySelector(s);
 const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store={get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
-let cfg=window.DEMO_CFG||{owner:store.get("owner",""),repo:store.get("repo",""),branch:store.get("branch","main"),token:store.get("token","")};
+let cfg=window.DEMO_CFG||window.HOST_CFG||{owner:store.get("owner",""),repo:store.get("repo",""),branch:store.get("branch","main"),token:store.get("token","")};
 let brands={},files=[],items=[],filter="upcoming",sel=new Set(["instagram"]);
 
 function toast(t,ms=3000){const m=$("#toast");m.textContent=t;m.style.display="block";clearTimeout(m._t);m._t=setTimeout(()=>m.style.display="none",ms)}
 function tab(name){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===name));
  document.querySelectorAll("main section").forEach(s=>s.classList.toggle("hide",s.id!==name));
- ["compose","settings"].forEach(k=>$("#act-"+k).classList.toggle("hide",k!==name));
+ ["compose","settings"].forEach(k=>$("#act-"+k).classList.toggle("hide",k!==name||(k==="settings"&&!!window.HOST)));
  $("#act").classList.toggle("hide",name==="list"||name==="brands");$("#ttl").textContent=TITLES[name];scrollTo(0,0);
  if(name==="list")loadList();if(name==="brands")renderBrands();
 }
@@ -300,8 +303,11 @@ async function commit(changes,message,onP){
 const utf8b64=s=>btoa(unescape(encodeURIComponent(s)));
 const thumbCache={};
 async function thumbSrc(pid,f){if(window.DEMO_RAW)return window.DEMO_RAW(pid,f);const k=pid+"/"+f;if(thumbCache[k])return thumbCache[k];
+ const ck=`https://media.autopost.local/${cfg.owner}/${cfg.repo}/posts/${k}`;let c=null;
+ if(!window.HOST){try{c=await caches.open("ap-media");const hit=await c.match(ck);if(hit)return thumbCache[k]=URL.createObjectURL(await hit.blob())}catch(e){}}
  const r=await fetch(`https://api.github.com${R()}/contents/posts/${pid}/${f}?ref=${cfg.branch}`,{headers:{Authorization:`Bearer ${cfg.token}`,Accept:"application/vnd.github.raw"}});
- if(!r.ok)return "";return thumbCache[k]=URL.createObjectURL(await r.blob())}
+ if(!r.ok)return "";if(c&&/\.(jpe?g|png|webp)$/i.test(f))try{await c.put(ck,r.clone())}catch(e){}
+ return thumbCache[k]=URL.createObjectURL(await r.blob())}
 function fillThumbs(){document.querySelectorAll("img[data-pid]").forEach(async im=>{im.src=await thumbSrc(im.dataset.pid,im.dataset.f)})}
 async function runNow(){try{await gh(`${R()}/actions/workflows/publish.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch})});return true}catch(e){return false}}
 
@@ -353,7 +359,7 @@ async function save(now,draft){
   const changes=[],media=[];let warn="";
   for(let i=0;i<files.length;i++){
    const f=files[i];
-   if(f.video){if(f.file.size>95e6)throw new Error("الفيديو أكبر من 95 ميجا");const ext=(f.file.name.split(".").pop()||"mp4").toLowerCase(),name=`${i+1}.${ext}`;changes.push({path:`posts/${pid}/${name}`,b64:await fileB64(f.file)});media.push(name)}
+   if(f.video){if(f.file.size>95e6)throw new Error("الفيديو أكبر من 95 ميجا");if(window.HOST&&f.file.size>30e6)throw new Error("الفيديو أكبر من 30 ميجا (الحد في الحساب المُستضاف)");const ext=(f.file.name.split(".").pop()||"mp4").toLowerCase(),name=`${i+1}.${ext}`;changes.push({path:`posts/${pid}/${name}`,b64:await fileB64(f.file)});media.push(name)}
    else{const j=await toJpeg(f.file);if(j.ratio<.79||j.ratio>1.92)warn=" — مقاس صورة خارج نسب إنستجرام";const name=`${i+1}.jpg`;changes.push({path:`posts/${pid}/${name}`,b64:j.b64});media.push(name)}
    setP((i+1)/(files.length*2));
   }
@@ -371,22 +377,36 @@ $("#c-save").onclick=()=>save(false);$("#c-now").onclick=()=>save(true);$("#c-dr
 
 // ---------- list
 document.querySelectorAll("#l-seg button").forEach(b=>b.onclick=()=>{filter=b.dataset.v;document.querySelectorAll("#l-seg button").forEach(x=>x.classList.toggle("on",x===b));renderList()});
+// list = cached on this device and shown instantly; then only files whose content changed (git sha) are fetched again
+const FCK=()=>`ap_fc_${cfg.owner}/${cfg.repo}`;
+let fcache=null;
+const fcLoad=()=>{if(fcache)return fcache;if(window.AP_DEMO)return fcache={};try{fcache=JSON.parse(localStorage.getItem(FCK())||"{}")}catch(e){fcache={}}return fcache};
+const fcSave=()=>{if(window.AP_DEMO)return;try{localStorage.setItem(FCK(),JSON.stringify(fcache))}catch(e){try{localStorage.removeItem(FCK())}catch(x){}}};
+function itemsFrom(fc){const ids=Object.keys(fc).filter(k=>/^posts\/[^/]+\/post\.json$/.test(k)).map(k=>k.split("/")[1]);const out=[];
+ for(const id of ids){try{const p=JSON.parse(fc[`posts/${id}/post.json`].text);const st=fc[`posts/${id}/status.json`];out.push({id,p,s:st&&st.text?JSON.parse(st.text):{}})}catch(e){}}return out}
+async function pool(list,n,fn){const out=[];let i=0;await Promise.all(Array.from({length:Math.min(n,list.length)},async()=>{while(i<list.length){const k=i++;out[k]=await fn(list[k])}}));return out}
+let listBusy=null;
 async function loadList(){
  if(!cfg.token)return;
- if(!items.length)$("#l-items").innerHTML='<div class="empty">جاري التحميل…</div>';
- try{
+ if(!items.length){const c=itemsFrom(fcLoad());if(c.length){items=c;renderList()}else $("#l-items").innerHTML='<div class="empty">جاري التحميل…</div>'}
+ if(listBusy)return listBusy;
+ listBusy=(async()=>{try{
   const tree=await gh(`${R()}/git/trees/${cfg.branch}?recursive=1&t=${Date.now()}`);
-  const ids=[...new Set(tree.tree.filter(t=>/^posts\/[^/]+\/post\.json$/.test(t.path)).map(t=>t.path.split("/")[1]))];
-  const hasS=new Set(tree.tree.filter(t=>/^posts\/[^/]+\/status\.json$/.test(t.path)).map(t=>t.path.split("/")[1]));
-  items=await Promise.all(ids.map(async id=>({id,p:JSON.parse(await readFile(`posts/${id}/post.json`)),s:hasS.has(id)?JSON.parse(await readFile(`posts/${id}/status.json`)):{}})));
-  renderList();
- }catch(e){$("#l-items").innerHTML=`<div class="empty">${esc(e.message)}</div>`}
+  const want=tree.tree.filter(t=>/^posts\/[^/]+\/(post|status)\.json$/.test(t.path));
+  const fc=fcLoad(),need=want.filter(t=>!fc[t.path]||fc[t.path].sha!==t.sha||t.sha==="x").map(t=>t.path);
+  let got={};
+  if(need.length){if(window.readMany)got=await readMany(need);else{const v=await pool(need,8,p=>readFile(p).catch(e=>{if(e.status===404)return null;throw e}));need.forEach((p,i)=>got[p]=v[i])}}
+  const next={};for(const t of want){next[t.path]=need.includes(t.path)?{sha:t.sha,text:got[t.path]}:fc[t.path]}
+  fcache=next;fcSave();items=itemsFrom(next);renderList();
+ }catch(e){if(!items.length)$("#l-items").innerHTML=`<div class="empty">${esc(e.message)}</div>`;else toast(e.message,6000)}finally{listBusy=null}})();
+ return listBusy;
 }
 const finished=x=>x.p.platforms.every(k=>x.s[k]?.ok||x.s[k]?.skipped);
 function renderList(){
  window.renderNow&&renderNow();
  if(filter==="cal"&&window.renderCal)return renderCal();
- let list=items.filter(x=>filter==="all"||(filter==="drafts"?x.p.draft:filter==="upcoming"?!x.p.draft&&!finished(x):!x.p.draft&&finished(x)));
+ const q=(window.listQ||"").trim().toLowerCase(),hit=x=>!q||[x.p.caption,x.p.label,x.p.campaign,brands[x.p.brand]?.name,...Object.values(x.p.captions||{})].some(v=>String(v||"").toLowerCase().includes(q));
+ let list=items.filter(hit).filter(x=>filter==="all"||(filter==="drafts"?x.p.draft:filter==="upcoming"?!x.p.draft&&!finished(x):!x.p.draft&&finished(x)));
  list.sort((a,b)=>(filter==="past"?-1:1)*(new Date(a.p.time)-new Date(b.p.time)));
  let last="",h="";
  for(const x of list){
@@ -401,8 +421,9 @@ function renderList(){
    <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div>${window.metricsLine?metricsLine(x):""}</div>
    ${manualBtn(x)}<button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
  }
- $("#l-items").innerHTML=h||'<div class="empty">مفيش بوستات هنا</div>';fillThumbs();
+ $("#l-items").innerHTML=h||`<div class="empty">${q?"مفيش نتايج":"مفيش بوستات هنا"}</div>`;fillThumbs();
 }
+$("#l-search").oninput=e=>{window.listQ=e.target.value;renderList()};
 // ---- one-tap posting for platforms without an open API (TikTok, Snapchat, X)
 const MANUAL_P=["tiktok","snapchat","x"];
 const sharedKey=(id,k)=>`shared:${id}:${k}`;
@@ -433,7 +454,7 @@ window.menu=id=>{const x=items.find(i=>i.id===id);const failed=Object.entries(x.
  <button onclick="editTime('${id}')">${ic("clock")}تغيير الميعاد</button><button onclick="editCap('${id}')">${ic("edit")}تعديل الكابشن</button>
  <button class="red" onclick="del('${id}')">${ic("trash")}حذف البوست</button>`)};
 const closeSheet=()=>$("#sheet").classList.remove("show");
-async function updatePost(id,fn,msg){const x=items.find(i=>i.id===id);fn(x.p);await commit([{path:`posts/${id}/post.json`,b64:utf8b64(JSON.stringify(x.p,null,2))}],msg);renderList();toast("اتعدل");if(!x.p.draft&&window.bumpNext)bumpNext(x.p.time)}
+async function updatePost(id,fn,msg){const x=items.find(i=>i.id===id);fn(x.p);if(fcache)delete fcache[`posts/${id}/post.json`];await commit([{path:`posts/${id}/post.json`,b64:utf8b64(JSON.stringify(x.p,null,2))}],msg);renderList();toast("اتعدل");if(!x.p.draft&&window.bumpNext)bumpNext(x.p.time)}
 window.editTime=id=>{const x=items.find(i=>i.id===id),d=new Date(x.p.time),p=n=>String(n).padStart(2,"0");
  sheet(`<div style="padding:10px"><div class="lbl">الميعاد الجديد</div><div class="two"><input type="date" id="e-d" value="${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}"><input type="time" id="e-h" value="${p(d.getHours())}:${p(d.getMinutes())}"></div>
  <div class="two" style="margin-top:12px"><button class="btn pri" id="e-ok" style="justify-content:center">حفظ</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
@@ -449,7 +470,9 @@ async function reallyDel(id){closeSheet();try{const tree=await gh(`${R()}/git/tr
 let secretNames=null,curBrand="default",authErr="";
 const GV="v23.0";
 async function loadBrands(){
- try{brands=JSON.parse(await readFile("config/brands.json")).brands;authErr=""}catch(e){if(e.status===401||e.status===403||e.status===404)authErr=e.message;brands={default:{name:"حسابي"}}}
+ const bk=`ap_brands_${cfg.owner}/${cfg.repo}`;
+ if(!Object.keys(brands).length){try{const c=JSON.parse(localStorage.getItem(bk)||"null");if(c){brands=c;$("#c-brand").innerHTML=Object.entries(brands).map(([k,b])=>`<option value="${esc(k)}">${esc(b.name||k)}</option>`).join("")}}catch(e){}}
+ try{brands=JSON.parse(await readFile("config/brands.json")).brands;authErr="";try{localStorage.setItem(bk,JSON.stringify(brands))}catch(e){}}catch(e){if(e.status===401||e.status===403||e.status===404)authErr=e.message;brands={default:{name:"حسابي"}}}
  if(!brands[curBrand])curBrand=Object.keys(brands)[0];
  $("#c-brand").innerHTML=Object.entries(brands).map(([k,b])=>`<option value="${esc(k)}">${esc(b.name||k)}</option>`).join("");
  $("#c-brand").onchange=renderChips;if(secretNames===null)loadSecrets().then(renderChips);else renderChips();
@@ -558,7 +581,7 @@ window.wzInstagram=()=>{const b=brands[curBrand];
    if(me.error)throw new Error(me.error.message);
    if(me.account_type&&me.account_type==="PERSONAL")throw new Error("الحساب لسه شخصي — حوّله Creator من إعدادات إنستجرام");
    await putSecret(sname(b,"IG_TOKEN"),t);
-   if(!window.DEMO_SECRETS&&cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+   if(!window.DEMO_SECRETS&&!window.HOST&&cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    b.instagram={login:"instagram",user_id:me.user_id||"",username:me.username||"",connected_at:new Date().toISOString()};
    await saveBrands("connect instagram");closeSheet();renderBrands();toast(me.username?`إنستجرام @${me.username} اتربط`:"إنستجرام اتربط",6000)}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
@@ -623,7 +646,7 @@ window.wzTikTok=()=>{
   <div class="lbl">Client key</div><input id="t-key" dir="ltr" value="${esc(TT_CLIENT_KEY_DEFAULT)}"><div class="lbl">Client secret</div><input id="t-sec" dir="ltr" type="password">
   <div class="nav"><button class="btn pri" id="t-ok">ربط بتيك توك</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
-  try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+  try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
    location.href="https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")})}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
@@ -683,7 +706,7 @@ window.wzPinterest=()=>{const b=brands[curBrand];const pinOk=hasSecret(b,"PIN_RE
   <div class="lbl">App ID</div><input id="p-id" dir="ltr" autocomplete="off"><div class="lbl">App secret key</div><input id="p-sec" dir="ltr" type="password" autocomplete="new-password">
   <div class="nav"><button class="btn pri" id="p-ok">ربط ببنترست</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#p-ok").onclick=async()=>{const id=$("#p-id").value.trim(),sec=$("#p-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#p-ok");btn.disabled=true;btn.textContent="بيحفظ…";
-  try{await putSecret(sname(b,"PIN_CLIENT_ID"),id);await putSecret(sname(b,"PIN_CLIENT_SECRET"),sec);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+  try{await putSecret(sname(b,"PIN_CLIENT_ID"),id);await putSecret(sname(b,"PIN_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("pin_pending",JSON.stringify({brand:curBrand}));
    location.href="https://www.pinterest.com/oauth/?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",scope:"boards:read,pins:read,pins:write,user_accounts:read",state:oState("pin")})}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط ببنترست"}}};
@@ -744,7 +767,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=window.HOST?HOST.user.email:`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>

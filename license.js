@@ -9,8 +9,9 @@ const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
-const VERSION = "35";
+const VERSION = "36";
 const CHANGES = [
+  ["36", "حساب جوه التطبيق بالإيميل (من غير GitHub) · قايمة أسرع بكتير · بحث في البوستات · اختصارات كيبورد ومواعيد سريعة", "Sign up with e-mail inside the app (no GitHub) · much faster lists · post search · keyboard shortcuts & quick times"],
   ["32", "ارفع صورة التحويل جوه التطبيق والاشتراك يتفعّل لوحده بعد المراجعة", "Upload your transfer screenshot in the app — activates automatically after review"],
   ["30", "صفحة أسعار ودفع جديدة", "New pricing & payment screens"],
   ["26", "اشتراكات (فترة مجانية + شهري/سنوي) · المساعدة والاقتراحات · الجديد في التطبيق", "Subscriptions (free trial + monthly/yearly) · Help & feedback · What's new"],
@@ -68,7 +69,7 @@ const FEATURES = () => [
   L("رابط موافقة للعميل + تقرير شهري PDF", "Client approval links + monthly PDF report"),
   L("تحليل محتواك وأحسن وقت للنشر", "Content insights and best time to post"),
   L("مساعد كتابة بالذكاء الاصطناعي (اختياري)", "Optional AI writing assistant"),
-  L("بياناتك على حسابك إنت — مش عندنا", "Your data stays in your account — not ours"),
+  window.HOST ? L("بياناتك خاصة بحسابك — ومفاتيح الربط متشفّرة", "Your data is private to your account — connection keys are encrypted") : L("بياناتك على حسابك إنت — مش عندنا", "Your data stays in your account — not ours"),
   L("كل التحديثات الجديدة تلقائي", "Every new update, automatically"),
 ];
 let payPlan = "year";
@@ -245,7 +246,7 @@ function wireUpload(k) {
   if (!CONTACT.inbox) return; let img = null;
   $("#pm-file").onchange = async e => { const f = e.target.files[0]; if (!f) return; try { img = await shrink(f); $("#pm-drop-t").innerHTML = `<img src="data:image/jpeg;base64,${img}" style="max-height:160px;border-radius:8px">`; $("#pm-send").disabled = false; } catch (x) { toast(L("الصورة مش مقروءة", "Can't read that image")); } };
   $("#pm-send").onclick = async () => { if (!img) return; $("#pm-send").disabled = true; $("#pm-send").textContent = L("بيتبعت…", "Sending…");
-    try { const r = await inboxPost({ action: "submit", user: me(), plan: k, image: img }); if (r.error) throw new Error(r.error);
+    try { const r = await inboxPost({ action: "submit", user: me(), plan: k, image: img, s: window.HOST?.session }); if (r.error) throw new Error(r.error);
       payReq = { status: "pending", plan: k }; closeSheet(); paint();
       sheet(`<div class="wz pp" style="text-align:center"><div class="pp-logo" style="background:var(--ok)">✓</div><h3>${L("وصلت!", "Received!")}</h3><p class="hint">${L("صورة التحويل اتبعتت للمراجعة. أول ما تتأكد، الاشتراك هيتفعّل عندك لوحده وهيظهرلك إشعار هنا. عادة في نفس اليوم.", "Your screenshot is in review. Once confirmed, your subscription activates automatically — usually the same day.")}</p><div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button></div></div>`);
     } catch (e) { toast(L("ماتبعتتش: ", "Not sent: ") + e.message, 6000); $("#pm-send").disabled = false; $("#pm-send").textContent = L("ابعت للمراجعة", "Send for review"); } };

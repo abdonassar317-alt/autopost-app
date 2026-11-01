@@ -37,7 +37,7 @@ window.fetch = async (url, opt = {}) => {
   const cur = trees[commits[head]];
   if (path.startsWith("/contents/")) { const p = decodeURIComponent(path.slice(10)); return p in cur ? new Response(cur[p], { status: 200 }) : J({ message: "Not Found" }, 404); }
   if (path.startsWith("/git/trees/") && m === "GET") return J({ tree: Object.keys(cur).map(p => ({ path: p, type: "blob", sha: "x" })) });
-  if (path === "/git/blobs") { const id = "b" + (++n); blobs[id] = decodeURIComponent(escape(atob(body.content))); return J({ sha: id }, 201); }
+  if (path === "/git/blobs") { const id = "b" + (++n); try { blobs[id] = decodeURIComponent(escape(atob(body.content))); } catch (e) { blobs[id] = atob(body.content); } return J({ sha: id }, 201); } // images are binary
   if (path === "/git/trees") { const id = "t" + (++n), t = { ...trees[body.base_tree] }; for (const e of body.tree) { if (e.sha === null) delete t[e.path]; else t[e.path] = blobs[e.sha]; } trees[id] = t; return J({ sha: id }, 201); }
   if (path === "/git/commits") { const id = "c" + (++n); commits[id] = body.tree; return J({ sha: id }, 201); }
   if (path.startsWith("/git/commits/")) return J({ tree: { sha: commits[path.split("/").pop()] } });
