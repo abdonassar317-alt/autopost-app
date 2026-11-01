@@ -9,8 +9,9 @@ const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", bank: "" };
-const VERSION = "29";
+const VERSION = "30";
 const CHANGES = [
+  ["30", "صفحة أسعار ودفع جديدة", "New pricing & payment screens"],
   ["26", "اشتراكات (فترة مجانية + شهري/سنوي) · المساعدة والاقتراحات · الجديد في التطبيق", "Subscriptions (free trial + monthly/yearly) · Help & feedback · What's new"],
   ["25", "تحليل المحتوى: أحسن وقت، التنوّع، مراجعة المعلومات، تجارب A/B · كشف الصور المكررة · وسوم الملفات · تصدير حزمة محتوى", "Content insights: best time, mix, info review dates, A/B tests · already-posted check · media tags · content pack export"],
   ["24", "واجهة إنجليزي/عربي · الوضع الغامق · رابط موافقة العميل · الأرقام الحقيقية", "English/Arabic UI · dark mode · client approval links · real metrics"],
@@ -58,24 +59,82 @@ function subBox() {
     (lic.plan === "owner" ? `<button class="btn sm" id="adm-open">${L("العملاء والمدفوعات", "Customers & payments")}</button>`
       : `<div class="two"><button class="btn sm pri" id="sub-pay">${L("ادفع / جدّد", "Pay / renew")}</button><button class="btn sm" id="sub-code">${L("عندي كود اشتراك", "I have a code")}</button></div>`);
 }
+const FEATURES = () => [
+  L("كل المنصات: إنستجرام، فيسبوك، لينكدإن، يوتيوب، بنترست، تيك توك، سناب، X", "Every platform: Instagram, Facebook, LinkedIn, YouTube, Pinterest, TikTok, Snapchat, X"),
+  L("حسابات وعملاء وبوستات من غير حد", "Unlimited accounts, clients and posts"),
+  L("رابط موافقة للعميل + تقرير شهري PDF", "Client approval links + monthly PDF report"),
+  L("تحليل محتواك وأحسن وقت للنشر", "Content insights and best time to post"),
+  L("مساعد كتابة بالذكاء الاصطناعي (اختياري)", "Optional AI writing assistant"),
+  L("بياناتك على حسابك إنت — مش عندنا", "Your data stays in your account — not ours"),
+  L("كل التحديثات الجديدة تلقائي", "Every new update, automatically"),
+];
+let payPlan = "year";
 function paySheet() {
-  const u = me(), r = ref(u);
-  sheet(`<div class="wz"><h3>${L("الاشتراك", "Subscription")}</h3>
-   <div class="sub">${L("الأداة بتتطور باستمرار — اشتراكك بيدعم التطوير وبيجيلك كل جديد تلقائي.", "AutoPost keeps improving — your subscription funds that and every update reaches you automatically.")}</div>
-   ${Object.entries(PLANS).map(([k, p]) => `<div class="lrow"><b style="flex:1">${planName(k)}</b><span>${p.price} ${L("جنيه", "EGP")}${k === "year" ? ` <small class="mut">(${L("بدل", "instead of")} ${PLANS.month.price * 12} — ${L("خصم 50%", "50% off")})</small>` : ""}</span></div>`).join("")}
-   <div class="lbl f">${L("طرق الدفع", "How to pay")}</div>
-   ${CONTACT.instapay ? `<div class="lrow"><span style="flex:1">InstaPay: <b>${esc(CONTACT.instapay)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.instapay)}">${L("نسخ", "Copy")}</button></div>` : ""}
-   ${CONTACT.instapay_phone ? `<div class="lrow"><span style="flex:1">${L("أو InstaPay على رقم", "Or InstaPay to mobile")}: <b style="direction:ltr;unicode-bidi:embed">${esc(CONTACT.instapay_phone)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.instapay_phone)}">${L("نسخ", "Copy")}</button></div>` : ""}
-   ${CONTACT.instapay ? `<img src="instapay-qr.jpg" alt="InstaPay QR" style="display:block;width:180px;margin:6px auto;border-radius:8px;background:#fff"><p class="hint" style="text-align:center">${L("أو امسح الكود من تطبيق InstaPay", "Or scan with the InstaPay app")}</p>` : ""}
-   ${CONTACT.bank ? `<div class="lrow"><span style="flex:1">${L("تحويل بنكي", "Bank transfer")}: <b>${esc(CONTACT.bank)}</b></span><button class="btn sm" data-cp="${esc(CONTACT.bank)}">${L("نسخ", "Copy")}</button></div>` : ""}
-   ${!CONTACT.instapay && !CONTACT.bank ? `<p class="hint">${L("بيانات الدفع هتتضاف قريب.", "Payment details coming soon.")}</p>` : ""}
-   <div class="box f"><b>${L("مهم:", "Important:")}</b> ${L("اكتب الكود ده في ملاحظة التحويل عشان دفعتك تتسجل على حسابك:", "Put this reference in the transfer note so the payment is matched to your account:")}<br><code style="font-size:16px">${esc(r)}</code> <button class="btn sm" data-cp="${esc(r)}">${L("نسخ", "Copy")}</button></div>
-   <p class="hint">${L("بعد التحويل ابعت صورة الإيصال، وهيوصلك كود الاشتراك تحطه هنا.", "After paying, send the receipt and you'll get a subscription code to paste here.")}</p>
-   ${CONTACT.whatsapp ? Object.keys(PLANS).map(k => `<a class="btn f" style="display:block;text-align:center" target="_blank" href="${wa(`AutoPost — ${L("دفعت اشتراك", "I paid for")} ${planName(k)} (${PLANS[k].price} EGP)\n${L("المرجع", "Reference")}: ${r}\nGitHub: ${u}\n${L("مرفق الإيصال", "Receipt attached")}`)}">${L("دفعت", "I paid")} ${planName(k)} — ${L("ابعت الإيصال على واتساب", "send receipt on WhatsApp")}</a>`).join("")
-     : `<a class="btn f" style="display:block;text-align:center" href="mailto:${CONTACT.email}?subject=${encodeURIComponent("AutoPost payment " + r)}&body=${encodeURIComponent("GitHub: " + u + "\nReference: " + r)}">${L("ابعت الإيصال بالإيميل", "Send the receipt by email")}</a>`}
-   <div class="nav"><button class="btn" onclick="closeSheet()">${L("قفل", "Close")}</button></div></div>`);
-  document.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.cp).then(() => toast(L("اتنسخ", "Copied"))));
+  const P = PLANS, mo = P.month.price, yr = P.year.price, perMo = Math.round(yr / 12), save = mo * 12 - yr;
+  const card = (k) => { const on = payPlan === k, y = k === "year";
+    return `<button class="pc${on ? " on" : ""}" data-plan="${k}">
+      ${y ? `<span class="pc-badge">${L("الأوفر", "Best value")}</span>` : ""}
+      <span class="pc-name">${planName(k)}</span>
+      <span class="pc-price"><b>${y ? perMo : mo}</b> ${L("جنيه", "EGP")}<small>/${L("شهر", "mo")}</small></span>
+      <span class="pc-sub">${y ? L(`${yr} جنيه في السنة · وفّر ${save} جنيه`, `${yr} EGP a year · save ${save} EGP`) : L("ادفع شهر بشهر", "Pay month to month")}</span>
+      <i class="pc-dot"></i></button>`; };
+  const trial = lic?.plan === "trial" && lic.ok ? `<div class="pp-trial">${L(`إنت في الفترة المجانية — فاضل ${daysLeft()} يوم. مش لازم تدفع دلوقتي.`, `You're on the free trial — ${daysLeft()} days left. No need to pay yet.`)}</div>` : "";
+  sheet(`<div class="wz pp"><div class="pp-head"><div class="pp-logo">A</div><h3>AutoPost</h3>
+     <p>${L("انشر على كل المنصات من مكان واحد — بأقل سعر.", "Post everywhere from one place — for less.")}</p></div>
+   ${trial}
+   <div class="pp-cards">${card("year")}${card("month")}</div>
+   <ul class="pp-feat">${FEATURES().map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+   <div class="pp-cmp">${L("أدوات الجدولة المعروفة بتبدأ من 5$ لكل حساب، وبعضها 99$ للمستخدم. هنا كل حساباتك بـ", "Well-known schedulers start at $5 per account, some at $99 per user. Here, all your accounts for")} <b>${mo} ${L("جنيه", "EGP")}</b>.</div>
+   <button class="btn pri pp-go" id="pp-go">${L("كمّل للدفع", "Continue to payment")} — ${payPlan === "year" ? yr : mo} ${L("جنيه", "EGP")}</button>
+   <div class="pp-trust"><span>✓ ${L("من غير كارت", "No card needed")}</span><span>✓ ${L("مفيش تجديد تلقائي", "No auto-renew")}</span><span>✓ ${L("بياناتك محفوظة دايمًا", "Your data is always kept")}</span></div>
+   <p class="hint" style="text-align:center">${L("الأداة بتتطور كل أسبوع — عندك فكرة؟", "AutoPost improves every week — got an idea?")} <a target="_blank" href="${wa("AutoPost — " + L("فكرة تطوير", "Feature idea"))}">${L("قولنا", "Tell us")}</a></p>
+   <div class="nav"><button class="btn" onclick="closeSheet()">${L("بعدين", "Later")}</button></div></div>`);
+  document.querySelectorAll("[data-plan]").forEach(b => b.onclick = () => { payPlan = b.dataset.plan; paySheet(); });
+  $("#pp-go").onclick = payStep;
 }
+function payStep() {
+  const u = me(), r = ref(u), k = payPlan, amt = PLANS[k].price;
+  const row = (label, val) => `<div class="pm-row"><div><small>${label}</small><b>${esc(val)}</b></div><button class="btn sm" data-cp="${esc(val)}">${L("نسخ", "Copy")}</button></div>`;
+  sheet(`<div class="wz pp"><div class="pp-steps"><span class="done">1 ${L("الخطة", "Plan")}</span><span class="on">2 ${L("الدفع", "Pay")}</span><span>3 ${L("التفعيل", "Activate")}</span></div>
+   <div class="pm-amt"><small>${planName(k)}</small><b>${amt}</b> ${L("جنيه", "EGP")}</div>
+   <div class="pm-box">
+     <div class="pm-title">InstaPay</div>
+     ${CONTACT.instapay ? `<img class="pm-qr" src="instapay-qr.jpg" alt="InstaPay QR"><p class="hint" style="text-align:center;margin-top:0">${L("امسح الكود من تطبيق InstaPay", "Scan with the InstaPay app")}</p>` : ""}
+     ${CONTACT.instapay ? row(L("العنوان", "Address"), CONTACT.instapay) : ""}
+     ${CONTACT.instapay_phone ? row(L("أو رقم الموبايل", "Or mobile number"), CONTACT.instapay_phone) : ""}
+     ${CONTACT.bank ? row(L("تحويل بنكي", "Bank transfer"), CONTACT.bank) : ""}
+   </div>
+   <div class="pm-ref"><div><small>${L("اكتب ده في ملاحظة التحويل", "Put this in the transfer note")}</small><b>${esc(r)}</b></div><button class="btn sm" data-cp="${esc(r)}">${L("نسخ", "Copy")}</button></div>
+   ${CONTACT.whatsapp ? `<a class="btn pri pp-go" target="_blank" href="${wa(`AutoPost — ${L("دفعت", "Paid")} ${planName(k)} (${amt} EGP)\n${L("المرجع", "Reference")}: ${r}\nGitHub: ${u}\n${L("مرفق الإيصال", "Receipt attached")}`)}">${L("دفعت — ابعت الإيصال على واتساب", "I've paid — send the receipt on WhatsApp")}</a>`
+     : `<a class="btn pri pp-go" href="mailto:${CONTACT.email}?subject=${encodeURIComponent("AutoPost payment " + r)}">${L("ابعت الإيصال بالإيميل", "Send the receipt by email")}</a>`}
+   <p class="hint" style="text-align:center">${L("هيوصلك كود التفعيل على واتساب عادة في نفس اليوم. تحطه من الإعدادات ← «عندي كود اشتراك».", "You'll get your activation code on WhatsApp, usually the same day. Paste it in Settings → “I have a code”.")}</p>
+   <div class="nav"><button class="btn" id="pm-back">${L("رجوع", "Back")}</button><button class="btn" id="pm-code">${L("عندي الكود", "I have the code")}</button></div></div>`);
+  document.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.cp).then(() => toast(L("اتنسخ ✓", "Copied ✓"))));
+  $("#pm-back").onclick = paySheet; $("#pm-code").onclick = codeSheet;
+}
+const ppCss = document.createElement("style");
+ppCss.textContent = `.pp{padding:6px 6px 0}.pp-head{text-align:center;padding:10px 0 6px}.pp-head h3{margin:8px 0 2px;font-size:22px;letter-spacing:-.02em}.pp-head p{margin:0;color:var(--mut);font-size:14px}
+.pp-logo{width:48px;height:48px;border-radius:14px;background:var(--ink);color:var(--s);display:grid;place-items:center;font-weight:800;font-size:22px;margin:0 auto}
+.pp-trial{background:var(--soft);border-radius:10px;padding:10px 12px;font-size:13px;text-align:center;margin:10px 0 0}
+.pp-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.pc{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:start;font:inherit;color:var(--ink);background:var(--s);border:1.5px solid var(--line);border-radius:14px;padding:16px 14px 14px;cursor:pointer;transition:border-color .15s,transform .15s}
+.pc:active{transform:scale(.98)}.pc.on{border-color:var(--ink);box-shadow:0 0 0 3px color-mix(in srgb,var(--ink) 10%,transparent)}
+.pc-badge{position:absolute;top:-10px;inset-inline-start:12px;background:var(--ink);color:var(--s);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.pc-name{font-size:13px;color:var(--mut);font-weight:600}.pc-price{font-size:13px}.pc-price b{font-size:30px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}.pc-price small{color:var(--mut)}
+.pc-sub{font-size:12px;color:var(--mut);line-height:1.4}.pc.on .pc-sub{color:var(--ok)}
+.pc-dot{position:absolute;top:14px;inset-inline-end:12px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--line)}.pc.on .pc-dot{border:5px solid var(--ink)}
+.pp-feat{list-style:none;padding:0;margin:4px 0 12px;display:grid;gap:9px}.pp-feat li{font-size:14px;padding-inline-start:26px;position:relative;line-height:1.45}
+.pp-feat li:before{content:"";position:absolute;inset-inline-start:0;top:2px;width:18px;height:18px;border-radius:50%;background:var(--soft) no-repeat center/11px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2 6.5l2.5 2.5L10 3.5' fill='none' stroke='%231f7a4d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.pp-cmp{font-size:13px;color:var(--mut);background:var(--soft);border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5}.pp-cmp b{color:var(--ink)}
+.pp-go{color:var(--s)!important;background:var(--ink)!important;width:100%;padding:15px;font-size:16px;border-radius:12px;display:flex;text-decoration:none}
+.pp-trust{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:12px;color:var(--mut);margin:10px 0 4px}
+.pp-steps{display:flex;gap:6px;justify-content:center;margin:6px 0 14px}.pp-steps span{font-size:12px;padding:5px 10px;border-radius:20px;background:var(--soft);color:var(--mut)}.pp-steps .on{background:var(--ink);color:var(--s)}.pp-steps .done{color:var(--ok)}
+.pm-amt{text-align:center;margin-bottom:12px}.pm-amt small{display:block;color:var(--mut);font-size:13px}.pm-amt b{font-size:36px;letter-spacing:-.03em}
+.pm-box{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}.pm-title{font-weight:700;margin-bottom:8px}
+.pm-qr{display:block;width:170px;margin:0 auto 6px;border-radius:10px;background:#fff;padding:4px}
+.pm-row,.pm-ref{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.pm-row>div,.pm-ref>div{flex:1;min-width:0}.pm-row small,.pm-ref small{display:block;color:var(--mut);font-size:12px}.pm-row b,.pm-ref b{direction:ltr;unicode-bidi:embed;word-break:break-all}
+.pm-ref{border:1.5px dashed var(--ink);border-radius:12px;padding:10px 12px;margin-bottom:12px}`;
+document.head.appendChild(ppCss);
 function codeSheet() {
   sheet(`<div class="wz"><h3>${L("كود الاشتراك", "Subscription code")}</h3><textarea id="sub-in" rows="4" placeholder="AP-…" style="direction:ltr"></textarea>
    <div class="nav"><button class="btn pri" id="sub-ok">${L("تفعيل", "Activate")}</button><button class="btn" onclick="closeSheet()">${L("إلغاء", "Cancel")}</button></div></div>`);
