@@ -416,7 +416,7 @@ async function renderBrands(){
  const b=brands[curBrand]||{};const tg=hasSecret(b,"TELEGRAM_BOT_TOKEN")||(secretNames&&secretNames.has("TELEGRAM_BOT_TOKEN"));
  const meta=hasSecret(b,"META_TOKEN")&&b.facebook?.page_id;
  const igOk=(b.instagram?.login==="instagram"&&hasSecret(b,"IG_TOKEN"))||(meta&&b.instagram?.user_id);
- const li=hasSecret(b,"LINKEDIN_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
+ const li=hasSecret(b,"LINKEDIN_TOKEN");const ttOk=hasSecret(b,"TT_REFRESH_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
  const liExp=b.linkedin?.connected_at?new Date(new Date(b.linkedin.connected_at).getTime()+59*864e5):null;
  const row=(lg,col,name,sub,ok,btn)=>`<div class="conn"><div class="lg" style="background:${col}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${ok?'<span class="pill ok">متصل</span>':""}${btn}</div>`;
  $("#b-panel").innerHTML=`${secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
@@ -429,7 +429,8 @@ async function renderBrands(){
  </div>
  <div class="box">
   ${row("tg","#229ed9","تليجرام",tg?"التقارير والتذكير شغالين":"تقارير النشر + تذكير المنصات اليدوي",tg,`<button class="btn sm" onclick="wzTelegram()">${tg?"تغيير":"اربط"}</button>`)}
-  ${row("tt","#111","تيك توك، سناب، X","بيوصلك الملفات والكابشن على تليجرام في الميعاد",false,"")}
+  ${row("tt","#111","تيك توك",ttOk?`${esc(b.tiktok?.name||"متصل")} · بينزل لوحده`:"اربطه عشان ينزل لوحده",ttOk,`<button class="btn sm" onclick="wzTikTok()">${ttOk?"تغيير":"اربط"}</button>`)}
+  ${row("sc","#fffc00;color:#111","سناب، X","زرار نشر بضغطة في الميعاد",false,"")}
  </div>
  ${curBrand!=="default"?`<button class="btn sm" style="color:var(--bad)" onclick="delBrand()">${ic("trash")} حذف العميل ده</button>`:""}`;
 }
@@ -524,6 +525,32 @@ async function finishYouTube(){
   await saveBrands("connect youtube");tab("brands");renderBrands();toast(ch?`يوتيوب (${ch}) اتربط ✅`:"يوتيوب اتربط ✅",8000)}
  catch(e){toast("يوتيوب: "+e.message,10000)}}
 
+// ---- TikTok wizard: Login Kit -> code comes back here -> GitHub Action exchanges it (client secret never leaves GitHub)
+const TT_CLIENT_KEY_DEFAULT="";
+window.wzTikTok=()=>{
+ sheet(`<div class="wz"><h3>ربط تيك توك</h3><div class="sub">مرة واحدة بس</div><ol class="steps">
+  <li>من <a href="https://developers.tiktok.com/apps/" target="_blank" rel="noopener">TikTok for Developers</a> افتح تطبيقك ← انسخ <b>Client key</b> و <b>Client secret</b></li>
+  <li>اضغط <b>ربط بتيك توك</b> ← وافق ← هترجع هنا لوحدك</li></ol>
+  <div class="lbl">Client key</div><input id="t-key" dir="ltr" value="${esc(TT_CLIENT_KEY_DEFAULT)}"><div class="lbl">Client secret</div><input id="t-sec" dir="ltr" type="password">
+  <div class="nav"><button class="btn pri" id="t-ok">ربط بتيك توك</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
+  try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+   sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
+   location.href="https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:"tt"})}
+  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
+async function finishTikTok(){
+ const q=new URLSearchParams(location.search);if(q.get("state")!=="tt")return;
+ history.replaceState(null,"",YT_REDIRECT);
+ const st=JSON.parse(sessionStorage.getItem("tt_pending")||"null");sessionStorage.removeItem("tt_pending");
+ if(q.get("error")||!q.get("code")){toast("ربط تيك توك اتلغى: "+(q.get("error_description")||q.get("error")||""),8000);return}
+ try{toast("بيربط تيك توك… ثواني",60000);
+  curBrand=st?.brand||curBrand;const b=brands[curBrand];
+  await gh(`${R()}/actions/workflows/tiktok-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
+  let name="";for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const t=JSON.parse(await readFile("state/tiktok.json"));if(t.connected){name=t.display_name||"";break}}catch(e){}}
+  b.tiktok={...(b.tiktok||{}),name,connected_at:new Date().toISOString()};await saveBrands("connect tiktok");secretNames&&secretNames.add(sname(b,"TT_REFRESH_TOKEN"));
+  tab("brands");renderBrands();toast(name?`تيك توك (${name}) اتربط ✅`:"تيك توك اتربط ✅ — لو ماظهرش، حدّث الصفحة بعد دقيقة",8000)}
+ catch(e){toast("تيك توك: "+e.message,10000)}}
+
 // ---- LinkedIn wizard
 window.wzLinkedIn=()=>{const b=brands[curBrand];
  sheet(`<div class="wz"><h3>ربط لينكدإن</h3><div class="sub">التوكن بيعيش 60 يوم، وهنفكّرك تجدده</div><ol class="steps">
@@ -573,7 +600,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
