@@ -476,24 +476,32 @@ window.wzInstagram=()=>{const b=brands[curBrand];
    await saveBrands("connect instagram");closeSheet();renderBrands();toast(me.username?`إنستجرام @${me.username} اتربط`:"إنستجرام اتربط",6000)}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
 
-// ---- YouTube wizard (Google OAuth via OAuth Playground — no server needed)
-window.wzYouTube=()=>{const b=brands[curBrand];
- sheet(`<div class="wz"><h3>ربط يوتيوب</h3><div class="sub">مرة واحدة بس — بعدها الفيديوهات تنزل لوحدها</div><ol class="steps">
-  <li>افتح <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">Google Cloud ← New project</a> باسم <code>AutoPost</code> ← Create</li>
-  <li>فعّل <a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener">YouTube Data API v3</a> ← Enable</li>
-  <li>من <a href="https://console.cloud.google.com/auth/overview" target="_blank" rel="noopener">Google Auth Platform</a> ← Get started ← اسم التطبيق وإيميلك ← <b>External</b> ← Create. وبعدين من <b>Audience</b> اضغط <b>Publish app</b> (عشان الربط مايقفش بعد أسبوع)</li>
-  <li>من <a href="https://console.cloud.google.com/auth/clients/create" target="_blank" rel="noopener">Clients ← Create client</a> اختار <b>Web application</b> وفي Authorized redirect URIs حط:<code style="display:block;margin-top:6px">https://developers.google.com/oauthplayground</code> ← Create ← انسخ Client ID و Client secret</li>
-  <li>افتح <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener">OAuth Playground</a> ← ⚙️ فوق ← علّم <b>Use your own OAuth credentials</b> وحط الاتنين ← في الخانة على الشمال اكتب <code>https://www.googleapis.com/auth/youtube.upload</code> ← Authorize APIs ← اختار قناتك ووافق ← <b>Exchange authorization code for tokens</b> ← انسخ <b>Refresh token</b></li></ol>
-  <div class="lbl">Client ID</div><input id="y-id" dir="ltr"><div class="lbl">Client secret</div><input id="y-sec" dir="ltr" type="password"><div class="lbl">Refresh token</div><input id="y-rt" dir="ltr" type="password" placeholder="1//…">
-  <div class="nav"><button class="btn pri" id="y-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
- $("#y-ok").onclick=async()=>{const id=$("#y-id").value.trim(),sec=$("#y-sec").value.trim(),rt=$("#y-rt").value.trim();if(!id||!sec||!rt)return toast("حط التلاتة");const btn=$("#y-ok");btn.disabled=true;btn.textContent="بيتأكد…";
-  try{const r=await (await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:id,client_secret:sec,refresh_token:rt,grant_type:"refresh_token"})})).json();
-   if(r.error)throw new Error(r.error_description||r.error);
-   let ch="";try{const c=await (await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",{headers:{Authorization:"Bearer "+r.access_token}})).json();ch=c.items?.[0]?.snippet?.title||""}catch(e){}
-   await putSecret(sname(b,"YT_CLIENT_ID"),id);await putSecret(sname(b,"YT_CLIENT_SECRET"),sec);await putSecret(sname(b,"YT_REFRESH_TOKEN"),rt);
-   b.youtube={...(b.youtube||{}),privacy:b.youtube?.privacy||"public",channel:ch,connected_at:new Date().toISOString()};
-   await saveBrands("connect youtube");closeSheet();renderBrands();toast(ch?`يوتيوب (${ch}) اتربط`:"يوتيوب اتربط",6000)}
-  catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط"}}};
+// ---- YouTube wizard: paste Client ID + secret once, then Google sign-in returns here and we exchange the code
+const YT_REDIRECT=location.origin+location.pathname;
+window.wzYouTube=()=>{
+ sheet(`<div class="wz"><h3>ربط يوتيوب</h3><div class="sub">خطوتين بس</div><ol class="steps">
+  <li>الصق <b>Client ID</b> و <b>Client secret</b> من <a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener">Google Cloud ← العملاء</a></li>
+  <li>اضغط <b>ربط بجوجل</b> ← اختار قناتك ← لو ظهر "التطبيق لم يتم التحقق منه" اضغط <b>Advanced</b> ثم <b>Go to AutoPost</b> ← <b>سماح</b>. هترجع هنا لوحدك.</li></ol>
+  <div class="lbl">Client ID</div><input id="y-id" dir="ltr" placeholder="…apps.googleusercontent.com"><div class="lbl">Client secret</div><input id="y-sec" dir="ltr" type="password" placeholder="GOCSPX-…">
+  <div class="nav"><button class="btn pri" id="y-ok">ربط بجوجل</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#y-ok").onclick=()=>{const id=$("#y-id").value.trim(),sec=$("#y-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");
+  sessionStorage.setItem("yt_pending",JSON.stringify({id,sec,brand:curBrand}));
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"consent",state:"yt",scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}};
+async function finishYouTube(){
+ const q=new URLSearchParams(location.search);if(q.get("state")!=="yt")return;
+ history.replaceState(null,"",YT_REDIRECT);
+ const st=JSON.parse(sessionStorage.getItem("yt_pending")||"null");sessionStorage.removeItem("yt_pending");
+ if(q.get("error")||!q.get("code")||!st){toast("ربط يوتيوب اتلغى",6000);return}
+ try{toast("بيربط يوتيوب…",20000);
+  const r=await (await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({code:q.get("code"),client_id:st.id,client_secret:st.sec,redirect_uri:YT_REDIRECT,grant_type:"authorization_code"})})).json();
+  if(r.error)throw new Error(r.error_description||r.error);
+  if(!r.refresh_token)throw new Error("جوجل مارجّعش refresh token — شيل صلاحية AutoPost من حسابك وجرّب تاني");
+  let ch="";try{const c=await (await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true",{headers:{Authorization:"Bearer "+r.access_token}})).json();ch=c.items?.[0]?.snippet?.title||""}catch(e){}
+  curBrand=st.brand||curBrand;const b=brands[curBrand];
+  await putSecret(sname(b,"YT_CLIENT_ID"),st.id);await putSecret(sname(b,"YT_CLIENT_SECRET"),st.sec);await putSecret(sname(b,"YT_REFRESH_TOKEN"),r.refresh_token);
+  b.youtube={...(b.youtube||{}),privacy:b.youtube?.privacy||"public",channel:ch,connected_at:new Date().toISOString()};
+  await saveBrands("connect youtube");tab("brands");renderBrands();toast(ch?`يوتيوب (${ch}) اتربط ✅`:"يوتيوب اتربط ✅",8000)}
+ catch(e){toast("يوتيوب: "+e.message,10000)}}
 
 // ---- LinkedIn wizard
 window.wzLinkedIn=()=>{const b=brands[curBrand];
@@ -544,7 +552,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
