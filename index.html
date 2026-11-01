@@ -263,7 +263,7 @@ async function runNow(){try{await gh(`${R()}/actions/workflows/publish.yml/dispa
 
 // ---------- compose
 $("#c-plats").innerHTML=PLATS.map(([k,n,c])=>`<div class="chip${sel.has(k)?" on":""}" data-k="${k}"><span class="d" style="background:${c}"></span>${n}${MANUAL.has(k)?" <small>تذكير</small>":""}</div>`).join("");
-document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on")});
+document.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on");if(k==="instagram"&&sel.has(k)&&!sel.has("facebook")){sel.add("facebook");document.querySelector('.chip[data-k="facebook"]')?.classList.add("on")}});
 function setDefaultTime(){const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);const p=n=>String(n).padStart(2,"0");$("#c-date").value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;$("#c-hour").value=`${p(d.getHours())}:00`}
 setDefaultTime();
 $("#c-caption").oninput=e=>$("#c-count").textContent=e.target.value.length;
