@@ -8,9 +8,10 @@ const PUBLIC_KEY = "Sbg09MltEUuNOc+7mUIOBjW2ZjQFTBkCYu3KuU/tuIY=";
 const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
-const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", bank: "" };
-const VERSION = "30";
+const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "", bank: "" };
+const VERSION = "32";
 const CHANGES = [
+  ["32", "ارفع صورة التحويل جوه التطبيق والاشتراك يتفعّل لوحده بعد المراجعة", "Upload your transfer screenshot in the app — activates automatically after review"],
   ["30", "صفحة أسعار ودفع جديدة", "New pricing & payment screens"],
   ["26", "اشتراكات (فترة مجانية + شهري/سنوي) · المساعدة والاقتراحات · الجديد في التطبيق", "Subscriptions (free trial + monthly/yearly) · Help & feedback · What's new"],
   ["25", "تحليل المحتوى: أحسن وقت، التنوّع، مراجعة المعلومات، تجارب A/B · كشف الصور المكررة · وسوم الملفات · تصدير حزمة محتوى", "Content insights: best time, mix, info review dates, A/B tests · already-posted check · media tags · content pack export"],
@@ -55,6 +56,8 @@ function subBox() {
     : lic.ok ? `${planName(lic.plan)} — ${L("لحد", "until")} ${fmtD(lic.until)} (${L(`فاضل ${d} يوم`, `${d} days left`)})`
     : L("الاشتراك خلص — النشر واقف لحد ما تجدد. بياناتك وبوستاتك محفوظة.", "Subscription ended — posting is paused until you renew. Your data and posts are kept.");
   return `<div class="lbl">${L("الاشتراك", "Subscription")}</div><p style="margin:4px 0 8px">${esc(st)}</p>` +
+    (payReq?.status === "pending" ? `<p class="hint" style="color:var(--warn)">⏳ ${L("صورة التحويل بتتراجع — الاشتراك هيتفعّل لوحده أول ما تتأكد.", "Your transfer is being reviewed — it will activate automatically.")}</p>` : "") +
+    (payReq?.status === "rejected" ? `<p class="hint" style="color:var(--bad)">${L("طلب الدفع اترفض", "Payment request rejected")}${payReq.reason ? ": " + esc(payReq.reason) : ""}</p>` : "") +
     (lic.bad ? `<p class="hint" style="color:var(--bad)">${L("الكود المحفوظ مش صالح للحساب ده.", "The saved code isn't valid for this account.")}</p>` : "") +
     (lic.plan === "owner" ? `<button class="btn sm" id="adm-open">${L("العملاء والمدفوعات", "Customers & payments")}</button>`
       : `<div class="two"><button class="btn sm pri" id="sub-pay">${L("ادفع / جدّد", "Pay / renew")}</button><button class="btn sm" id="sub-code">${L("عندي كود اشتراك", "I have a code")}</button></div>`);
@@ -104,13 +107,14 @@ function payStep() {
      ${CONTACT.instapay_phone ? row(L("أو رقم الموبايل", "Or mobile number"), CONTACT.instapay_phone) : ""}
      ${CONTACT.bank ? row(L("تحويل بنكي", "Bank transfer"), CONTACT.bank) : ""}
    </div>
-   <div class="pm-ref"><div><small>${L("اكتب ده في ملاحظة التحويل", "Put this in the transfer note")}</small><b>${esc(r)}</b></div><button class="btn sm" data-cp="${esc(r)}">${L("نسخ", "Copy")}</button></div>
-   ${CONTACT.whatsapp ? `<a class="btn pri pp-go" target="_blank" href="${wa(`AutoPost — ${L("دفعت", "Paid")} ${planName(k)} (${amt} EGP)\n${L("المرجع", "Reference")}: ${r}\nGitHub: ${u}\n${L("مرفق الإيصال", "Receipt attached")}`)}">${L("دفعت — ابعت الإيصال على واتساب", "I've paid — send the receipt on WhatsApp")}</a>`
-     : `<a class="btn pri pp-go" href="mailto:${CONTACT.email}?subject=${encodeURIComponent("AutoPost payment " + r)}">${L("ابعت الإيصال بالإيميل", "Send the receipt by email")}</a>`}
+   <div class="pm-ref"><div><small>${CONTACT.inbox ? L("اختياري: لو InstaPay فيه خانة ملاحظة اكتب فيها", "Optional: if InstaPay shows a note field, type") : L("اكتب ده في خانة الملاحظة في InstaPay", "Type this in the InstaPay note field")}</small><b>${esc(r)}</b></div><button class="btn sm" data-cp="${esc(r)}">${L("نسخ", "Copy")}</button></div>
+   ${uploadBlock(k)}
+   ${CONTACT.inbox ? "" : `<div>${CONTACT.whatsapp ? `<a class="btn pri pp-go" target="_blank" href="${wa(`AutoPost — ${L("دفعت", "Paid")} ${planName(k)} (${amt} EGP)\n${L("المرجع", "Reference")}: ${r}\nGitHub: ${u}\n${L("مرفق الإيصال", "Receipt attached")}`)}">${L("دفعت — ابعت الإيصال على واتساب", "I've paid — send the receipt on WhatsApp")}</a>`
+     : `<a class="btn pri pp-go" href="mailto:${CONTACT.email}?subject=${encodeURIComponent("AutoPost payment " + r)}">${L("ابعت الإيصال بالإيميل", "Send the receipt by email")}</a>`}</div>`}
    <p class="hint" style="text-align:center">${L("هيوصلك كود التفعيل على واتساب عادة في نفس اليوم. تحطه من الإعدادات ← «عندي كود اشتراك».", "You'll get your activation code on WhatsApp, usually the same day. Paste it in Settings → “I have a code”.")}</p>
    <div class="nav"><button class="btn" id="pm-back">${L("رجوع", "Back")}</button><button class="btn" id="pm-code">${L("عندي الكود", "I have the code")}</button></div></div>`);
   document.querySelectorAll("[data-cp]").forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.cp).then(() => toast(L("اتنسخ ✓", "Copied ✓"))));
-  $("#pm-back").onclick = paySheet; $("#pm-code").onclick = codeSheet;
+  $("#pm-back").onclick = paySheet; $("#pm-code").onclick = codeSheet; wireUpload(k);
 }
 const ppCss = document.createElement("style");
 ppCss.textContent = `.pp{padding:6px 6px 0}.pp-head{text-align:center;padding:10px 0 6px}.pp-head h3{margin:8px 0 2px;font-size:22px;letter-spacing:-.02em}.pp-head p{margin:0;color:var(--mut);font-size:14px}
@@ -133,6 +137,9 @@ ppCss.textContent = `.pp{padding:6px 6px 0}.pp-head{text-align:center;padding:10
 .pm-box{border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}.pm-title{font-weight:700;margin-bottom:8px}
 .pm-qr{display:block;width:170px;margin:0 auto 6px;border-radius:10px;background:#fff;padding:4px}
 .pm-row,.pm-ref{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.pm-row>div,.pm-ref>div{flex:1;min-width:0}.pm-row small,.pm-ref small{display:block;color:var(--mut);font-size:12px}.pm-row b,.pm-ref b{direction:ltr;unicode-bidi:embed;word-break:break-all}
+.pm-up{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.pm-drop{display:flex;justify-content:center;align-items:center;min-height:90px;border:1.5px dashed var(--line);border-radius:12px;margin:8px 0 10px;cursor:pointer;color:var(--mut);font-size:14px;text-align:center;padding:8px}
+.rq{display:flex;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0}.rq-img{width:84px;height:120px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:var(--soft)}.rq-img.big{position:fixed;inset:5vh 5vw;width:90vw;height:90vh;object-fit:contain;z-index:60;background:#000c;cursor:zoom-out}
+.rq-b{flex:1;min-width:0;font-size:14px}.rq-cs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.rq-c{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--soft)}.rq-c.y{color:var(--ok)}.rq-c.n{color:var(--bad)}.rq-n{background:var(--bad);color:#fff;border-radius:20px;padding:0 7px;font-size:12px}
 .pm-ref{border:1.5px dashed var(--ink);border-radius:12px;padding:10px 12px;margin-bottom:12px}`;
 document.head.appendChild(ppCss);
 function codeSheet() {
@@ -161,8 +168,10 @@ async function adminSheet() {
   await loadCust();
   const list = cust.customers, paid = list.filter(c => cStatus(c)[0] === "ok" || cStatus(c)[0] === "warn").length;
   const income = list.flatMap(c => c.payments || []).filter(p => new Date(p.date) > Date.now() - 30 * DAY).reduce((a, p) => a + (+p.amount || 0), 0);
+  const reqHtml = await requestsBlock();
   sheet(`<div class="wz"><h3>${L("العملاء والمدفوعات", "Customers & payments")}</h3>
    <div class="sub">${L(`${list.length} عميل · ${paid} دافع · دخل آخر 30 يوم: ${income} جنيه`, `${list.length} customers · ${paid} paid · last 30 days: ${income} EGP`)}</div>
+   ${reqHtml}<div class="lbl f">${L("العملاء", "Customers")}</div>
    ${list.map((c, i) => { const [cl, t] = cStatus(c); return `<div class="nrow ${cl === "ok" ? "" : cl}"><div><b>${esc(c.name || c.github)}</b> <small class="mut">${esc(c.github)} · ${esc(ref(c.github))}</small><br>${esc(t)}${c.payments?.length ? ` <small class="mut">· ${L("آخر دفعة", "last")}: ${c.payments.at(-1).amount} ${esc(c.payments.at(-1).method)}</small>` : ""}</div>
      <div class="na"><button class="btn sm pri" data-pay="${i}">${L("سجّل دفعة", "Record payment")}</button>${c.code ? `<button class="btn sm" data-code="${i}">${L("الكود", "Code")}</button>` : ""}</div></div>`; }).join("") || `<p class="hint">${L("مفيش عملاء لسه.", "No customers yet.")}</p>`}
    <div class="lbl f">${L("عميل جديد", "New customer")}</div><input id="cu-g" placeholder="${L("اسم حسابه على GitHub", "GitHub username")}" style="direction:ltr"><div class="two f"><input id="cu-n" placeholder="${L("الاسم", "Name")}"><input id="cu-p" placeholder="${L("واتساب", "WhatsApp")}" style="direction:ltr"></div>
@@ -172,6 +181,7 @@ async function adminSheet() {
     if (list.some(c => c.github.toLowerCase() === g.toLowerCase())) return toast(L("موجود بالفعل", "Already added"));
     list.push({ github: g, name: $("#cu-n").value.trim(), phone: $("#cu-p").value.trim(), added: new Date().toISOString(), payments: [] });
     try { await saveCust("add customer " + g); adminSheet(); } catch (e) { toast(e.message); } };
+  wireRequests();
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = () => recordPay(+b.dataset.pay));
   document.querySelectorAll("[data-code]").forEach(b => b.onclick = () => showCode(list[+b.dataset.code]));
 }
@@ -184,12 +194,14 @@ function recordPay(i) { const c = cust.customers[i];
    <div class="nav"><button class="btn pri" id="rp-ok">${L("تأكيد وإصدار الكود", "Confirm & issue code")}</button><button class="btn" onclick="adminSheet()">${L("رجوع", "Back")}</button></div></div>`);
   let plan = "month";
   $("#rp-plan").querySelectorAll("button").forEach(b => b.onclick = () => { plan = b.dataset.v; $("#rp-plan").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); $("#rp-a").value = PLANS[plan].price; });
-  $("#rp-ok").onclick = async () => {
-    const start = c.until && new Date(c.until) > Date.now() ? new Date(c.until) : new Date();
-    const until = addMonths(start, PLANS[plan].months).toISOString().replace(/\.\d+Z$/, "Z");
-    c.payments = [...(c.payments || []), { date: new Date().toISOString(), plan, amount: +$("#rp-a").value || 0, method: $("#rp-m").value, txn: $("#rp-r").value.trim() || undefined }];
-    c.until = until; c.plan = plan; c.code = sign({ u: c.github.toLowerCase(), p: plan, until }, getSk());
+  $("#rp-ok").onclick = async () => { grant(c, plan, +$("#rp-a").value || 0, $("#rp-m").value, $("#rp-r").value.trim());
     try { await saveCust("payment " + c.github); showCode(c); } catch (e) { toast(e.message); } };
+}
+function grant(c, plan, amount, method, txn) {
+  const start = c.until && new Date(c.until) > Date.now() ? new Date(c.until) : new Date();
+  const until = addMonths(start, PLANS[plan].months).toISOString().replace(/\.\d+Z$/, "Z");
+  c.payments = [...(c.payments || []), { date: new Date().toISOString(), plan, amount, method, txn: txn || undefined }];
+  c.until = until; c.plan = plan; c.code = sign({ u: c.github.toLowerCase(), p: plan, until }, getSk()); return c;
 }
 function showCode(c) {
   const msg = `${L("أهلاً", "Hi")} ${c.name || ""} 👋\n${L("دفعتك وصلت، شكرًا! اشتراكك في AutoPost شغال لحد", "Payment received, thank you! Your AutoPost subscription is active until")} ${fmtD(c.until)}.\n${L("افتح الأداة ← الإعدادات ← «عندي كود اشتراك» والصق الكود ده:", "Open the app → Settings → “I have a code” and paste:")}\n\n${c.code}`;
@@ -208,6 +220,62 @@ function keySheet() {
       localStorage.setItem(SKK, $("#sk-in").value.trim()); toast(L("تمام ✓", "Saved ✓")); adminSheet(); } catch (e) { toast(L("المفتاح مش صحيح", "Wrong key")); } };
 }
 
+// ------------------------------------------------------------------ payment inbox (Apps Script web app on the owner's Google account)
+const IKEY = "ap_inbox_key";
+const inboxGet = async q => (await fetch(CONTACT.inbox + "?" + new URLSearchParams(q))).json();
+const inboxPost = async b => (await fetch(CONTACT.inbox, { method: "POST", body: JSON.stringify(b) })).json();
+async function shrink(file) { const bmp = await createImageBitmap(file), k = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", .82).split(",")[1]; }
+let payReq = null; // client's latest request
+async function checkReq() { if (!CONTACT.inbox || isOwner()) return;
+  try { payReq = await inboxGet({ action: "status", user: me() }); } catch (e) { return; }
+  if (payReq.status === "approved" && payReq.code && lic?.cfg?.code !== payReq.code) { const p = decode(payReq.code);
+    if (p && String(p.u).toLowerCase() === me()) { try { await commit([{ path: "config/license.json", b64: utf8b64(JSON.stringify({ ...(lic?.cfg || {}), code: payReq.code }, null, 2)) }], "activate subscription"); await loadLic(); paint();
+      toast(L(`دفعتك اتقبلت ✓ اشتراكك شغال لحد ${fmtD(p.until)}`, `Payment approved ✓ Active until ${fmtD(p.until)}`), 8000); } catch (e) {} } }
+  paint(); }
+function uploadBlock(k) {
+  if (!CONTACT.inbox) return "";
+  return `<div class="pm-up"><div class="pm-title">${L("بعد ما تحوّل: ارفع صورة التحويل", "After you pay: upload the transfer screenshot")}</div>
+    <label class="pm-drop" id="pm-drop"><input type="file" accept="image/*" id="pm-file" hidden><span id="pm-drop-t">📷 ${L("اختار سكرين التحويل من الموبايل", "Choose the transfer screenshot")}</span></label>
+    <button class="btn pri pp-go" id="pm-send" disabled>${L("ابعت للمراجعة", "Send for review")}</button>
+    <p class="hint" style="text-align:center">${L("الصورة بتروح لصاحب التطبيق بس. أول ما يتأكد إن الفلوس وصلت، الاشتراك بيتفعّل عندك لوحده — مش محتاج تعمل حاجة.", "Only the app owner sees it. Once the money is confirmed, your subscription activates by itself.")}</p></div>`;
+}
+function wireUpload(k) {
+  if (!CONTACT.inbox) return; let img = null;
+  $("#pm-file").onchange = async e => { const f = e.target.files[0]; if (!f) return; try { img = await shrink(f); $("#pm-drop-t").innerHTML = `<img src="data:image/jpeg;base64,${img}" style="max-height:160px;border-radius:8px">`; $("#pm-send").disabled = false; } catch (x) { toast(L("الصورة مش مقروءة", "Can't read that image")); } };
+  $("#pm-send").onclick = async () => { if (!img) return; $("#pm-send").disabled = true; $("#pm-send").textContent = L("بيتبعت…", "Sending…");
+    try { const r = await inboxPost({ action: "submit", user: me(), plan: k, image: img }); if (r.error) throw new Error(r.error);
+      payReq = { status: "pending", plan: k }; closeSheet(); paint();
+      sheet(`<div class="wz pp" style="text-align:center"><div class="pp-logo" style="background:var(--ok)">✓</div><h3>${L("وصلت!", "Received!")}</h3><p class="hint">${L("صورة التحويل اتبعتت للمراجعة. أول ما تتأكد، الاشتراك هيتفعّل عندك لوحده وهيظهرلك إشعار هنا. عادة في نفس اليوم.", "Your screenshot is in review. Once confirmed, your subscription activates automatically — usually the same day.")}</p><div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button></div></div>`);
+    } catch (e) { toast(L("ماتبعتتش: ", "Not sent: ") + e.message, 6000); $("#pm-send").disabled = false; $("#pm-send").textContent = L("ابعت للمراجعة", "Send for review"); } };
+}
+const ikey = () => { try { return localStorage.getItem(IKEY) || ""; } catch (e) { return ""; } };
+async function requestsBlock() {
+  if (!CONTACT.inbox) return `<p class="hint">${L("صندوق صور التحويل مش متفعّل لسه.", "The payment-screenshot inbox isn't set up yet.")}</p>`;
+  if (!ikey()) return `<div class="lbl f">${L("مفتاح صندوق المدفوعات", "Payment inbox key")}</div><div class="two"><input id="ik-in" style="direction:ltr" placeholder="ADMIN_KEY"><button class="btn sm" id="ik-ok">${L("حفظ", "Save")}</button></div>`;
+  let rs = []; try { const r = await inboxGet({ action: "list", key: ikey() }); if (r.error) throw new Error(r.error); rs = r.requests || []; } catch (e) { return `<p class="hint" style="color:var(--bad)">${L("مش قادر أوصل لصندوق المدفوعات: ", "Can't reach the payment inbox: ")}${esc(e.message)}</p>`; }
+  const pend = rs.filter(r => r.status === "pending");
+  window.__reqs = rs;
+  const yes = (b, t) => `<span class="rq-c ${b ? "y" : "n"}">${b ? "✓" : "✗"} ${t}</span>`;
+  return `<div class="lbl f">${L("طلبات الدفع", "Payment requests")} ${pend.length ? `<span class="rq-n">${pend.length}</span>` : ""}</div>` +
+    (pend.map(r => `<div class="rq"><img src="data:image/jpeg;base64,${r.img}" class="rq-img" onclick="this.classList.toggle('big')"><div class="rq-b">
+      <b>${esc(r.user)}</b> — ${planName(r.plan)} <b>${r.price}</b> ${L("جنيه", "EGP")}<br><small class="mut">${new Date(r.at).toLocaleString(EN() ? "en-GB" : "ar-EG")}</small>
+      <div class="rq-cs">${yes(r.check?.amount_ok, L("المبلغ", "Amount"))}${yes(r.check?.ref_ok, L("المرجع", "Reference"))}${yes(r.check?.instapay, "InstaPay")}</div>
+      ${r.check?.amounts?.length ? `<small class="mut">${L("أرقام في الصورة", "Numbers seen")}: ${r.check.amounts.join(" · ")}</small>` : ""}
+      <p class="hint" style="margin:6px 0">${L("اتأكد من تطبيق InstaPay إن المبلغ وصل فعلًا قبل القبول.", "Check your InstaPay app that the money really arrived before approving.")}</p>
+      <div class="two"><button class="btn sm pri" data-ok="${r.id}">${L("قبول وتفعيل", "Approve & activate")}</button><button class="btn sm" data-no="${r.id}">${L("رفض", "Reject")}</button></div></div></div>`).join("") || `<p class="hint">${L("مفيش طلبات جديدة.", "No new requests.")}</p>`);
+}
+function wireRequests() {
+  $("#ik-ok") && ($("#ik-ok").onclick = () => { try { localStorage.setItem(IKEY, $("#ik-in").value.trim()); } catch (e) {} adminSheet(); });
+  document.querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => { const r = __reqs.find(x => x.id === b.dataset.ok); b.disabled = true;
+    let c = cust.customers.find(x => x.github.toLowerCase() === r.user); if (!c) { c = { github: r.user, name: "", phone: r.contact || "", added: new Date().toISOString(), payments: [] }; cust.customers.push(c); }
+    grant(c, r.plan, r.price, "InstaPay", "req " + r.id);
+    try { await saveCust("payment " + r.user); const x = await inboxPost({ action: "decide", key: ikey(), id: r.id, approve: true, code: c.code }); if (x.error) throw new Error(x.error);
+      toast(L(`اتفعّل ${r.user} لحد ${fmtD(c.until)} ✓ — هيوصله لوحده`, `${r.user} active until ${fmtD(c.until)} ✓ — delivered automatically`), 6000); adminSheet(); } catch (e) { toast(e.message); b.disabled = false; } });
+  document.querySelectorAll("[data-no]").forEach(b => b.onclick = async () => { const why = prompt(L("سبب الرفض (هيظهر للعميل):", "Reason (shown to the client):"), L("المبلغ موصلش", "Payment not received")); if (why === null) return;
+    try { await inboxPost({ action: "decide", key: ikey(), id: b.dataset.no, approve: false, reason: why }); adminSheet(); } catch (e) { toast(e.message); } });
+}
 // ------------------------------------------------------------------ help & feedback + what's new
 function helpBox() {
   const info = `AutoPost v${VERSION} · ${me() || "-"} · ${navigator.userAgent.match(/Android|iPhone|iPad|Mac|Windows|Linux/)?.[0] || ""}`;
@@ -244,7 +312,7 @@ window.renderNow = () => { _rn2(); if (!isOwner() || !cust) return; const el = $
 async function init() {
   if (!cfg.token || !cfg.owner) return setTimeout(init, 3000);
   try { await loadLic(); if (isOwner() && getSk()) await loadCust(); } catch (e) {}
-  paint(); window.renderNow && renderNow();
+  paint(); window.renderNow && renderNow(); checkReq(); setInterval(checkReq, 5 * 60e3);
   try { const seen = localStorage.getItem("ap_seen_v"); if (seen && seen !== VERSION) toast(L(`اتحدّث التطبيق لـ v${VERSION} — شوف الجديد في الإعدادات`, `Updated to v${VERSION} — see What's new in Settings`), 6000); localStorage.setItem("ap_seen_v", VERSION); } catch (e) {}
 }
 setInterval(() => { if (lic && !$("#sub-box")) paint(); }, 1500);
