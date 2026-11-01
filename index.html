@@ -406,17 +406,17 @@ window.del=id=>{sheet(`<div style="padding:12px"><div class="lbl">تحذف ال�
 async function reallyDel(id){closeSheet();try{const tree=await gh(`${R()}/git/trees/${cfg.branch}?recursive=1`);await commit(tree.tree.filter(t=>t.type==="blob"&&t.path.startsWith(`posts/${id}/`)).map(t=>({path:t.path,del:true})),"delete "+id);items=items.filter(i=>i.id!==id);renderList();toast("اتحذف")}catch(e){toast(e.message)}}
 
 // ---------- brands / connections
-let secretNames=null,curBrand="default";
+let secretNames=null,curBrand="default",authErr="";
 const GV="v23.0";
 async function loadBrands(){
- try{brands=JSON.parse(await readFile("config/brands.json")).brands}catch(e){brands={default:{name:"حسابي"}}}
+ try{brands=JSON.parse(await readFile("config/brands.json")).brands;authErr=""}catch(e){if(e.status===401||e.status===403||e.status===404)authErr=e.message;brands={default:{name:"حسابي"}}}
  if(!brands[curBrand])curBrand=Object.keys(brands)[0];
  $("#c-brand").innerHTML=Object.entries(brands).map(([k,b])=>`<option value="${esc(k)}">${esc(b.name||k)}</option>`).join("");
  $("#c-brand").onchange=renderChips;if(secretNames===null)loadSecrets().then(renderChips);else renderChips();
 }
 async function loadSecrets(){
  if(window.DEMO_SECRETS){secretNames=window.DEMO_SECRETS;return}
- try{const r=await gh(`${R()}/actions/secrets?per_page=100`);secretNames=new Set(r.secrets.map(s=>s.name))}catch(e){secretNames=null}
+ try{const r=await gh(`${R()}/actions/secrets?per_page=100`);secretNames=new Set(r.secrets.map(s=>s.name))}catch(e){secretNames=null;if(e.status===401)authErr=e.message}
 }
 const pre=b=>(b.secret_prefix||"").toUpperCase();
 const sname=(b,n)=>pre(b)?`${pre(b)}_${n}`:n;
@@ -442,7 +442,7 @@ async function renderBrands(){
  const li=hasSecret(b,"LINKEDIN_TOKEN");const ttOk=hasSecret(b,"TT_REFRESH_TOKEN");const pinOk=hasSecret(b,"PIN_REFRESH_TOKEN");const yt=hasSecret(b,"YT_REFRESH_TOKEN");
  const liExp=b.linkedin?.connected_at?new Date(new Date(b.linkedin.connected_at).getTime()+59*864e5):null;
  const row=(lg,col,name,sub,ok,btn)=>`<div class="conn"><div class="lg" style="background:${col}">${lg}</div><div class="tx"><b>${name}</b><small>${sub}</small></div>${ok?'<span class="pill ok">متصل</span>':""}${btn}</div>`;
- $("#b-panel").innerHTML=`${secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
+ $("#b-panel").innerHTML=`${authErr?`<div class="box note" style="color:var(--bad)">${esc(authErr)} <button class="btn sm" onclick="tab('settings')">الإعدادات</button></div>`:secretNames===null?'<div class="box note" style="color:var(--bad)">التوكن مش معاه صلاحية Secrets — عدّله من GitHub وخلي Secrets: Read and write.</div>':""}
  <div class="box"><div class="lbl">اسم العميل / البراند</div><div class="two"><input id="bn" value="${esc(b.name||"")}"><button class="btn" onclick="renameBrand()">حفظ الاسم</button></div></div>
  <div class="box">
   ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده"+(b.ig_to_fb===false?" · ميتا بتشيّره على بروفايلك في فيسبوك":""):"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
@@ -704,7 +704,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
+async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
