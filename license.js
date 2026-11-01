@@ -9,7 +9,7 @@ const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
-const VERSION = "34";
+const VERSION = "35";
 const CHANGES = [
   ["32", "ارفع صورة التحويل جوه التطبيق والاشتراك يتفعّل لوحده بعد المراجعة", "Upload your transfer screenshot in the app — activates automatically after review"],
   ["30", "صفحة أسعار ودفع جديدة", "New pricing & payment screens"],
@@ -139,7 +139,7 @@ ppCss.textContent = `.pp{padding:6px 6px 0}.pp-head{text-align:center;padding:10
 .pm-row,.pm-ref{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.pm-row>div,.pm-ref>div{flex:1;min-width:0}.pm-row small,.pm-ref small{display:block;color:var(--mut);font-size:12px}.pm-row b,.pm-ref b{direction:ltr;unicode-bidi:embed;word-break:break-all}
 .pm-up{border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}.pm-drop{display:flex;justify-content:center;align-items:center;min-height:90px;border:1.5px dashed var(--line);border-radius:12px;margin:8px 0 10px;cursor:pointer;color:var(--mut);font-size:14px;text-align:center;padding:8px}
 .rq{display:flex;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0}.rq-img{width:84px;height:120px;object-fit:cover;border-radius:8px;cursor:zoom-in;background:var(--soft)}.rq-img.big{position:fixed;inset:5vh 5vw;width:90vw;height:90vh;object-fit:contain;z-index:60;background:#000c;cursor:zoom-out}
-.rq-b{flex:1;min-width:0;font-size:14px}.rq-cs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.rq-c{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--soft)}.rq-c.y{color:var(--ok)}.rq-c.n{color:var(--bad)}.rq-n{background:var(--bad);color:#fff;border-radius:20px;padding:0 7px;font-size:12px}
+.rq-b{flex:1;min-width:0;font-size:14px}.rq-cs{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.rq-c{font-size:12px;padding:2px 8px;border-radius:20px;background:var(--soft)}.rq-c.y{color:var(--ok)}.rq-c.n{color:var(--bad)}.rq-warn{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad);border-radius:8px;padding:6px 8px;font-size:13px;margin:4px 0}.rq-btns{display:flex;flex-wrap:wrap;gap:6px}.rq-n{background:var(--bad);color:#fff;border-radius:20px;padding:0 7px;font-size:12px}
 .pm-ref{border:1.5px dashed var(--ink);border-radius:12px;padding:10px 12px;margin-bottom:12px}`;
 document.head.appendChild(ppCss);
 function codeSheet() {
@@ -264,11 +264,14 @@ async function requestsBlock() {
       <div class="rq-cs">${yes(r.check?.amount_ok, L("المبلغ", "Amount"))}${yes(r.check?.ref_ok, L("المرجع", "Reference"))}${yes(r.check?.instapay, "InstaPay")}</div>
       ${r.check?.amounts?.length ? `<small class="mut">${L("أرقام في الصورة", "Numbers seen")}: ${r.check.amounts.join(" · ")}</small>` : ""}
       <p class="hint" style="margin:6px 0">${L("اتأكد من تطبيق InstaPay إن المبلغ وصل فعلًا قبل القبول.", "Check your InstaPay app that the money really arrived before approving.")}</p>
-      <div class="two"><button class="btn sm pri" data-ok="${r.id}">${L("قبول وتفعيل", "Approve & activate")}</button><button class="btn sm" data-no="${r.id}">${L("رفض", "Reject")}</button></div></div></div>`).join("") || `<p class="hint">${L("مفيش طلبات جديدة.", "No new requests.")}</p>`);
+      ${r.check && !r.check.amount_ok ? `<div class="rq-warn">⚠️ ${L(`المبلغ في الصورة مش ${r.price} جنيه — اتأكد من InstaPay قبل ما توافق`, `The screenshot doesn't show ${r.price} EGP — check InstaPay before approving`)}</div>` : ""}
+      <div class="rq-btns">${Object.keys(PLANS).map(k => `<button class="btn sm ${k === r.plan ? "pri" : ""}" data-ok="${r.id}" data-plan="${k}">${L("قبول", "Approve")} ${planName(k)} (${PLANS[k].price})</button>`).join("")}<button class="btn sm" data-no="${r.id}">${L("رفض", "Reject")}</button></div></div></div>`).join("") || `<p class="hint">${L("مفيش طلبات جديدة.", "No new requests.")}</p>`);
 }
 function wireRequests() {
   $("#ik-ok") && ($("#ik-ok").onclick = () => { try { localStorage.setItem(IKEY, $("#ik-in").value.trim()); } catch (e) {} adminSheet(); });
-  document.querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => { const r = __reqs.find(x => x.id === b.dataset.ok); b.disabled = true;
+  document.querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => { const r0 = __reqs.find(x => x.id === b.dataset.ok), plan = b.dataset.plan || r0.plan;
+    if (plan !== r0.plan && !confirm(L(`العميل طالب ${planName(r0.plan)} بس هتفعّله ${planName(plan)} (${PLANS[plan].price} جنيه). تمام؟`, `Client asked for ${planName(r0.plan)} but you'll activate ${planName(plan)}. OK?`))) return;
+    const r = { ...r0, plan, price: PLANS[plan].price }; b.disabled = true;
     let c = cust.customers.find(x => x.github.toLowerCase() === r.user); if (!c) { c = { github: r.user, name: "", phone: r.contact || "", added: new Date().toISOString(), payments: [] }; cust.customers.push(c); }
     grant(c, r.plan, r.price, "InstaPay", "req " + r.id);
     try { await saveCust("payment " + r.user); const x = await inboxPost({ action: "decide", key: ikey(), id: r.id, approve: true, code: c.code }); if (x.error) throw new Error(x.error);
