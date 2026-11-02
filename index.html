@@ -231,21 +231,21 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=37"></script>
-<script src="host.js?v=37"></script>
-<script src="i18n.js?v=37"></script>
-<script src="theme.js?v=37"></script>
-<script src="vendor-nacl.js?v=37"></script>
-<script src="vendor-blake.js?v=37"></script>
-<script src="phase2.js?v=37" defer></script>
-<script src="library.js?v=37" defer></script>
-<script src="plan.js?v=37" defer></script>
-<script src="approval.js?v=37" defer></script>
-<script src="ai.js?v=37" defer></script>
-<script src="insights.js?v=37" defer></script>
-<script src="export.js?v=37" defer></script>
-<script src="license.js?v=37" defer></script>
-<script src="keys.js?v=37" defer></script>
+<script src="demo.js?v=38"></script>
+<script src="host.js?v=38"></script>
+<script src="i18n.js?v=38"></script>
+<script src="theme.js?v=38"></script>
+<script src="vendor-nacl.js?v=38"></script>
+<script src="vendor-blake.js?v=38"></script>
+<script src="phase2.js?v=38" defer></script>
+<script src="library.js?v=38" defer></script>
+<script src="plan.js?v=38" defer></script>
+<script src="approval.js?v=38" defer></script>
+<script src="ai.js?v=38" defer></script>
+<script src="insights.js?v=38" defer></script>
+<script src="export.js?v=38" defer></script>
+<script src="license.js?v=38" defer></script>
+<script src="keys.js?v=38" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -509,7 +509,7 @@ async function renderBrands(){
  <div class="box"><div class="lbl">اسم العميل / البراند</div><div class="two"><input id="bn" value="${esc(b.name||"")}"><button class="btn" onclick="renameBrand()">حفظ الاسم</button></div></div>
  <div class="box">
   ${row("ig","linear-gradient(45deg,#f9a825,#e1306c,#7b1fa2)","إنستجرام",igOk?"@"+esc(b.instagram.username||"متصل")+" · بينزل لوحده"+(b.ig_to_fb===false?" · ميتا بتشيّره على بروفايلك في فيسبوك":""):"الحساب الأساسي (Creator أو Business)",igOk,`<button class="btn sm" onclick="wzInstagram()">${igOk?"تغيير":"اربط"}</button>`)}
-  ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها لو اخترت «صفحة فيسبوك» في البوست`:"البروفايل الشخصي: بينزل عن طريق مشاركة إنستجرام التلقائية",meta,`<button class="btn sm" onclick="wzMeta()">${meta?"تغيير":"صفحة؟"}</button>`)}
+  ${row("f","#1877f2","فيسبوك",meta?`صفحة ${esc(b.facebook.name||"")} · بتنزل لوحدها لو اخترت «صفحة فيسبوك» في البوست`:"البروفايل الشخصي: بينزل عن طريق مشاركة إنستجرام التلقائية",meta,`<button class="btn sm" onclick="wzFacebook()">${meta?"تغيير":"اربط"}</button>`)}
   ${row("in","#0a66c2","لينكدإن",li?(liExp?`بينزل لوحده · بيتجدد لما تفتح الأداة قبل ${liExp.toLocaleDateString("ar-EG",{day:"numeric",month:"long"})}`:"متصل"):"البروفايل الشخصي",li,`<button class="btn sm" onclick="${li?"liRenew()":"wzLinkedIn()"}">${li?"تجديد":"اربط"}</button>`)}
   ${row("▶","#ff0000","يوتيوب",yt?(b.youtube?.channel?`قناة ${esc(b.youtube.channel)} · بينزل لوحده`:"بينزل لوحده"):"للفيديوهات والشورتس بس",yt,`<button class="btn sm" onclick="${yt?"ytSwitch()":"wzYouTube()"}">${yt?"تغيير القناة":"اربط"}</button>`)}
  </div>
@@ -529,7 +529,51 @@ window.addBrand=()=>{sheet(`<div class="wz"><h3>عميل جديد</h3><div class
 window.delBrand=()=>{sheet(`<div class="wz"><h3>حذف ${esc(brands[curBrand].name)}؟</h3><div class="sub">البوستات المتجدولة للعميل ده مش هتتنشر.</div><div class="nav"><button class="btn" style="background:var(--bad);color:#fff;border-color:var(--bad);flex:1" id="db-ok">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#db-ok").onclick=async()=>{delete brands[curBrand];curBrand="default";closeSheet();try{await saveBrands("delete account");renderBrands()}catch(e){toast(e.message)}}};
 
-// ---- Meta wizard
+// ---- Facebook one tap (Facebook Login for Business): Page + its Instagram. Today it works for people with a role on the
+// AutoPost app (admins / testers) — no Meta review needed. Secrets stay in GitHub Actions (meta-connect.yml).
+async function mWait(step,t0){for(let i=0;i<25;i++){await new Promise(r=>setTimeout(r,5000));try{const t=JSON.parse(await readFile("state/meta.json"));if((t.at||0)>=t0-60000&&(t.step===step||t.step==="error"||(step==="code"&&t.step==="pick")))return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
+async function mGo(code){const t0=Date.now();await gh(`${R()}/actions/workflows/meta-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code,redirect:YT_REDIRECT,prefix:pre(brands[curBrand])}})});return t0}
+window.fbConnect=async()=>{try{toast("بيجهّز ربط فيسبوك… ثواني",30000);
+ const t=await mWait("id",await mGo(""));
+ if(!t.has_secret){if(window.HOST)throw new Error("الربط مش متاح دلوقتي");return fbSecretSheet()}
+ sessionStorage.setItem("fb_pending",JSON.stringify({brand:curBrand}));
+ oGo("https://www.facebook.com/v23.0/dialog/oauth?"+new URLSearchParams({client_id:t.client_id,config_id:t.config_id,redirect_uri:YT_REDIRECT,response_type:"code",override_default_response_type:"true",state:oState("fb")}))}
+ catch(e){toast("فيسبوك: "+e.message,8000)}};
+// owner, once: the app secret (Meta for Developers ▸ AutoPost ▸ App settings ▸ Basic ▸ App secret ▸ Show)
+window.fbSecretSheet=()=>{sheet(`<div class="wz"><h3>App Secret بتاع تطبيق AutoPost</h3><div class="sub">مرة واحدة بس — بيتحفظ متشفّر في GitHub ومحدش بيشوفه، وبعدها أي حساب يتربط بضغطة.</div><ol class="steps">
+  <li>افتح <a href="https://developers.facebook.com/apps/1495427845973679/settings/basic/" target="_blank" rel="noopener">إعدادات التطبيق ← أساسي</a></li>
+  <li>جنب <b>مفتاح سر التطبيق (App secret)</b> دوس <b>عرض</b> واكتب باسورد فيسبوك ← انسخه والصقه هنا</li></ol>
+  <div class="lbl">App Secret</div><input id="fs-sec" dir="ltr" type="password" autocomplete="new-password">
+  <div class="nav"><button class="btn pri" id="fs-ok">حفظ ومتابعة</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+ $("#fs-ok").onclick=async()=>{const v=$("#fs-sec").value.trim();if(!/^[0-9a-f]{32}$/i.test(v))return toast("السر شكله 32 حرف/رقم");
+  try{await putSecret("META_APP_SECRET",v);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);closeSheet();fbConnect()}catch(e){toast(e.message,8000)}}};
+function fbDone(t){const b=brands[curBrand];b.facebook={page_id:t.page_id,name:t.page_name||""};
+ if(t.ig_user_id&&b.instagram?.login!=="instagram")b.instagram={user_id:t.ig_user_id,username:t.ig_username||""};
+ secretNames&&secretNames.add(sname(b,"META_TOKEN"));
+ return saveBrands("connect facebook page").then(()=>{tab("brands");renderBrands();toast(t.ig_username?`فيسبوك (${t.page_name}) وإنستجرام @${t.ig_username} اتربطوا ✅`:`صفحة ${t.page_name} اتربطت ✅ — مفيش إنستجرام مربوط بيها`,9000)})}
+async function finishMeta(){const q=oCheck("fb");if(!q)return;
+ const st=JSON.parse(sessionStorage.getItem("fb_pending")||"null");sessionStorage.removeItem("fb_pending");
+ if(q.get("error")||!q.get("code")){toast("ربط فيسبوك اتلغى",8000);return}
+ try{toast("بيربط فيسبوك… ثواني",60000);curBrand=st?.brand||curBrand;
+  const t=await mWait("code",await mGo(q.get("code")));
+  if(t.step==="error")throw new Error(t.error);
+  if(t.step==="pick")return fbDone(t);
+  if(!t.pages?.length)throw new Error("مفيش صفحات فيسبوك على الحساب ده — إنستجرام لازم يكون Business/Creator ومربوط بصفحة");
+  let sel=0;sheet(`<div class="wz"><h3>اختار الصفحة</h3>${t.pages.map((p,i)=>`<div class="pick${i?"":" on"}" data-i="${i}"><b style="flex:1">${esc(p.name)}</b><small class="mut">${p.ig?"@"+esc(p.ig):"مفيش إنستجرام"}</small></div>`).join("")}
+   <div class="nav"><button class="btn pri" id="fp-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
+  document.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{sel=+el.dataset.i;document.querySelectorAll(".pick").forEach(x=>x.classList.toggle("on",x===el))});
+  $("#fp-ok").onclick=async()=>{$("#fp-ok").disabled=true;try{closeSheet();toast("بيربط الصفحة…",40000);const r=await mWait("pick",await mGo("pick-"+t.pages[sel].id));if(r.step==="error")throw new Error(r.error);await fbDone(r)}catch(e){toast("فيسبوك: "+e.message,10000)}}}
+ catch(e){toast("فيسبوك: "+e.message+(window.HOST?" — لو لسه مااتفعّلش حسابك، دوس «اطلب التفعيل»":""),12000)}}
+// clients: Meta allows it once the owner adds them as a Tester on the app (until Meta reviews the app)
+window.fbRequest=()=>{const w=(window.AP_WA||"201092900137");sheet(`<div class="wz"><h3>تفعيل إنستجرام وفيسبوك</h3><div class="sub">مرة واحدة بس، لحد ما Meta يوافق على التطبيق للكل.</div><ol class="steps">
+  <li>ابعت لينك بروفايلك على فيسبوك (أو الإيميل اللي مسجّل بيه) <a href="https://wa.me/${w}?text=${encodeURIComponent("AutoPost — عايز أفعّل ربط إنستجرام وفيسبوك. لينك بروفايلي على فيسبوك: ")}" target="_blank" rel="noopener">على واتساب</a></li>
+  <li>هيوصلك إشعار على فيسبوك بدعوة «Tester» لتطبيق AutoPost — وافق عليها من <a href="https://developers.facebook.com/requests/" target="_blank" rel="noopener">صفحة الطلبات</a> (لو طلب منك تسجّل كمطوّر، سجّل — ببلاش وبياخد دقيقة)</li>
+  <li>ارجع هنا ودوس <b>ربط بفيسبوك</b></li></ol>
+  <div class="nav"><button class="btn pri" onclick="closeSheet();fbConnect()">ربط بفيسبوك</button><button class="btn" onclick="closeSheet()">قفل</button></div></div>`)};
+window.wzFacebook=()=>sheet(`<div class="wz"><h3>فيسبوك وإنستجرام</h3><div class="sub">سجّل بفيسبوك واختار صفحتك — إنستجرام المربوط بالصفحة بيتربط معاها (لازم يكون Business أو Creator).</div>
+ <div class="nav"><button class="btn pri" onclick="closeSheet();fbConnect()">ربط بفيسبوك</button></div>
+ ${window.HOST?'<p class="hint f">أول مرة؟ <a href="#" onclick="fbRequest();return false">اطلب التفعيل</a></p>':'<p class="hint f"><a href="#" onclick="wzMeta();return false">متقدم: الربط بتوكن يدوي</a></p>'}</div>`);
+// ---- Meta wizard (manual token — advanced)
 const META_PERMS="pages_show_list, pages_read_engagement, pages_manage_posts, instagram_basic, instagram_content_publish, business_management";
 window.wzMeta=(step=1,st={})=>{
  const b=brands[curBrand];
@@ -594,7 +638,7 @@ function oCheck(kind){const q=new URLSearchParams(location.search),st=q.get("sta
 // ---- sign-in in a small window that closes itself and hands the answer back (full-page redirect if popups are blocked)
 function oGo(url){const w=window.open(url,"ap_oauth","width=520,height=720");if(!w){location.href=url;return}
  const on=async e=>{if(e.origin!==location.origin||!e.data||!e.data.apOAuth)return;removeEventListener("message",on);clearInterval(w._t);
-  history.replaceState(null,"",YT_REDIRECT+e.data.apOAuth);await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest()};
+  history.replaceState(null,"",YT_REDIRECT+e.data.apOAuth);await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();await finishMeta()};
  addEventListener("message",on)}
 // ---- YouTube wizard: paste Client ID + secret once, then Google sign-in returns here and we exchange the code
 const YT_REDIRECT=location.origin+location.pathname;
@@ -772,7 +816,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(window.AP_POPUP)return;if(!cfg.token){tab("settings");return}$("#who").textContent=window.HOST?HOST.user.email:`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
+async function init(){if(window.AP_POPUP)return;if(!cfg.token){tab("settings");return}$("#who").textContent=window.HOST?HOST.user.email:`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();await finishMeta();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>

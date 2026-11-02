@@ -283,7 +283,7 @@ function hostedConnect() {
   const metaNote = (orig) => () => { sheet(`<div class="wz" data-i18n-skip><h3>${L("إنستجرام وفيسبوك", "Instagram & Facebook")}</h3>
     <div class="sub">${L("الربط بضغطة لحسابات العملاء مستني موافقة Meta على تطبيق AutoPost. لحد ما توافق، البوستات بتوصلك تذكير بالصور والكابشن جاهزين تنزلهم بضغطة.", "One-tap connection for client accounts is waiting for Meta to approve the AutoPost app. Until then you get a reminder with the photos and caption ready to post in one tap.")}</div>
     <div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button><button class="btn" id="meta-adv">${L("متقدم: عندي توكن", "Advanced: I have a token")}</button></div></div>`); document.getElementById("meta-adv").onclick = () => orig(); };
-  window.wzInstagram = metaNote(window.wzInstagram); window.wzMeta = metaNote(window.wzMeta);
+  window.wzInstagram = () => wzFacebook(); // clients: Instagram comes with their Facebook Page (one tap)
 }
 
 document.addEventListener("DOMContentLoaded", () => { hostedConnect(); settingsBoxes(); setTimeout(settingsBoxes, 800); setTimeout(settingsBoxes, 3000); });
