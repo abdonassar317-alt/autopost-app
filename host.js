@@ -256,24 +256,20 @@ function settingsBoxes() {
 // ---------------------------------------------------------------- hosted: connect platforms with one tap (the owner's developer apps)
 function hostedConnect() {
   if (!window.HOST || window.AP_POPUP || typeof brands === "undefined") return;
-  const wait = async (file, step, t0) => { for (let i = 0; i < 25; i++) { await new Promise((r) => setTimeout(r, 5000));
+  const wait = async (file, step, t0) => { for (let i = 0; i < 50; i++) { await new Promise((r) => setTimeout(r, 2500));
     try { const t = JSON.parse(await readFile(file)); if ((t.at || 0) >= t0 - 60000 && (!step || t.step === step)) return t; } catch (e) {} }
     throw new Error(L("استنى دقيقة وجرّب تاني", "Taking long — try again in a minute")); };
   const start = async (wf) => { const t0 = Date.now(); await gh(`${R()}/actions/workflows/${wf}/dispatches`, { method: "POST", body: JSON.stringify({ ref: cfg.branch, inputs: { code: "", redirect: YT_REDIRECT, prefix: pre(brands[curBrand]) } }) }); return t0; };
   const guard = (fn) => async () => { try { await fn(); } catch (e) { toast(e.message, 8000); } };
   window.wzLinkedIn = () => liGo(LI_CLIENT_ID_DEFAULT);
   window.wzYouTube = window.ytSwitch = guard(async () => {
-    toast(L("بيجهّز ربط يوتيوب… ثواني", "Preparing YouTube sign-in…"), 30000);
-    const t = await wait("state/youtube.json", "id", await start("youtube-connect.yml"));
-    if (!t.client_id) throw new Error(L("ربط يوتيوب مش متاح دلوقتي", "YouTube connection isn't available right now"));
+    const t = { client_id: APP_PUBLIC.yt_client };
     sessionStorage.setItem("ytw_pending", JSON.stringify({ brand: curBrand }));
     toast(L("لو جوجل قال «التطبيق غير موثّق»: Advanced ← Go to AutoPost ← Allow", "If Google says “unverified app”: Advanced → Go to AutoPost → Allow"), 12000);
     oGo("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({ client_id: t.client_id, redirect_uri: YT_REDIRECT, response_type: "code", access_type: "offline", prompt: "select_account consent", state: oState("ytw"), scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly" }));
   });
   window.wzTikTok = guard(async () => {
-    toast(L("بيجهّز ربط تيك توك… ثواني", "Preparing TikTok sign-in…"), 30000);
-    const t = await wait("state/tiktok.json", "id", await start("tiktok-connect.yml"));
-    if (!t.client_key) throw new Error(L("ربط تيك توك مش متاح دلوقتي", "TikTok connection isn't available right now"));
+    const t = { client_key: APP_PUBLIC.tt_key };
     sessionStorage.setItem("tt_pending", JSON.stringify({ brand: curBrand }));
     oGo("https://www.tiktok.com/v2/auth/authorize/?" + new URLSearchParams({ client_key: t.client_key, scope: "user.info.basic,video.publish", response_type: "code", redirect_uri: YT_REDIRECT, state: oState("tt") }));
   });

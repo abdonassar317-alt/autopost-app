@@ -9,8 +9,9 @@ const TRIAL_DAYS = 90, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
-const VERSION = "39";
+const VERSION = "40";
 const CHANGES = [
+  ["40", "ربط المنصات بقى أسرع (خطوة واحدة بدل اتنين)", "Faster platform connections (one step instead of two)"],
   ["39", "إصلاح ربط فيسبوك وإنستجرام ويوتيوب وتيك توك من النافذة الصغيرة", "Fixed Facebook, Instagram, YouTube and TikTok sign-in from the small window"],
   ["38", "ربط فيسبوك وإنستجرام بضغطة (تسجيل دخول فيسبوك)", "One-tap Facebook & Instagram connection (Facebook login)"],
   ["37", "ربط المنصات في نافذة صغيرة بترجع لوحدها · حسابات العملاء بتربط لينكدإن ويوتيوب وتيك توك بضغطة", "Platform sign-in in a small window that closes itself · client accounts connect LinkedIn, YouTube and TikTok in one tap"],

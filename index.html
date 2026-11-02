@@ -231,21 +231,21 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=39"></script>
-<script src="host.js?v=39"></script>
-<script src="i18n.js?v=39"></script>
-<script src="theme.js?v=39"></script>
-<script src="vendor-nacl.js?v=39"></script>
-<script src="vendor-blake.js?v=39"></script>
-<script src="phase2.js?v=39" defer></script>
-<script src="library.js?v=39" defer></script>
-<script src="plan.js?v=39" defer></script>
-<script src="approval.js?v=39" defer></script>
-<script src="ai.js?v=39" defer></script>
-<script src="insights.js?v=39" defer></script>
-<script src="export.js?v=39" defer></script>
-<script src="license.js?v=39" defer></script>
-<script src="keys.js?v=39" defer></script>
+<script src="demo.js?v=40"></script>
+<script src="host.js?v=40"></script>
+<script src="i18n.js?v=40"></script>
+<script src="theme.js?v=40"></script>
+<script src="vendor-nacl.js?v=40"></script>
+<script src="vendor-blake.js?v=40"></script>
+<script src="phase2.js?v=40" defer></script>
+<script src="library.js?v=40" defer></script>
+<script src="plan.js?v=40" defer></script>
+<script src="approval.js?v=40" defer></script>
+<script src="ai.js?v=40" defer></script>
+<script src="insights.js?v=40" defer></script>
+<script src="export.js?v=40" defer></script>
+<script src="license.js?v=40" defer></script>
+<script src="keys.js?v=40" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -483,7 +483,7 @@ async function loadSecrets(){
 }
 const pre=b=>(b.secret_prefix||"").toUpperCase();
 const sname=(b,n)=>pre(b)?`${pre(b)}_${n}`:n;
-const hasSecret=(b,n)=>!!secretNames&&(secretNames.has(sname(b,n))||(!pre(b)&&secretNames.has(n)));
+const hasSecret=(b,n)=>!!secretNames&&(secretNames.has(sname(b,n))||(!pre(b)&&secretNames.has(n))||(n==="META_TOKEN"&&!!b?.facebook?.page_id&&hasSecret(b,"META_PAGE_"+b.facebook.page_id)));
 async function saveBrands(msg){await commit([{path:"config/brands.json",b64:utf8b64(JSON.stringify({brands},null,2))}],msg||"update accounts");await loadBrands()}
 async function putSecret(name,value){
  if(window.DEMO_SECRETS){window.DEMO_SECRETS.add(name);return}
@@ -529,13 +529,13 @@ window.addBrand=()=>{sheet(`<div class="wz"><h3>عميل جديد</h3><div class
 window.delBrand=()=>{sheet(`<div class="wz"><h3>حذف ${esc(brands[curBrand].name)}؟</h3><div class="sub">البوستات المتجدولة للعميل ده مش هتتنشر.</div><div class="nav"><button class="btn" style="background:var(--bad);color:#fff;border-color:var(--bad);flex:1" id="db-ok">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#db-ok").onclick=async()=>{delete brands[curBrand];curBrand="default";closeSheet();try{await saveBrands("delete account");renderBrands()}catch(e){toast(e.message)}}};
 
+// public ids of the owner's developer apps (not secrets) — knowing them here saves a whole GitHub run per connection
+const APP_PUBLIC={fb_app:"1495427845973679",fb_config:"1870198361310565",yt_client:"792170108248-821jlddj1r6o267unapivh3epn2vq18j.apps.googleusercontent.com",tt_key:"sbawk7um46jbdnqb83"};
 // ---- Facebook one tap (Facebook Login for Business): Page + its Instagram. Today it works for people with a role on the
 // AutoPost app (admins / testers) — no Meta review needed. Secrets stay in GitHub Actions (meta-connect.yml).
-async function mWait(step,t0){for(let i=0;i<25;i++){await new Promise(r=>setTimeout(r,5000));try{const t=JSON.parse(await readFile("state/meta.json"));if((t.at||0)>=t0-60000&&(t.step===step||t.step==="error"||(step==="code"&&t.step==="pick")))return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
+async function mWait(step,t0){for(let i=0;i<50;i++){await new Promise(r=>setTimeout(r,2500));try{const t=JSON.parse(await readFile("state/meta.json"));if((t.at||0)>=t0-60000&&(t.step===step||t.step==="error"||(step==="code"&&t.step==="pick")))return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
 async function mGo(code){const t0=Date.now();await gh(`${R()}/actions/workflows/meta-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code,redirect:YT_REDIRECT,prefix:pre(brands[curBrand])}})});return t0}
-window.fbConnect=async()=>{try{toast("بيجهّز ربط فيسبوك… ثواني",30000);
- const t=await mWait("id",await mGo(""));
- if(!t.has_secret){if(window.HOST)throw new Error("الربط مش متاح دلوقتي");return fbSecretSheet()}
+window.fbConnect=async()=>{try{const t={client_id:APP_PUBLIC.fb_app,config_id:APP_PUBLIC.fb_config};
  sessionStorage.setItem("fb_pending",JSON.stringify({brand:curBrand}));
  oGo("https://www.facebook.com/v23.0/dialog/oauth?"+new URLSearchParams({client_id:t.client_id,config_id:t.config_id,redirect_uri:YT_REDIRECT,response_type:"code",override_default_response_type:"true",state:oState("fb")}))}
  catch(e){toast("فيسبوك: "+e.message,8000)}};
@@ -549,20 +549,22 @@ window.fbSecretSheet=()=>{sheet(`<div class="wz"><h3>App Secret بتاع تطب�
   try{await putSecret("META_APP_SECRET",v);if(cfg.token)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);closeSheet();fbConnect()}catch(e){toast(e.message,8000)}}};
 function fbDone(t){const b=brands[curBrand];b.facebook={page_id:t.page_id,name:t.page_name||""};
  if(t.ig_user_id&&b.instagram?.login!=="instagram")b.instagram={user_id:t.ig_user_id,username:t.ig_username||""};
- secretNames&&secretNames.add(sname(b,"META_TOKEN"));
+ secretNames&&(secretNames.add(sname(b,"META_TOKEN")),secretNames.add(sname(b,"META_PAGE_"+t.page_id)));
  return saveBrands("connect facebook page").then(()=>{tab("brands");renderBrands();toast(t.ig_username?`فيسبوك (${t.page_name}) وإنستجرام @${t.ig_username} اتربطوا ✅`:`صفحة ${t.page_name} اتربطت ✅ — مفيش إنستجرام مربوط بيها`,9000)})}
 async function finishMeta(){const q=oCheck("fb");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("fb_pending")||"null");sessionStorage.removeItem("fb_pending");
  if(q.get("error")||!q.get("code")){toast("ربط فيسبوك اتلغى",8000);return}
  try{toast("بيربط فيسبوك… ثواني",60000);curBrand=st?.brand||curBrand;
   const t=await mWait("code",await mGo(q.get("code")));
-  if(t.step==="error")throw new Error(t.error);
+  if(t.step==="error"){if(!window.HOST&&/secret|client_secret|validating/i.test(t.error||""))return fbSecretSheet();throw new Error(t.error)}
   if(t.step==="pick")return fbDone(t);
   if(!t.pages?.length)throw new Error("مفيش صفحات فيسبوك على الحساب ده — إنستجرام لازم يكون Business/Creator ومربوط بصفحة");
   let sel=0;sheet(`<div class="wz"><h3>اختار الصفحة</h3>${t.pages.map((p,i)=>`<div class="pick${i?"":" on"}" data-i="${i}"><b style="flex:1">${esc(p.name)}</b><small class="mut">${p.ig?"@"+esc(p.ig):"مفيش إنستجرام"}</small></div>`).join("")}
    <div class="nav"><button class="btn pri" id="fp-ok">ربط</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
   document.querySelectorAll(".pick").forEach(el=>el.onclick=()=>{sel=+el.dataset.i;document.querySelectorAll(".pick").forEach(x=>x.classList.toggle("on",x===el))});
-  $("#fp-ok").onclick=async()=>{$("#fp-ok").disabled=true;try{closeSheet();toast("بيربط الصفحة…",40000);const r=await mWait("pick",await mGo("pick-"+t.pages[sel].id));if(r.step==="error")throw new Error(r.error);await fbDone(r)}catch(e){toast("فيسبوك: "+e.message,10000)}}}
+  $("#fp-ok").onclick=async()=>{$("#fp-ok").disabled=true;const pg=t.pages[sel];closeSheet();
+   try{if(pg.ig_id===undefined){toast("بيربط الصفحة…",40000);const r=await mWait("pick",await mGo("pick-"+pg.id));if(r.step==="error")throw new Error(r.error);return fbDone(r)}
+    await fbDone({page_id:pg.id,page_name:pg.name,ig_user_id:pg.ig_id||"",ig_username:pg.ig||""})}catch(e){toast("فيسبوك: "+e.message,10000)}}}
  catch(e){toast("فيسبوك: "+e.message+(window.HOST?" — لو لسه مااتفعّلش حسابك، دوس «اطلب التفعيل»":""),12000)}}
 // clients: Meta allows it once the owner adds them as a Tester on the app (until Meta reviews the app)
 window.fbRequest=()=>{const w=(window.AP_WA||"201092900137");sheet(`<div class="wz"><h3>تفعيل إنستجرام وفيسبوك</h3><div class="sub">مرة واحدة بس، لحد ما Meta يوافق على التطبيق للكل.</div><ol class="steps">
@@ -671,7 +673,7 @@ async function finishYouTube(){
  catch(e){toast("يوتيوب: "+e.message,10000)}}
 
 // ---- YouTube: switch channel without pasting anything (client id comes from GitHub, code exchanged in a GitHub Action)
-async function ytWait(t0,step){for(let i=0;i<25;i++){await new Promise(r=>setTimeout(r,5000));try{const t=JSON.parse(await readFile("state/youtube.json"));if(t.at>=t0-60000&&t.step===step)return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
+async function ytWait(t0,step){for(let i=0;i<50;i++){await new Promise(r=>setTimeout(r,2500));try{const t=JSON.parse(await readFile("state/youtube.json"));if(t.at>=t0-60000&&t.step===step)return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
 window.ytSwitch=async()=>{const b=brands[curBrand];if(!hasSecret(b,"YT_CLIENT_SECRET"))return wzYouTube();
  try{toast("بيجهّز… ثواني",30000);const t0=Date.now();
   await gh(`${R()}/actions/workflows/youtube-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:"",redirect:YT_REDIRECT,prefix:pre(b)}})});
@@ -710,7 +712,7 @@ async function finishTikTok(){
  try{toast("بيربط تيك توك… ثواني",60000);
   curBrand=st?.brand||curBrand;const b=brands[curBrand];
   await gh(`${R()}/actions/workflows/tiktok-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
-  let name="";for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const t=JSON.parse(await readFile("state/tiktok.json"));if(t.connected){name=t.display_name||"";break}}catch(e){}}
+  let name="";for(let i=0;i<40;i++){await new Promise(r=>setTimeout(r,3000));try{const t=JSON.parse(await readFile("state/tiktok.json"));if(t.connected){name=t.display_name||"";break}}catch(e){}}
   b.tiktok={...(b.tiktok||{}),name,connected_at:new Date().toISOString()};await saveBrands("connect tiktok");secretNames&&secretNames.add(sname(b,"TT_REFRESH_TOKEN"));
   tab("brands");renderBrands();toast(name?`تيك توك (${name}) اتربط ✅`:"تيك توك اتربط ✅ — لو ماظهرش، حدّث الصفحة بعد دقيقة",8000)}
  catch(e){toast("تيك توك: "+e.message,10000)}}
@@ -743,7 +745,7 @@ async function finishLinkedIn(){
  try{toast("بيربط لينكدإن… ثواني",60000);
   curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
   await gh(`${R()}/actions/workflows/linkedin-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
-  let name="",ok=false,err="";for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const t=JSON.parse(await readFile("state/linkedin.json"));if(t.at&&t.at>=t0-60000){if(t.connected){ok=true;name=t.name||""}else err=t.error||"فشل";break}}catch(e){}}
+  let name="",ok=false,err="";for(let i=0;i<40;i++){await new Promise(r=>setTimeout(r,3000));try{const t=JSON.parse(await readFile("state/linkedin.json"));if(t.at&&t.at>=t0-60000){if(t.connected){ok=true;name=t.name||""}else err=t.error||"فشل";break}}catch(e){}}
   if(err)throw new Error(err);
   b.linkedin={...(b.linkedin||{}),author:"",name,client_id:st?.id||b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT,connected_at:new Date().toISOString()};await saveBrands("connect linkedin");secretNames&&secretNames.add(sname(b,"LINKEDIN_TOKEN"));
   tab("brands");renderBrands();toast(ok?`لينكدإن (${name||"بروفايلك"}) اتربط ✅`:"لينكدإن بيتربط — حدّث الصفحة بعد دقيقة",8000)}
@@ -768,7 +770,7 @@ async function finishPinterest(){const q=oCheck("pin");if(!q)return;
  if(q.get("error")||!q.get("code")){toast("ربط بنترست اتلغى",8000);return}
  try{toast("بيربط بنترست… ثواني",60000);curBrand=st?.brand||curBrand;const b=brands[curBrand];const t0=Date.now();
   await gh(`${R()}/actions/workflows/pinterest-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:q.get("code"),redirect:YT_REDIRECT,prefix:pre(b)}})});
-  let t=null;for(let i=0;i<20;i++){await new Promise(r=>setTimeout(r,6000));try{const x=JSON.parse(await readFile("state/pinterest.json"));if(x.at>=t0-60000){t=x;break}}catch(e){}}
+  let t=null;for(let i=0;i<40;i++){await new Promise(r=>setTimeout(r,3000));try{const x=JSON.parse(await readFile("state/pinterest.json"));if(x.at>=t0-60000){t=x;break}}catch(e){}}
   if(!t)throw new Error("GitHub اتأخر — حدّث الصفحة بعد دقيقة");if(!t.connected)throw new Error(t.error||"فشل");
   b.pinterest={...(b.pinterest||{}),username:t.username,boards:t.boards,connected_at:new Date().toISOString()};secretNames&&secretNames.add(sname(b,"PIN_REFRESH_TOKEN"));
   await saveBrands("connect pinterest");tab("brands");renderBrands();pinBoards()}
