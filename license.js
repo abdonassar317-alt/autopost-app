@@ -290,6 +290,7 @@ function helpBox() {
   const link = (kind, txt) => CONTACT.whatsapp ? wa(`AutoPost — ${txt}\n\n…\n\n(${info})`) : `mailto:${CONTACT.email}?subject=${encodeURIComponent("AutoPost — " + txt)}&body=${encodeURIComponent("\n\n(" + info + ")")}`;
   return `<div class="lbl">${L("مساعدة واقتراحات", "Help & feedback")}</div>
    <p class="hint">${L("عندك فكرة تطوير أو قابلتك مشكلة؟ ابعتلنا — الأداة بتتطور باستمرار وكل اقتراح بيتقرا.", "Have an idea or hit a problem? Tell us — AutoPost is always improving and every suggestion is read.")}</p>
+   <a class="btn sm" style="width:100%;justify-content:center;margin-bottom:8px" target="_blank" href="guide/">📘 ${L("دليل الاستخدام بالصور", "Illustrated user guide")}</a>
    <div class="two"><a class="btn sm" target="_blank" href="${link("idea", L("فكرة تطوير", "Feature idea"))}">💡 ${L("اقترح فكرة", "Suggest an idea")}</a><a class="btn sm" target="_blank" href="${link("bug", L("مشكلة في التطبيق", "Problem report"))}">🛠 ${L("بلّغ عن مشكلة", "Report a problem")}</a></div>
    <p class="hint f">${CONTACT.whatsapp ? `${L("واتساب", "WhatsApp")}: <a target="_blank" href="${wa("AutoPost")}" style="direction:ltr;unicode-bidi:embed">${esc(CONTACT.whatsapp)}</a> · ` : ""}${L("إيميل", "Email")}: <a href="mailto:${CONTACT.email}">${esc(CONTACT.email)}</a></p>
    <div class="lbl f">${L("الجديد في التطبيق", "What's new")} <small class="mut">v${VERSION}</small></div>

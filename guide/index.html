@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>AutoPost — دليل الاستخدام</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="إزاي تعمل حسابك على AutoPost، تربط صفحاتك، وتجدول أول بوست — خطوة بخطوة بالصور.">
+<meta property="og:title" content="AutoPost — دليل الاستخدام"><meta property="og:description" content="انشر على كل المنصات من مكان واحد — الدليل خطوة بخطوة.">
+<meta property="og:image" content="https://abdonassar317-alt.github.io/autopost-app/guide/cover.jpg">
+<link rel="icon" href="../icon.svg">
+<style>
+@font-face{font-family:P;font-weight:400;src:url(../fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2)}
+@font-face{font-family:P;font-weight:600;src:url(../fonts/ibm-plex-sans-arabic-arabic-600-normal.woff2)}
+@font-face{font-family:P;font-weight:700;src:url(../fonts/ibm-plex-sans-arabic-arabic-700-normal.woff2)}
+@font-face{font-family:L;font-weight:400;src:url(../fonts/ibm-plex-sans-arabic-latin-400-normal.woff2)}
+@font-face{font-family:L;font-weight:600;src:url(../fonts/ibm-plex-sans-arabic-latin-600-normal.woff2)}
+@font-face{font-family:L;font-weight:700;src:url(../fonts/ibm-plex-sans-arabic-latin-700-normal.woff2)}
+@page{size:A4;margin:0}
+:root{--ink:#1c1c1e;--mut:#6b6b70;--line:#e6e5e1;--soft:#f3f2ee;--bg:#fafaf8;--acc:#1c1c1e;--ok:#1f7a4d;--warn:#a16207}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:L,P,sans-serif;color:var(--ink);font-size:12.5pt;line-height:1.75}
+.page{width:210mm;height:297mm;padding:18mm 17mm 16mm;position:relative;page-break-after:always;overflow:hidden;background:#fff}
+.page:last-child{page-break-after:auto}
+.foot{position:absolute;bottom:9mm;left:17mm;right:17mm;display:flex;justify-content:space-between;font-size:9pt;color:var(--mut);border-top:1px solid var(--line);padding-top:3mm}
+.foot b{direction:ltr;font-weight:700;color:var(--ink)}
+h1{font-size:30pt;line-height:1.25;margin:0 0 4mm;font-weight:700;letter-spacing:-.3px}
+h2{font-size:20pt;margin:0 0 2mm;font-weight:700}
+.kick{font-size:10pt;font-weight:600;color:var(--mut);letter-spacing:.3px;margin-bottom:2mm}
+.lead{font-size:13pt;color:#3a3a3e;margin:0 0 6mm}
+p{margin:0 0 3mm}
+.row{display:flex;gap:8mm;align-items:flex-start}
+.col{flex:1;min-width:0}
+.phone{width:62mm;flex:none;border:2.2mm solid #1c1c1e;border-radius:9mm;overflow:hidden;background:#fff;box-shadow:0 2mm 6mm rgba(0,0,0,.08)}
+.phone img{display:block;width:100%}
+.phone.sm{width:52mm}.phone.xs{width:41mm;border-width:1.8mm;border-radius:7mm}.prow{display:flex;gap:6mm;justify-content:center;margin-top:3mm}
+.cap{font-size:9pt;color:var(--mut);text-align:center;margin-top:2mm}
+ol.steps{counter-reset:s;list-style:none;padding:0;margin:0}
+ol.steps li{counter-increment:s;position:relative;padding:0 11mm 4mm 0}
+ol.steps li:before{content:counter(s);position:absolute;right:0;top:.5mm;width:7mm;height:7mm;border-radius:50%;background:var(--ink);color:#fff;font-size:10pt;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:L}
+.box{background:var(--soft);border-radius:4mm;padding:4mm 5mm;margin:4mm 0;font-size:11pt}
+.box.warn{background:#fdf6e3;border-inline-start:1.2mm solid #d4a017}
+.box.ok{background:#eaf5ef;border-inline-start:1.2mm solid var(--ok)}
+.box b.t{display:block;margin-bottom:1mm}
+code,.ltr{direction:ltr;unicode-bidi:isolate;font-family:L}
+code{background:var(--soft);border-radius:1.5mm;padding:0 1.5mm;font-size:10.5pt}
+table{width:100%;border-collapse:collapse;font-size:10.5pt;margin:3mm 0}
+th,td{border-bottom:1px solid var(--line);padding:2.4mm 2mm;text-align:right;vertical-align:top}
+th{font-weight:700;background:var(--soft)}
+td:first-child{font-weight:600;white-space:nowrap}
+.tag{display:inline-block;border-radius:10mm;padding:0 2.5mm;font-size:9pt;font-weight:600}
+.tag.a{background:#e3f1e9;color:var(--ok)}.tag.m{background:#fdf0d5;color:var(--warn)}
+/* cover */
+.cover{background:#1c1c1e;color:#fff;display:flex;flex-direction:column;justify-content:space-between}
+.cover .brand{display:flex;align-items:center;gap:3mm;font-weight:700;font-size:15pt;direction:ltr;justify-content:flex-end}
+.cover .brand i{width:4mm;height:4mm;border-radius:1mm;background:#fff;display:inline-block}
+.cover h1{color:#fff;font-size:40pt;margin-top:0}
+.cover .lead{color:#c9c9cf;font-size:15pt}
+.cover .phones{display:flex;gap:6mm;justify-content:center;margin:6mm 0}
+.cover .phone{border-color:#3a3a3e;width:50mm}
+.cover .meta{color:#9a9aa0;font-size:10pt;display:flex;justify-content:space-between}
+.cover .meta b{color:#fff;direction:ltr}
+/* flow */
+.flow{display:flex;gap:3mm;align-items:stretch;margin:5mm 0}
+.flow .st{flex:1;border:1px solid var(--line);border-radius:4mm;padding:4mm;background:#fff;position:relative}
+.flow .st .n{font-family:L;font-weight:700;font-size:20pt;color:#c8c7c2;line-height:1}
+.flow .st b{display:block;margin:1.5mm 0 1mm;font-size:12pt}
+.flow .st span{font-size:9.5pt;color:var(--mut);line-height:1.55;display:block}
+.flow .ar{align-self:center;color:#b5b4af;font-size:16pt}
+.toc{columns:2;column-gap:10mm;font-size:11.5pt}
+.toc div{break-inside:avoid;padding:1.5mm 0;border-bottom:1px dashed var(--line);display:flex;justify-content:space-between}
+.toc span{color:var(--mut);font-family:L}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:3mm;margin-top:4mm}
+.legend div{border:1px solid var(--line);border-radius:3mm;padding:3mm;font-size:10.5pt}
+.legend b{display:block}
+.qa b{display:block;margin-top:3mm}
+
+.bar{display:none}
+@media screen{
+ body{background:#ecebe7}
+ .bar{display:flex;position:sticky;top:0;z-index:5;justify-content:space-between;align-items:center;gap:10px;padding:10px 16px;background:rgba(236,235,231,.92);backdrop-filter:blur(8px);direction:rtl}
+ .bar .b{font-weight:700;direction:ltr;display:flex;align-items:center;gap:8px}.bar .b i{width:9px;height:9px;border-radius:2px;background:#1c1c1e;display:inline-block}
+ .bar a{background:#1c1c1e;color:#fff;text-decoration:none;border-radius:10px;padding:8px 14px;font-weight:600;font-size:14px;white-space:nowrap}
+ .bar a.o{background:#fff;color:#1c1c1e;border:1px solid #d8d7d2}
+ .page{width:auto;height:auto;max-width:860px;margin:18px auto;border-radius:18px;box-shadow:0 1px 3px rgba(0,0,0,.06);padding:44px 40px 36px;overflow:visible}
+ .cover{min-height:auto;gap:22px}
+ .foot{display:none}
+}
+@media screen and (max-width:700px){
+ html,body{font-size:15px;overflow-x:hidden}
+ .page{overflow:hidden;overflow-wrap:anywhere}
+ .cover .meta{flex-direction:column;gap:4px}
+ .bar .b{display:none}
+ .page{margin:10px;padding:26px 18px;border-radius:14px}
+ .row{flex-direction:column;align-items:stretch}
+ .row>div:not(.col){display:flex!important;flex-direction:row!important;gap:10px!important;justify-content:center;flex-wrap:wrap}
+ .phone,.phone.sm,.phone.xs{width:44vw;max-width:200px}
+ .cover .phone{width:28vw}
+ .flow{flex-direction:column}.flow .ar{transform:rotate(-90deg)}
+ .toc{columns:1}
+ h1{font-size:28px}.cover h1{font-size:32px}h2{font-size:22px}
+ .legend{grid-template-columns:1fr}
+ td:first-child{white-space:normal}
+}
+</style>
+</head>
+<body>
+<div class="bar"><span class="b"><i></i>AutoPost</span><span style="display:flex;gap:8px"><a class="o" href="AutoPost-guide.pdf" download>تنزيل PDF</a><a href="../">افتح التطبيق</a></span></div>
+
+<!-- 1. cover -->
+<section class="page cover">
+ <div class="brand"><i></i>AutoPost</div>
+ <div>
+  <div class="kick" style="color:#9a9aa0">دليل الاستخدام · للعملاء</div>
+  <h1>انشر على كل المنصات<br>من مكان واحد</h1>
+  <p class="lead">إزاي تعمل حسابك، تربط صفحاتك، وتجدول أول بوست — خطوة بخطوة بالصور.</p>
+ </div>
+ <div class="phones">
+  <div class="phone"><img src="01-signup.jpg"></div>
+  <div class="phone"><img src="08-compose-bottom.jpg"></div>
+  <div class="phone"><img src="10-list.jpg"></div>
+ </div>
+ <div class="meta"><span>نوفمبر 2026</span><b>abdonassar317-alt.github.io/autopost-app</b></div>
+</section>
+
+<!-- 2. overview -->
+<section class="page">
+ <div class="kick">مقدمة</div>
+ <h2>AutoPost بيعمل إيه؟</h2>
+ <p class="lead">بتكتب البوست مرة واحدة، تختار المنصات والميعاد، وAutoPost ينشره لوحده في ميعاده — حتى لو موبايلك مقفول.</p>
+ <div class="flow">
+  <div class="st"><div class="n">1</div><b>اعمل حساب</b><span>اسم + إيميل + باسورد، وكود 6 أرقام بيوصلك على الإيميل.</span></div><div class="ar">←</div>
+  <div class="st"><div class="n">2</div><b>اربط صفحاتك</b><span>فيسبوك وإنستجرام ولينكدإن ويوتيوب — مرة واحدة بس.</span></div><div class="ar">←</div>
+  <div class="st"><div class="n">3</div><b>اعمل بوست</b><span>صور أو فيديو، كابشن، المنصات والميعاد.</span></div><div class="ar">←</div>
+  <div class="st"><div class="n">4</div><b>بينزل لوحده</b><span>وتتابع اللي اتنشر ولينكاته من «المجدول».</span></div>
+ </div>
+ <div class="box ok"><b class="t">أول 3 شهور مجانًا</b>من غير فيزا. بعدها 200 جنيه في الشهر، أو 1200 جنيه في السنة (يعني 100 جنيه في الشهر).</div>
+ <h2 style="font-size:15pt;margin-top:7mm">المحتويات</h2>
+ <div class="toc">
+  <div>إنشاء الحساب <span>3</span></div>
+  <div>التبويبات الأربعة <span>4</span></div>
+  <div>ربط الحسابات <span>5</span></div>
+  <div>فيسبوك وإنستجرام <span>6</span></div>
+  <div>لينكدإن · يوتيوب · تيك توك <span>7</span></div>
+  <div>إنشاء بوست وجدولته <span>8</span></div>
+  <div>متابعة البوستات <span>9</span></div>
+  <div>الاشتراك والدفع <span>10</span></div>
+  <div>الإعدادات والمساعدة <span>11</span></div>
+  <div>أسئلة شائعة <span>11</span></div>
+ </div>
+ <div class="box" style="margin-top:7mm"><b class="t">تفتح التطبيق منين؟</b>من أي متصفح على الموبايل أو الكمبيوتر: <span class="ltr"><b>abdonassar317-alt.github.io/autopost-app</b></span>. تقدر «تثبّته» زي أي تطبيق من الإعدادات ← «تثبيت على الجهاز ده».</div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>2</span></div>
+</section>
+
+<!-- 3. signup -->
+<section class="page">
+ <div class="kick">الخطوة 1</div>
+ <h2>إنشاء الحساب</h2>
+ <p class="lead">دقيقة واحدة، ومن غير أي حساب GitHub أو بيانات تقنية.</p>
+ <div class="row">
+  <div class="col">
+   <ol class="steps">
+    <li>افتح رابط التطبيق. أول ما يفتح هتلاقي شاشة <b>«اعمل حسابك»</b>.</li>
+    <li>اكتب <b>اسمك أو اسم البراند</b> (مثلاً «كافيه النيل»)، و<b>إيميلك</b>، و<b>كلمة سر</b> 8 حروف على الأقل. زرار «إظهار» بيوريك اللي كتبته.</li>
+    <li>دوس <b>«اعمل الحساب»</b>.</li>
+    <li>هيوصلك إيميل من AutoPost فيه <b>كود من 6 أرقام</b> (لو مش لاقيه بص في Spam). اكتبه — الحساب بيتأكد لوحده أول ما الكود يكتمل.</li>
+    <li>خلاص! هتدخل على التطبيق على طول.</li>
+   </ol>
+   <div class="box"><b class="t">عندك حساب بالفعل؟</b>دوس «سجّل دخول» تحت الزرار. ولو نسيت كلمة السر: «نسيت كلمة السر؟» ← إيميلك ← الكود ← كلمة سر جديدة.</div>
+   <div class="box"><b class="t">عايز تتفرج الأول؟</b>«جرّب الأداة ببيانات تجريبية» بيفتح نسخة تجريبية — مفيش حاجة بتتنشر أو بتتحفظ.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4mm">
+   <div><div class="phone xs"><img src="01-signup.jpg"></div><div class="cap">شاشة «اعمل حسابك»</div></div>
+   <div><div class="phone xs"><img src="02-code.jpg"></div><div class="cap">كود التأكيد</div></div>
+  </div>
+ </div>
+ <div class="box ok"><b class="t">على جهاز تاني؟</b>افتح نفس الرابط وسجّل دخول بنفس الإيميل وكلمة السر — بوستاتك وحساباتك المربوطة كلها هتلاقيها.</div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>3</span></div>
+</section>
+
+<!-- 4. tabs -->
+<section class="page">
+ <div class="kick">التعرّف على التطبيق</div>
+ <h2>التبويبات الأربعة</h2>
+ <p class="lead">تحت الشاشة فيه 4 أزرار — دي كل حاجة في التطبيق.</p>
+ <div class="row">
+  <div class="col">
+   <div class="legend">
+    <div><b>➕ جديد</b>إنشاء بوست: الصور، الكابشن، المنصات، الميعاد.</div>
+    <div><b>📅 المجدول</b>كل بوستاتك: الجاي، التقويم، المسودات، اللي اتنشر.</div>
+    <div><b>🏷️ الحسابات</b>ربط فيسبوك وإنستجرام ولينكدإن ويوتيوب وغيرهم.</div>
+    <div><b>⚙️ الإعدادات</b>حسابك، الاشتراك، اللغة، الوضع الغامق، المساعدة.</div>
+   </div>
+   <div class="box" style="margin-top:6mm"><b class="t">فوق الشاشة</b>إيميلك (يعني إنت مسجّل دخول)، زرار <b>EN / ع</b> لتغيير اللغة، وزرار ☾ للوضع الغامق.</div>
+   <div class="box"><b class="t">على الكمبيوتر؟ اختصارات بتوفر وقت</b>
+    <code>N</code> بوست جديد · <code>Ctrl+Enter</code> جدولة · <code>Ctrl+S</code> مسودة · <code>/</code> بحث · <code>C</code> التقويم · <code>1-4</code> التبويبات · <code>?</code> كل الاختصارات</div>
+   <div class="box warn"><b class="t">أول حاجة تعملها</b>روح <b>الحسابات</b> واربط صفحاتك قبل ما تجدول — المنصة اللي مش مربوطة مكتوب جنبها «مش متصل» ومش هتنزل عليها.</div>
+  </div>
+  <div><div class="phone"><img src="03-home.jpg"></div><div class="cap">أول شاشة بعد التسجيل</div></div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>4</span></div>
+</section>
+
+<!-- 5. accounts -->
+<section class="page">
+ <div class="kick">الخطوة 2</div>
+ <h2>ربط الحسابات</h2>
+ <p class="lead">من تبويب <b>الحسابات</b> دوس <b>«اربط»</b> جنب المنصة. بتفتح نافذة صغيرة، تسجّل وتوافق، وترجع لوحدك. بعد ما توافق استنى حوالي <b>30 ثانية</b> لحد ما يظهر «اتربط ✅».</p>
+ <div class="row">
+  <div class="col">
+   <table>
+    <tr><th>المنصة</th><th>بتتربط إزاي</th><th>النشر</th></tr>
+    <tr><td>فيسبوك + إنستجرام</td><td>بتسجّل بفيسبوك وتختار صفحتك — إنستجرام المربوط بالصفحة بيتربط معاها (صفحة 6)</td><td><span class="tag a">تلقائي</span></td></tr>
+    <tr><td>لينكدإن</td><td>تسجيل دخول لينكدإن ← «سماح». بيتجدد لما تفتح التطبيق كل كام أسبوع</td><td><span class="tag a">تلقائي</span></td></tr>
+    <tr><td>يوتيوب</td><td>تسجيل جوجل ← اختار القناة ← «سماح» (صفحة 7)</td><td><span class="tag a">تلقائي</span></td></tr>
+    <tr><td>تيك توك</td><td>تسجيل تيك توك</td><td><span class="tag m">تذكير</span> مؤقتًا</td></tr>
+    <tr><td>تليجرام</td><td>بوت بتعمله من BotFather — بيبعتلك تقرير كل بوست</td><td>اختياري</td></tr>
+    <tr><td>سناب · X · بنترست</td><td>مش محتاجين ربط</td><td><span class="tag m">تذكير</span></td></tr>
+   </table>
+   <div class="box"><b class="t">يعني إيه «تذكير»؟</b>في ميعاد البوست بيظهرلك زرار <b>«انشر على …»</b> في المجدول: بيجهّزلك الصور وينسخ الكابشن، وتنزّله بضغطة من تطبيق المنصة.</div>
+   <div class="box"><b class="t">بتدير أكتر من براند؟</b>«+ عميل جديد» فوق الصفحة بيعمل براند تاني بصفحاته ومنصاته لوحده.</div>
+  </div>
+  <div><div class="phone sm"><img src="04-accounts.jpg"></div><div class="cap">صفحة الحسابات</div></div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>5</span></div>
+</section>
+
+<!-- 6. facebook -->
+<section class="page">
+ <div class="kick">الخطوة 2 — فيسبوك وإنستجرام</div>
+ <h2>ربط فيسبوك وإنستجرام</h2>
+ <p class="lead">إنستجرام بيتنشر عليه عن طريق صفحة الفيسبوك المربوط بيها — فربطة واحدة بتربط الاتنين.</p>
+ <div class="box warn"><b class="t">قبل ما تبدأ</b>حساب إنستجرام لازم يكون <b>Business أو Creator</b> (إعدادات إنستجرام ← نوع الحساب) ومربوط بـ<b>صفحة فيسبوك</b>. البروفايل الشخصي على فيسبوك مش بيسمح بالنشر التلقائي.</div>
+ <div class="row">
+  <div class="col">
+   <h2 style="font-size:14pt">أول مرة بس: اطلب التفعيل</h2>
+   <p>لحد ما Meta يوافق على التطبيق للكل، بنفعّل كل عميل بإيدينا مرة واحدة:</p>
+   <ol class="steps">
+    <li>الحسابات ← فيسبوك «اربط» ← <b>«اطلب التفعيل»</b> ← ابعت لينك بروفايلك على فيسبوك على واتساب.</li>
+    <li>هيوصلك إشعار على فيسبوك بدعوة لتطبيق AutoPost. وافق عليها من <span class="ltr">developers.facebook.com/requests</span> (لو طلب تسجّل كمطوّر: ببلاش ودقيقة).</li>
+   </ol>
+   <h2 style="font-size:14pt;margin-top:3mm">الربط</h2>
+   <ol class="steps">
+    <li>دوس <b>«ربط بفيسبوك»</b> ← سجّل دخول ← وافق على الصلاحيات.</li>
+    <li>لو عندك أكتر من صفحة هيظهرلك <b>«اختار الصفحة»</b> وجنب كل صفحة حساب إنستجرام بتاعها.</li>
+    <li>هيظهر: <b>«فيسبوك (اسم الصفحة) وإنستجرام @… اتربطوا ✅»</b>.</li>
+   </ol>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4mm">
+   <div><div class="phone sm"><img src="05-facebook.jpg"></div><div class="cap">ربط بفيسبوك</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>6</span></div>
+</section>
+
+<!-- 7. others -->
+<section class="page">
+ <div class="kick">الخطوة 2 — باقي المنصات</div>
+ <h2>لينكدإن · يوتيوب · تيك توك</h2>
+ <div class="row">
+  <div class="col">
+   <h2 style="font-size:14pt">لينكدإن</h2>
+   <ol class="steps"><li>«اربط» ← سجّل دخول لينكدإن ← <b>«سماح»</b>.</li><li>بينشر على بروفايلك الشخصي. الربط بيعيش 60 يوم وبيتجدد لوحده لما تفتح التطبيق.</li></ol>
+   <h2 style="font-size:14pt;margin-top:2mm">يوتيوب</h2>
+   <ol class="steps"><li>«اربط» ← اختار حساب جوجل والقناة.</li><li>لو ظهر <b>«Google hasn't verified this app»</b>: دوس <b>Advanced</b> ← <b>Go to AutoPost</b> ← <b>Allow</b>. ده طبيعي لحد ما جوجل يوثّق التطبيق.</li><li>يوتيوب بينزل الفيديوهات، وكمان بيعمل Short لوحده من الصور.</li></ol>
+   <h2 style="font-size:14pt;margin-top:2mm">تيك توك</h2>
+   <ol class="steps"><li>«اربط» ← سجّل دخول تيك توك ← وافق.</li><li>لحد ما تيك توك يوافق على التطبيق، البوست بيوصلك «تذكير» بزرار نشر بضغطة.</li></ol>
+  </div>
+  <div class="col">
+   <div class="box"><b class="t">النافذة الصغيرة مش بتفتح؟</b>المتصفح ساعات بيمنع النوافذ المنبثقة. اسمح بيها للموقع (أيقونة في آخر شريط العنوان) أو التطبيق هيفتح صفحة التسجيل في نفس التاب ويرجعك لوحده.</div>
+   <div class="box"><b class="t">النافذة قالت «تمام — اقفل النافذة»؟</b>اقفلها وارجع للتطبيق — هيكمّل الربط لوحده خلال ثواني.</div>
+   <div class="box"><b class="t">عايز تغيّر الحساب أو القناة؟</b>نفس الزرار هيبقى اسمه «تغيير» أو «تغيير القناة».</div>
+   <div class="box warn"><b class="t">ظهر «فشل»؟</b>جرّب تاني بعد دقيقة. لو اتكرر صوّر الشاشة وابعتها من الإعدادات ← «بلّغ عن مشكلة».</div>
+  </div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>7</span></div>
+</section>
+
+<!-- 8. compose -->
+<section class="page">
+ <div class="kick">الخطوة 3</div>
+ <h2>إنشاء بوست وجدولته</h2>
+ <p class="lead">من تبويب <b>جديد</b>:</p>
+ <div class="row">
+  <div class="col">
+   <ol class="steps">
+    <li><b>الحساب:</b> اختار البراند (لو عندك أكتر من واحد). <b>الحملة</b> اختيارية لتجميع بوستات مع بعض.</li>
+    <li><b>الميديا:</b> «اختار صور أو فيديو» — لحد 10 صور (كاروسيل) أو فيديو واحد. الأسهم تحت كل صورة بتغيّر ترتيبها.</li>
+    <li><b>الكابشن:</b> اكتبه. «كابشن مختلف لمنصة معينة» لو عايز نص مختلف للينكدإن مثلاً. وفيه «قوالب» و«هاشتاجات» و«مساعد» للكتابة.</li>
+    <li><b>الميعاد:</b> اختار اليوم والساعة، أو دوس زرار سريع: «بعد ساعة»، «النهارده 8 م»، «بكرة 12 ظ»، «بكرة 8 م»، «الجمعة 8 م».</li>
+    <li><b>المنصات:</b> دوس على المنصات اللي عايزه (المختار عليه إطار أسود).</li>
+    <li>دوس <b>«جدولة»</b> — هيظهر «اتجدول» ✓.</li>
+   </ol>
+   <div class="box"><b class="t">الأزرار التلاتة تحت</b><b>جدولة</b> = ينزل في الميعاد · <b>مسودة</b> = يتحفظ من غير نشر · <b>نشر الآن</b> = ينزل خلال دقايق.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4mm">
+   <div><div class="phone xs"><img src="07-compose-top.jpg"></div><div class="cap">الميديا والكابشن</div></div>
+   <div><div class="phone xs"><img src="08-compose-bottom.jpg"></div><div class="cap">الميعاد والمنصات</div></div>
+  </div>
+ </div>
+ <div class="box ok"><b class="t">البوست بينزل وموبايلك مقفول</b>الجدولة بتشتغل على السيرفر، مش على جهازك. ممكن يتأخر البوست كام دقيقة عن الميعاد — ده طبيعي.</div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>8</span></div>
+</section>
+
+<!-- 9. list -->
+<section class="page">
+ <div class="kick">الخطوة 4</div>
+ <h2>متابعة البوستات</h2>
+ <p class="lead">تبويب <b>المجدول</b> فيه كل حاجة.</p>
+ <div class="row">
+  <div class="col">
+   <ol class="steps">
+    <li><b>«محتاجك دلوقتي»</b> فوق: أي حاجة محتاجة منك تدخّل (ربط خلص، بوست فشل، نشر بإيدك). لو مكتوب «كله تمام ✓» يبقى مفيش حاجة.</li>
+    <li><b>البحث:</b> اكتب أي كلمة من الكابشن.</li>
+    <li><b>الجاي · تقويم · أفكار · مسودات · اتنشر · الكل</b>: طرق عرض مختلفة. التقويم بيبدأ يوم السبت، وتقدر تسحب البوست ليوم تاني على الكمبيوتر.</li>
+    <li>تحت كل بوست حالة كل منصة: <span class="tag a">اتنشر ↗</span> (لينك البوست)، <span class="tag m">تذكير</span>، أو «فشل / محتاج تدخل».</li>
+    <li>زرار <b>⋮</b> جنب البوست: تغيير الميعاد، تعديل الكابشن، نسخة في بوست جديد، حذف.</li>
+   </ol>
+   <div class="box"><b class="t">أدوات إضافية</b>تصدير/استيراد Excel، تقرير شهري PDF، رابط موافقة للعميل قبل النشر، تحليل محتواك وأحسن وقت للنشر.</div>
+  </div>
+  </div>
+ <div class="prow">
+  <div><div class="phone xs"><img src="10-list.jpg"></div><div class="cap">البوستات الجاية</div></div>
+  <div><div class="phone xs"><img src="11-calendar.jpg"></div><div class="cap">التقويم</div></div>
+  <div><div class="phone xs"><img src="12-menu.jpg"></div><div class="cap">خيارات البوست ⋮</div></div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>9</span></div>
+</section>
+
+<!-- 10. pay -->
+<section class="page">
+ <div class="kick">الاشتراك</div>
+ <h2>الاشتراك والدفع</h2>
+ <p class="lead">أول 3 شهور ببلاش. لما تحب تشترك: الإعدادات ← الاشتراك ← <b>«ادفع / جدّد»</b>.</p>
+ <div class="row">
+  <div class="col">
+   <table>
+    <tr><th>الخطة</th><th>السعر</th></tr>
+    <tr><td>شهري</td><td>200 جنيه في الشهر</td></tr>
+    <tr><td>سنوي (الأوفر)</td><td>1200 جنيه في السنة — يعني 100 جنيه في الشهر، توفّر 1200 جنيه</td></tr>
+   </table>
+   <ol class="steps">
+    <li>اختار الخطة ← «كمّل الدفع».</li>
+    <li>حوّل المبلغ على <b>InstaPay</b> (امسح الكود، أو انسخ العنوان أو رقم الموبايل).</li>
+    <li>في خانة الملاحظة في InstaPay اكتب <b>رقمك المرجعي</b> اللي ظاهر في الشاشة (بيبدأ بـ <code>AP-</code>).</li>
+    <li>ارجع للتطبيق و<b>ارفع سكرين التحويل</b> ← «ابعت للمراجعة».</li>
+    <li>أول ما الدفع يتأكد، الاشتراك بيتفعّل عندك <b>لوحده</b> وبيظهرلك إشعار.</li>
+   </ol>
+   <div class="box warn"><b class="t">لو الاشتراك خلص</b>النشر بيقف بعد 3 أيام سماح — بس <b>مفيش حاجة بتتمسح</b>. أول ما تجدد، كله بيرجع يشتغل.</div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:4mm">
+   <div><div class="phone xs"><img src="14-pricing.jpg"></div><div class="cap">الخطط</div></div>
+   <div><div class="phone xs"><img src="15-pay.jpg"></div><div class="cap">الدفع بـ InstaPay</div></div>
+  </div>
+ </div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>10</span></div>
+</section>
+
+<!-- 11. settings + faq -->
+<section class="page">
+ <div class="kick">الإعدادات والمساعدة</div>
+ <h2>الإعدادات</h2>
+ <div class="row">
+  <div class="col">
+   <ul style="padding-inline-start:5mm;margin:0 0 3mm">
+    <li><b>حسابك:</b> اسمك وإيميلك، «تغيير كلمة السر»، «تسجيل خروج».</li>
+    <li><b>الاشتراك:</b> فاضل كام يوم، والدفع.</li>
+    <li><b>المظهر واللغة:</b> فاتح / غامق / تلقائي، عربي / English.</li>
+    <li><b>تثبيت التطبيق</b> على الموبايل أو الكمبيوتر.</li>
+    <li><b>مساعدة واقتراحات:</b> «اقترح فكرة» أو «بلّغ عن مشكلة» على واتساب أو الإيميل، و«الجديد في التطبيق».</li>
+   </ul>
+   <h2 style="font-size:16pt;margin-top:4mm">أسئلة شائعة</h2>
+   <div class="qa">
+    <b>البوست ماتنشرش في ميعاده بالظبط؟</b>ممكن يتأخر كام دقيقة. لو عدّى أكتر من 24 ساعة بيتلغي وبيظهرلك في «محتاجك دلوقتي».
+    <b>ينفع أنشر على بروفايلي الشخصي في فيسبوك؟</b>لأ — فيسبوك قافل ده على كل التطبيقات. بينزل على <b>صفحتك</b>، وإنستجرام ممكن يشيّره على بروفايلك تلقائي من إعدادات إنستجرام.
+    <b>إنستجرام بيقول لازم Business؟</b>من إنستجرام: الإعدادات ← نوع الحساب ← حوّله Creator أو Business (ببلاش) واربطه بصفحتك.
+    <b>بياناتي في أمان؟</b>بياناتك خاصة بحسابك ومحدش من العملاء التانيين يشوفها، ومفاتيح ربط المنصات متشفّرة.
+    <b>نسيت كلمة السر؟</b>شاشة الدخول ← «نسيت كلمة السر؟» ← كود على الإيميل.
+   </div>
+  </div>
+  <div><div class="phone sm"><img src="13-settings.jpg"></div><div class="cap">الإعدادات</div></div>
+ </div>
+ <div class="box ok" style="margin-top:4mm"><b class="t">محتاج مساعدة؟</b>واتساب <span class="ltr">+20 109 290 0137</span> · إيميل <span class="ltr">abdonassar317@gmail.com</span> — الأداة بتتطور باستمرار وكل اقتراح بيتقرا.</div>
+ <div class="foot"><span>AutoPost — دليل الاستخدام</span><span>11</span></div>
+</section>
+
+</body>
+</html>
