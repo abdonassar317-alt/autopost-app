@@ -15,12 +15,19 @@ const api = async (body) => { const r = await fetch(SERVER, { method: "POST", bo
 window.apApi = api;
 
 // ---------------------------------------------------------------- returning from a platform sign-in inside the small window
-if (window.opener && window.opener !== window && /[?&]state=/.test(location.search)) {
+// Google and Facebook cut the link back to the opener (window.opener = null), so the answer goes through localStorage,
+// which every tab of the app shares. Only a window we opened ourselves (its state is in ap_oauth_wait) does this.
+(() => {
+  const st = new URLSearchParams(location.search).get("state");
+  if (!st || !/[?&](code|error)=/.test(location.search)) return;
+  let wait = null; try { wait = localStorage.getItem("ap_oauth_wait"); } catch (e) {}
+  if (wait !== st) return;
   window.AP_POPUP = true;
-  try { window.opener.postMessage({ apOAuth: location.search }, location.origin); } catch (e) {}
-  document.addEventListener("DOMContentLoaded", () => { document.body.innerHTML = `<div style="font:16px system-ui;padding:40px;text-align:center">✓ ${L("تمام — راجع للتطبيق", "Done — back to the app")}</div>`; });
-  setTimeout(() => window.close(), 400);
-}
+  try { localStorage.setItem("ap_oauth_result", JSON.stringify({ state: st, search: location.search, at: Date.now() })); localStorage.removeItem("ap_oauth_wait"); } catch (e) {}
+  try { window.opener && window.opener.postMessage({ apOAuth: location.search }, location.origin); } catch (e) {}
+  document.addEventListener("DOMContentLoaded", () => { document.body.innerHTML = `<div style="font:16px system-ui;padding:40px;text-align:center;line-height:1.8">✓ ${L("تمام — اقفل النافذة دي وارجع للتطبيق", "Done — close this window and go back to the app")}</div>`; });
+  setTimeout(() => { try { window.close(); } catch (e) {} }, 300);
+})();
 
 // ---------------------------------------------------------------- session
 let sess = null; try { sess = JSON.parse(ls.get("ap_session") || "null"); } catch (e) {}

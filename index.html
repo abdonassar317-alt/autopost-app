@@ -231,21 +231,21 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=38"></script>
-<script src="host.js?v=38"></script>
-<script src="i18n.js?v=38"></script>
-<script src="theme.js?v=38"></script>
-<script src="vendor-nacl.js?v=38"></script>
-<script src="vendor-blake.js?v=38"></script>
-<script src="phase2.js?v=38" defer></script>
-<script src="library.js?v=38" defer></script>
-<script src="plan.js?v=38" defer></script>
-<script src="approval.js?v=38" defer></script>
-<script src="ai.js?v=38" defer></script>
-<script src="insights.js?v=38" defer></script>
-<script src="export.js?v=38" defer></script>
-<script src="license.js?v=38" defer></script>
-<script src="keys.js?v=38" defer></script>
+<script src="demo.js?v=39"></script>
+<script src="host.js?v=39"></script>
+<script src="i18n.js?v=39"></script>
+<script src="theme.js?v=39"></script>
+<script src="vendor-nacl.js?v=39"></script>
+<script src="vendor-blake.js?v=39"></script>
+<script src="phase2.js?v=39" defer></script>
+<script src="library.js?v=39" defer></script>
+<script src="plan.js?v=39" defer></script>
+<script src="approval.js?v=39" defer></script>
+<script src="ai.js?v=39" defer></script>
+<script src="insights.js?v=39" defer></script>
+<script src="export.js?v=39" defer></script>
+<script src="license.js?v=39" defer></script>
+<script src="keys.js?v=39" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -636,10 +636,14 @@ function oCheck(kind){const q=new URLSearchParams(location.search),st=q.get("sta
  let ok=false;try{ok=sessionStorage.getItem("oauth_state_"+kind)===st;sessionStorage.removeItem("oauth_state_"+kind)}catch(e){}
  history.replaceState(null,"",YT_REDIRECT);if(!ok){toast("رابط الرجوع ده مش من الجلسة دي — اعمل الربط تاني من الأداة",8000);return null}return q}
 // ---- sign-in in a small window that closes itself and hands the answer back (full-page redirect if popups are blocked)
-function oGo(url){const w=window.open(url,"ap_oauth","width=520,height=720");if(!w){location.href=url;return}
- const on=async e=>{if(e.origin!==location.origin||!e.data||!e.data.apOAuth)return;removeEventListener("message",on);clearInterval(w._t);
-  history.replaceState(null,"",YT_REDIRECT+e.data.apOAuth);await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();await finishMeta()};
- addEventListener("message",on)}
+function oGo(url){const st=new URL(url).searchParams.get("state");
+ try{localStorage.removeItem("ap_oauth_result");localStorage.setItem("ap_oauth_wait",st)}catch(e){}
+ const w=window.open(url,"ap_oauth","width=520,height=720");if(!w){try{localStorage.removeItem("ap_oauth_wait")}catch(e){}location.href=url;return}
+ let done=false;const go=async search=>{if(done)return;done=true;clearInterval(t);removeEventListener("storage",onS);removeEventListener("message",onM);try{localStorage.removeItem("ap_oauth_result")}catch(e){}
+  history.replaceState(null,"",YT_REDIRECT+search);await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();await finishMeta()};
+ const read=()=>{try{const r=JSON.parse(localStorage.getItem("ap_oauth_result")||"null");if(r&&r.state===st)go(r.search)}catch(e){}};
+ const onS=e=>{if(e.key==="ap_oauth_result")read()},onM=e=>{if(e.origin===location.origin&&e.data&&e.data.apOAuth)go(e.data.apOAuth)};
+ addEventListener("storage",onS);addEventListener("message",onM);const t=setInterval(read,1000);setTimeout(()=>clearInterval(t),15*60e3)}
 // ---- YouTube wizard: paste Client ID + secret once, then Google sign-in returns here and we exchange the code
 const YT_REDIRECT=location.origin+location.pathname;
 window.wzYouTube=()=>{
