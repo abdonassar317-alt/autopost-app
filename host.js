@@ -14,6 +14,14 @@ const isDemo = /[?&]demo\b/.test(location.search);
 const api = async (body) => { const r = await fetch(SERVER, { method: "POST", body: JSON.stringify(body) }); if (!r.ok) throw new Error("server " + r.status); return r.json(); };
 window.apApi = api;
 
+// ---------------------------------------------------------------- returning from a platform sign-in inside the small window
+if (window.opener && window.opener !== window && /[?&]state=/.test(location.search)) {
+  window.AP_POPUP = true;
+  try { window.opener.postMessage({ apOAuth: location.search }, location.origin); } catch (e) {}
+  document.addEventListener("DOMContentLoaded", () => { document.body.innerHTML = `<div style="font:16px system-ui;padding:40px;text-align:center">✓ ${L("تمام — راجع للتطبيق", "Done — back to the app")}</div>`; });
+  setTimeout(() => window.close(), 400);
+}
+
 // ---------------------------------------------------------------- session
 let sess = null; try { sess = JSON.parse(ls.get("ap_session") || "null"); } catch (e) {}
 if (isDemo) sess = null;
@@ -70,7 +78,8 @@ if (sess?.s && sess?.user?.id) {
     if (path === "/actions/secrets/public-key") { r = await g("pubkey"); return r.error ? fail(r) : J({ key: r.key, key_id: r.key_id }); }
     if (path.startsWith("/actions/secrets/") && m === "PUT") { r = await g("secret", { name: path.split("/").pop(), value: body.encrypted_value }); return r.error ? fail(r) : new Response(null, { status: 204 }); }
     if (path.startsWith("/actions/secrets")) { r = await g("secrets"); return r.error ? fail(r) : J({ total_count: r.secrets.length, secrets: r.secrets }); }
-    if (path.endsWith("/dispatches")) { r = await g("dispatch", { workflow: path.split("/")[3], inputs: body.inputs }); return r.error ? fail(r) : new Response(null, { status: 204 }); }
+    if (path.endsWith("/dispatches")) { for (let i = 0; i < 3; i++) { r = await g("dispatch", { workflow: path.split("/")[3], inputs: body.inputs }); if (r.error !== "slow_down" || path.includes("publish.yml")) break; await new Promise((ok) => setTimeout(ok, 6000)); }
+      return r.error ? fail(r) : new Response(null, { status: 204 }); }
     if (path.includes("/runs")) return J({ workflow_runs: [] });
     return J({ message: L("مش متاح في الحساب المُستضاف", "Not available on hosted accounts") }, 404);
   };
@@ -237,5 +246,45 @@ function settingsBoxes() {
     };
   }
 }
-document.addEventListener("DOMContentLoaded", () => { settingsBoxes(); setTimeout(settingsBoxes, 800); setTimeout(settingsBoxes, 3000); });
+// ---------------------------------------------------------------- hosted: connect platforms with one tap (the owner's developer apps)
+function hostedConnect() {
+  if (!window.HOST || window.AP_POPUP || typeof brands === "undefined") return;
+  const wait = async (file, step, t0) => { for (let i = 0; i < 25; i++) { await new Promise((r) => setTimeout(r, 5000));
+    try { const t = JSON.parse(await readFile(file)); if ((t.at || 0) >= t0 - 60000 && (!step || t.step === step)) return t; } catch (e) {} }
+    throw new Error(L("استنى دقيقة وجرّب تاني", "Taking long — try again in a minute")); };
+  const start = async (wf) => { const t0 = Date.now(); await gh(`${R()}/actions/workflows/${wf}/dispatches`, { method: "POST", body: JSON.stringify({ ref: cfg.branch, inputs: { code: "", redirect: YT_REDIRECT, prefix: pre(brands[curBrand]) } }) }); return t0; };
+  const guard = (fn) => async () => { try { await fn(); } catch (e) { toast(e.message, 8000); } };
+  window.wzLinkedIn = () => liGo(LI_CLIENT_ID_DEFAULT);
+  window.wzYouTube = window.ytSwitch = guard(async () => {
+    toast(L("بيجهّز ربط يوتيوب… ثواني", "Preparing YouTube sign-in…"), 30000);
+    const t = await wait("state/youtube.json", "id", await start("youtube-connect.yml"));
+    if (!t.client_id) throw new Error(L("ربط يوتيوب مش متاح دلوقتي", "YouTube connection isn't available right now"));
+    sessionStorage.setItem("ytw_pending", JSON.stringify({ brand: curBrand }));
+    toast(L("لو جوجل قال «التطبيق غير موثّق»: Advanced ← Go to AutoPost ← Allow", "If Google says “unverified app”: Advanced → Go to AutoPost → Allow"), 12000);
+    oGo("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({ client_id: t.client_id, redirect_uri: YT_REDIRECT, response_type: "code", access_type: "offline", prompt: "select_account consent", state: oState("ytw"), scope: "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly" }));
+  });
+  window.wzTikTok = guard(async () => {
+    toast(L("بيجهّز ربط تيك توك… ثواني", "Preparing TikTok sign-in…"), 30000);
+    const t = await wait("state/tiktok.json", "id", await start("tiktok-connect.yml"));
+    if (!t.client_key) throw new Error(L("ربط تيك توك مش متاح دلوقتي", "TikTok connection isn't available right now"));
+    sessionStorage.setItem("tt_pending", JSON.stringify({ brand: curBrand }));
+    oGo("https://www.tiktok.com/v2/auth/authorize/?" + new URLSearchParams({ client_key: t.client_key, scope: "user.info.basic,video.publish", response_type: "code", redirect_uri: YT_REDIRECT, state: oState("tt") }));
+  });
+  const _pin = window.wzPinterest;
+  window.wzPinterest = guard(async () => { const b = brands[curBrand];
+    if (hasSecret(b, "PIN_REFRESH_TOKEN") && b.pinterest?.boards?.length) return _pin();
+    toast(L("بيجهّز ربط بنترست… ثواني", "Preparing Pinterest sign-in…"), 30000);
+    const t = await wait("state/pinterest.json", "id", await start("pinterest-connect.yml"));
+    if (!t.client_id) throw new Error(L("ربط بنترست للعملاء لسه مش متاح", "Pinterest isn't available for accounts yet"));
+    sessionStorage.setItem("pin_pending", JSON.stringify({ brand: curBrand }));
+    oGo("https://www.pinterest.com/oauth/?" + new URLSearchParams({ client_id: t.client_id, redirect_uri: YT_REDIRECT, response_type: "code", scope: "boards:read,pins:read,pins:write,user_accounts:read", state: oState("pin") }));
+  });
+  // Meta (Instagram / Facebook) lets other people's accounts connect only after Meta reviews the app
+  const metaNote = (orig) => () => { sheet(`<div class="wz" data-i18n-skip><h3>${L("إنستجرام وفيسبوك", "Instagram & Facebook")}</h3>
+    <div class="sub">${L("الربط بضغطة لحسابات العملاء مستني موافقة Meta على تطبيق AutoPost. لحد ما توافق، البوستات بتوصلك تذكير بالصور والكابشن جاهزين تنزلهم بضغطة.", "One-tap connection for client accounts is waiting for Meta to approve the AutoPost app. Until then you get a reminder with the photos and caption ready to post in one tap.")}</div>
+    <div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button><button class="btn" id="meta-adv">${L("متقدم: عندي توكن", "Advanced: I have a token")}</button></div></div>`); document.getElementById("meta-adv").onclick = () => orig(); };
+  window.wzInstagram = metaNote(window.wzInstagram); window.wzMeta = metaNote(window.wzMeta);
+}
+
+document.addEventListener("DOMContentLoaded", () => { hostedConnect(); settingsBoxes(); setTimeout(settingsBoxes, 800); setTimeout(settingsBoxes, 3000); });
 })();

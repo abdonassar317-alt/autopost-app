@@ -231,21 +231,21 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=36"></script>
-<script src="host.js?v=36b"></script>
-<script src="i18n.js?v=36"></script>
-<script src="theme.js?v=36"></script>
-<script src="vendor-nacl.js?v=36"></script>
-<script src="vendor-blake.js?v=36"></script>
-<script src="phase2.js?v=36" defer></script>
-<script src="library.js?v=36" defer></script>
-<script src="plan.js?v=36" defer></script>
-<script src="approval.js?v=36" defer></script>
-<script src="ai.js?v=36" defer></script>
-<script src="insights.js?v=36" defer></script>
-<script src="export.js?v=36" defer></script>
-<script src="license.js?v=36" defer></script>
-<script src="keys.js?v=36" defer></script>
+<script src="demo.js?v=37"></script>
+<script src="host.js?v=37"></script>
+<script src="i18n.js?v=37"></script>
+<script src="theme.js?v=37"></script>
+<script src="vendor-nacl.js?v=37"></script>
+<script src="vendor-blake.js?v=37"></script>
+<script src="phase2.js?v=37" defer></script>
+<script src="library.js?v=37" defer></script>
+<script src="plan.js?v=37" defer></script>
+<script src="approval.js?v=37" defer></script>
+<script src="ai.js?v=37" defer></script>
+<script src="insights.js?v=37" defer></script>
+<script src="export.js?v=37" defer></script>
+<script src="license.js?v=37" defer></script>
+<script src="keys.js?v=37" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -591,6 +591,11 @@ function oState(kind){const n=kind+"."+[...crypto.getRandomValues(new Uint8Array
 function oCheck(kind){const q=new URLSearchParams(location.search),st=q.get("state")||"";if(!st.startsWith(kind+"."))return null;
  let ok=false;try{ok=sessionStorage.getItem("oauth_state_"+kind)===st;sessionStorage.removeItem("oauth_state_"+kind)}catch(e){}
  history.replaceState(null,"",YT_REDIRECT);if(!ok){toast("رابط الرجوع ده مش من الجلسة دي — اعمل الربط تاني من الأداة",8000);return null}return q}
+// ---- sign-in in a small window that closes itself and hands the answer back (full-page redirect if popups are blocked)
+function oGo(url){const w=window.open(url,"ap_oauth","width=520,height=720");if(!w){location.href=url;return}
+ const on=async e=>{if(e.origin!==location.origin||!e.data||!e.data.apOAuth)return;removeEventListener("message",on);clearInterval(w._t);
+  history.replaceState(null,"",YT_REDIRECT+e.data.apOAuth);await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest()};
+ addEventListener("message",on)}
 // ---- YouTube wizard: paste Client ID + secret once, then Google sign-in returns here and we exchange the code
 const YT_REDIRECT=location.origin+location.pathname;
 window.wzYouTube=()=>{
@@ -601,7 +606,7 @@ window.wzYouTube=()=>{
   <div class="nav"><button class="btn pri" id="y-ok">ربط بجوجل</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#y-ok").onclick=()=>{const id=$("#y-id").value.trim(),sec=$("#y-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");
   sessionStorage.setItem("yt_pending",JSON.stringify({id,sec,brand:curBrand}));
-  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"consent",state:oState("yt"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}};
+  oGo("https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"consent",state:oState("yt"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"}))}};
 async function finishYouTube(){
  const q=oCheck("yt");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("yt_pending")||"null");sessionStorage.removeItem("yt_pending");
@@ -624,7 +629,7 @@ window.ytSwitch=async()=>{const b=brands[curBrand];if(!hasSecret(b,"YT_CLIENT_SE
   await gh(`${R()}/actions/workflows/youtube-connect.yml/dispatches`,{method:"POST",body:JSON.stringify({ref:cfg.branch,inputs:{code:"",redirect:YT_REDIRECT,prefix:pre(b)}})});
   const t=await ytWait(t0,"id");if(!t.client_id)throw new Error("مفيش Client ID محفوظ");
   sessionStorage.setItem("ytw_pending",JSON.stringify({brand:curBrand}));
-  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:t.client_id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"select_account consent",state:oState("ytw"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"})}
+  oGo("https://accounts.google.com/o/oauth2/v2/auth?"+new URLSearchParams({client_id:t.client_id,redirect_uri:YT_REDIRECT,response_type:"code",access_type:"offline",prompt:"select_account consent",state:oState("ytw"),scope:"https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"}))}
  catch(e){toast("يوتيوب: "+e.message,8000)}};
 async function finishYtSwitch(){
  const q=oCheck("ytw");if(!q)return;
@@ -648,7 +653,7 @@ window.wzTikTok=()=>{
  $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
-   location.href="https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")})}
+   oGo("https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")}))}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
 async function finishTikTok(){
  const q=oCheck("tt");if(!q)return;
@@ -665,11 +670,11 @@ async function finishTikTok(){
 // ---- LinkedIn wizard: sign in on LinkedIn -> code comes back here -> GitHub Action exchanges it (secret stays in GitHub)
 const LI_CLIENT_ID_DEFAULT="78ozcr6ezgdlyu";
 function liGo(id){sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
- location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"})}
+ oGo("https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"}))}
 // one-tap renew: secret already in GitHub, and LinkedIn skips the consent screen for scopes you already approved
-window.liRenew=()=>{const b=brands[curBrand];const id=b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT;if(hasSecret(b,"LI_CLIENT_SECRET"))liGo(id);else wzLinkedIn()};
+window.liRenew=()=>{const b=brands[curBrand];const id=b.linkedin?.client_id||LI_CLIENT_ID_DEFAULT;if(hasSecret(b,"LI_CLIENT_SECRET")||window.HOST)liGo(id);else wzLinkedIn()};
 // auto-renew when the token is 50+ days old (at most once a day, only when you open the app)
-function liAutoRenew(){const b=brands[curBrand];const c=b?.linkedin?.connected_at;if(!c||!hasSecret(b,"LI_CLIENT_SECRET"))return;
+function liAutoRenew(){const b=brands[curBrand];const c=b?.linkedin?.connected_at;if(!c||!(hasSecret(b,"LI_CLIENT_SECRET")||window.HOST))return;
  if(Date.now()-new Date(c).getTime()<50*864e5)return;const k="li_auto_"+curBrand,d=new Date().toDateString();try{if(localStorage.getItem(k)===d)return;localStorage.setItem(k,d)}catch(e){}
  toast("بيجدد لينكدإن تلقائي…",4000);setTimeout(()=>liGo(b.linkedin.client_id||LI_CLIENT_ID_DEFAULT),1500)}
 window.wzLinkedIn=()=>{
@@ -681,7 +686,7 @@ window.wzLinkedIn=()=>{
  $("#l-ok").onclick=async()=>{const id=$("#l-id").value.trim(),sec=$("#l-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#l-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"LI_CLIENT_ID"),id);await putSecret(sname(b,"LI_CLIENT_SECRET"),sec);
    sessionStorage.setItem("li_pending",JSON.stringify({brand:curBrand,id}));
-   location.href="https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"})}
+   oGo("https://www.linkedin.com/oauth/v2/authorization?"+new URLSearchParams({response_type:"code",client_id:id,redirect_uri:YT_REDIRECT,state:oState("li"),scope:"openid profile w_member_social"}))}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بلينكدإن"}}};
 async function finishLinkedIn(){
  const q=oCheck("li");if(!q)return;
@@ -708,7 +713,7 @@ window.wzPinterest=()=>{const b=brands[curBrand];const pinOk=hasSecret(b,"PIN_RE
  $("#p-ok").onclick=async()=>{const id=$("#p-id").value.trim(),sec=$("#p-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#p-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{await putSecret(sname(b,"PIN_CLIENT_ID"),id);await putSecret(sname(b,"PIN_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("pin_pending",JSON.stringify({brand:curBrand}));
-   location.href="https://www.pinterest.com/oauth/?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",scope:"boards:read,pins:read,pins:write,user_accounts:read",state:oState("pin")})}
+   oGo("https://www.pinterest.com/oauth/?"+new URLSearchParams({client_id:id,redirect_uri:YT_REDIRECT,response_type:"code",scope:"boards:read,pins:read,pins:write,user_accounts:read",state:oState("pin")}))}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط ببنترست"}}};
 async function finishPinterest(){const q=oCheck("pin");if(!q)return;
  const st=JSON.parse(sessionStorage.getItem("pin_pending")||"null");sessionStorage.removeItem("pin_pending");
@@ -767,7 +772,7 @@ $("#install-btn").onclick=async()=>{
   `<li>افتح الموقع من <b>Safari</b></li><li>دوس زرار المشاركة (المربع اللي طالع منه سهم)</li><li>اختار <b>Add to Home Screen</b> ← Add</li>`:
   `<li><b>أندرويد:</b> من Chrome دوس ⋮ ← <b>Install app</b> أو <b>Add to Home screen</b></li><li><b>ويندوز وماك:</b> من Chrome أو Edge دوس أيقونة التثبيت في آخر شريط العنوان، أو ⋮ ← <b>Install AutoPost</b></li>`}</ol>
   <button class="btn pri" style="width:100%" onclick="closeSheet()">تمام</button></div>`)};
-async function init(){if(!cfg.token){tab("settings");return}$("#who").textContent=window.HOST?HOST.user.email:`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
+async function init(){if(window.AP_POPUP)return;if(!cfg.token){tab("settings");return}$("#who").textContent=window.HOST?HOST.user.email:`${cfg.owner}/${cfg.repo}`;await loadBrands();if(authErr){toast(authErr,12000);tab("settings");return}await finishYouTube();await finishTikTok();await finishLinkedIn();await finishYtSwitch();await finishPinterest();liAutoRenew()}
 init();
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
 </script>
