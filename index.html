@@ -698,10 +698,10 @@ window.wzTikTok=()=>{
  sheet(`<div class="wz"><h3>ربط تيك توك</h3><div class="sub">مرة واحدة بس</div><ol class="steps">
   <li>من <a href="https://developers.tiktok.com/apps/" target="_blank" rel="noopener">TikTok for Developers</a> افتح تطبيقك ← انسخ <b>Client key</b> و <b>Client secret</b></li>
   <li>اضغط <b>ربط بتيك توك</b> ← وافق ← هترجع هنا لوحدك</li></ol>
-  <div class="lbl">Client key</div><input id="t-key" dir="ltr" value="${esc(TT_CLIENT_KEY_DEFAULT)}"><div class="lbl">Client secret</div><input id="t-sec" dir="ltr" type="password">
+  <div class="lbl">Client key</div><input id="t-key" dir="ltr" value="${esc(TT_CLIENT_KEY_DEFAULT)}"><div class="lbl">Client secret${hasSecret(brands[curBrand],"TT_CLIENT_SECRET")?" (محفوظ — سيبه فاضي)":""}</div><input id="t-sec" dir="ltr" type="password">
   <div class="nav"><button class="btn pri" id="t-ok">ربط بتيك توك</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
- $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
-  try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
+ $("#t-ok").onclick=async()=>{const b0=brands[curBrand],had=hasSecret(b0,"TT_CLIENT_SECRET"),k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||(!sec&&!had))return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
+  try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);if(sec)await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
    oGo("https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish,video.upload",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")}))}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
