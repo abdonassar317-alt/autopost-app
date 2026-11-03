@@ -693,7 +693,7 @@ async function finishYtSwitch(){
  catch(e){toast("يوتيوب: "+e.message,10000)}}
 
 // ---- TikTok wizard: Login Kit -> code comes back here -> GitHub Action exchanges it (client secret never leaves GitHub)
-const TT_CLIENT_KEY_DEFAULT="";
+const TT_CLIENT_KEY_DEFAULT=APP_PUBLIC.tt_key;
 window.wzTikTok=()=>{
  sheet(`<div class="wz"><h3>ربط تيك توك</h3><div class="sub">مرة واحدة بس</div><ol class="steps">
   <li>من <a href="https://developers.tiktok.com/apps/" target="_blank" rel="noopener">TikTok for Developers</a> افتح تطبيقك ← انسخ <b>Client key</b> و <b>Client secret</b></li>
