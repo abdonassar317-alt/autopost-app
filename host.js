@@ -120,7 +120,7 @@ const css = `#auth{position:fixed;inset:0;z-index:50;background:var(--bg);overfl
 #auth .err{color:var(--bad);font-size:13.5px;min-height:20px;margin-top:8px}#auth .foot{margin-top:34px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--mut);line-height:1.8}
 #auth .foot a{color:var(--mut);cursor:pointer}#auth .code{letter-spacing:10px;font-size:24px;text-align:center;direction:ltr;font-weight:600}
 #auth .pw{position:relative}#auth .pw button{position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--mut);font:inherit;font-size:12.5px;cursor:pointer}
-#auth .perks{margin:18px 0 0;padding:0;list-style:none;font-size:13.5px;color:var(--mut)}#auth .perks li{padding:3px 0}#auth .perks li:before{content:"✓ ";color:var(--ok)}`;
+#auth .trust{margin-top:14px;font-size:12.5px;line-height:1.7;color:var(--mut);background:var(--soft);border-radius:10px;padding:10px 12px}#auth .trust a{color:var(--mut)}#auth .perks{margin:18px 0 0;padding:0;list-style:none;font-size:13.5px;color:var(--mut)}#auth .perks li{padding:3px 0}#auth .perks li:before{content:"✓ ";color:var(--ok)}`;
 function screen(view = "signup", st = {}) {
   let el = document.getElementById("auth");
   if (!el) { const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s); el = document.createElement("div"); el.id = "auth"; el.setAttribute("data-i18n-skip", ""); document.body.appendChild(el); }
@@ -134,6 +134,7 @@ function screen(view = "signup", st = {}) {
       <div class="lbl">${L("كلمة السر", "Password")} <span>${L("8 حروف على الأقل", "8+ characters")}</span></div>${pw("a-pass", "")}
       <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("اعمل الحساب", "Create account")}</button>
       <div class="alt"><span>${L("عندك حساب؟", "Have an account?")}</span><a data-v="signin">${L("سجّل دخول", "Sign in")}</a></div>
+      <div class="trust">🔒 ${L("حساباتك في أمان: مش بنطلب ولا بنحفظ باسورد فيسبوك أو إنستجرام أو أي منصة. الربط بيتم من صفحة المنصة نفسها، وتقدر تلغيه في أي وقت. كلمة سر AutoPost بتتشفّر على جهازك قبل ما تتبعت.", "Your accounts are safe: we never ask for or store your Facebook, Instagram or any platform password. You connect on the platform's own page and can remove access any time. Your AutoPost password is encrypted on your device before it's sent.")} <a href="privacy.html" target="_blank" rel="noopener">${L("الخصوصية", "Privacy")}</a></div>
       <ul class="perks"><li>${L("انشر على إنستجرام وفيسبوك ولينكدإن ويوتيوب وتيك توك وأكتر", "Post to Instagram, Facebook, LinkedIn, YouTube, TikTok and more")}</li><li>${L("جدولة، تقويم، مسودات، وموافقة العميل", "Scheduling, calendar, drafts and client approval")}</li><li>${L("بعد أول شهر: 37 جنيه بس في الشهر", "After the first month: just 37 EGP/month")}</li></ul>`,
     signin: `<h2>${L("أهلاً بيك تاني", "Welcome back")}</h2><div class="sub">${L("سجّل دخول بإيميلك", "Sign in with your e-mail")}</div>
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
@@ -152,7 +153,7 @@ function screen(view = "signup", st = {}) {
   };
   el.innerHTML = `<div class="in"><div class="brand"><i></i>AutoPost<span style="flex:1"></span><button id="a-lang" style="border:1px solid var(--line);background:var(--s);color:var(--ink);border-radius:8px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer">${window.apLang === "ar" ? "EN" : "ع"}</button></div>${V[view]}
     <div class="foot">${L("عايز تتفرج الأول؟", "Want to look around first?")} <a href="?demo">${L("جرّب الأداة ببيانات تجريبية", "Try it with sample data")}</a><br>
-    <a id="a-gh">${L("متقدم: عندي GitHub وعايز بياناتي على حسابي", "Advanced: use my own GitHub")}</a></div></div>`;
+    <a id="a-gh">${L("للمطورين: استخدم حساب GitHub بتاعك", "For developers: use your own GitHub")}</a></div></div>`;
   document.dir = window.apLang === "ar" ? "rtl" : "ltr";
   const $ = (s) => el.querySelector(s), err = (t) => ($("#a-err").textContent = t || "");
   el.querySelectorAll("[data-v]").forEach((a) => (a.onclick = () => screen(a.dataset.v, { email: $("#a-email")?.value || st.email })));
@@ -216,6 +217,7 @@ function settingsBoxes() {
       const u = HOST.user, esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
       b.innerHTML = `<div class="lbl">${L("حسابك", "Your account")}</div><p style="margin:2px 0"><b>${esc(u.name)}</b></p><p class="note" style="margin:0 0 10px" dir="ltr">${esc(u.email)}</p>
         <p class="hint">${L("على أي جهاز تاني: افتح AutoPost وسجّل دخول بنفس الإيميل.", "On any other device: open AutoPost and sign in with the same e-mail.")}</p>
+        <p class="hint">🔒 ${L("بياناتك ليك لوحدك ومحدش من العملاء التانيين يشوفها. مش بنحفظ باسورد أي منصة — الربط بإذن من المنصة نفسها وتقدر تشيله في أي وقت من إعداداتها.", "Your data is yours only — other clients can't see it. We never store any platform password — connections are permissions you grant on the platform and can remove any time from its settings.")} <a href="privacy.html" target="_blank" rel="noopener">${L("الخصوصية", "Privacy")}</a></p>
         <div class="two"><button class="btn sm" id="acct-pw">${L("تغيير كلمة السر", "Change password")}</button><button class="btn sm" id="acct-out" style="color:var(--bad)">${L("تسجيل خروج", "Sign out")}</button></div>`;
       set.prepend(b);
       b.querySelector("#acct-out").onclick = logout;
@@ -226,8 +228,8 @@ function settingsBoxes() {
   }
   if (String(window.cfg?.owner || (typeof cfg !== "undefined" ? cfg.owner : "")).toLowerCase() === "abdonassar317-alt" && !document.getElementById("host-box") && !isDemo) {
     const b = document.createElement("div"); b.className = "box"; b.id = "host-box"; b.setAttribute("data-i18n-skip", "");
-    b.innerHTML = `<div class="lbl">${L("حسابات جوه التطبيق (للعملاء)", "Accounts inside the app (clients)")}</div>
-      <p class="note">${L("العميل يسجّل بإيميل وباسورد بس، وبياناته تتحفظ في فولدر لوحده في الريبو الخاص بتاعك. إنت مش محتاج تعمل حاجة غير قبول الدفع.", "Clients sign up with e-mail + password only; their data lives in its own folder in your private repo. You only approve payments.")}</p>
+    b.innerHTML = `<div class="lbl">${L("لوحة الأدمن — إنت بس اللي شايفها", "Admin panel — only you can see this")}</div>
+      <p class="note">${L("العملاء مش بيشوفوا الجزء ده خالص. كل عميل بيسجّل بإيميل وكلمة سر، وبياناته في مكان منفصل محدش يشوفه غيره. شغلك هنا: متابعة الزوار والتسجيل، والحسابات، وقبول الدفع.", "Clients never see this section. Each client signs up with e-mail + password and their data is kept separately — no one else can see it. Here you follow visitors & sign-ups, accounts, and approve payments.")}</p>
       <div id="host-st" class="hint">…</div>
       <div id="host-k" class="f" style="display:none"><div class="lbl">${L("مفتاح صندوق المدفوعات (ADMIN_KEY)", "Payment-inbox key (ADMIN_KEY)")}</div><input id="host-kin" dir="ltr" autocomplete="off" placeholder="ADMIN_KEY"></div><div class="two f"><button class="btn sm pri" id="host-on">${L("تشغيل / تحديث", "Turn on / refresh")}</button><button class="btn sm" id="host-users">${L("الحسابات", "Accounts")}</button></div>
       <button class="btn sm pri f" id="host-stats" style="width:100%">📊 ${L("الزوار والتسجيل", "Visitors & sign-ups")}</button><div id="host-sum" class="hint" style="margin-top:6px"></div>`;
@@ -235,7 +237,7 @@ function settingsBoxes() {
     const key = () => { const v = b.querySelector("#host-kin")?.value.trim(); if (v) ls.set("ap_inbox_key", v); return ls.get("ap_inbox_key") || ""; };
     if (!ls.get("ap_inbox_key")) b.querySelector("#host-k").style.display = "";
     const st = async () => { const el = b.querySelector("#host-st");
-      try { const r = await api({ action: "hello" }); el.textContent = r.version ? (r.hosted ? L("✓ شغال — العملاء يقدروا يسجّلوا", "✓ On — clients can sign up") : L("مقفول — دوس «تشغيل»", "Off — press Turn on"))
+      try { const r = await api({ action: "hello" }); el.textContent = r.version ? (r.hosted ? L("✓ التسجيل مفتوح للناس", "✓ Sign-ups are open") : L("مقفول — دوس «تشغيل»", "Off — press Turn on"))
         : L("محتاج تحدّث كود Apps Script الأول (tools/payments-inbox.gs) وتعمل New version", "Update the Apps Script code first (tools/payments-inbox.gs) and deploy a New version"); }
       catch (e) { el.textContent = L("مش قادر أوصل للسيرفر", "Can't reach the server"); } };
     st();
@@ -326,8 +328,8 @@ function hostedConnect() {
   });
   // Meta (Instagram / Facebook) lets other people's accounts connect only after Meta reviews the app
   const metaNote = (orig) => () => { sheet(`<div class="wz" data-i18n-skip><h3>${L("إنستجرام وفيسبوك", "Instagram & Facebook")}</h3>
-    <div class="sub">${L("الربط بضغطة لحسابات العملاء مستني موافقة Meta على تطبيق AutoPost. لحد ما توافق، البوستات بتوصلك تذكير بالصور والكابشن جاهزين تنزلهم بضغطة.", "One-tap connection for client accounts is waiting for Meta to approve the AutoPost app. Until then you get a reminder with the photos and caption ready to post in one tap.")}</div>
-    <div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button><button class="btn" id="meta-adv">${L("متقدم: عندي توكن", "Advanced: I have a token")}</button></div></div>`); document.getElementById("meta-adv").onclick = () => orig(); };
+    <div class="sub">${L("ربط إنستجرام وفيسبوك بضغطة واحدة مستني موافقة Meta (الشركة المالكة لفيسبوك). لحد ما توافق، هيوصلك تذكير فيه الصور والكابشن جاهزين تنزلهم بضغطة — ومن غير ما تدّينا باسورد حسابك.", "One-tap Instagram & Facebook connection is waiting for Meta's approval. Until then you get a reminder with the photos and caption ready to post in one tap — without ever giving us your password.")}</div>
+    <div class="nav"><button class="btn pri" onclick="closeSheet()">${L("تمام", "OK")}</button></div></div>`); };
   window.wzInstagram = () => wzFacebook(); // clients: Instagram comes with their Facebook Page (one tap)
 }
 

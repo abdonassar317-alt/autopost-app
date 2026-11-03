@@ -9,8 +9,9 @@ const TRIAL_DAYS = 30, GRACE_DAYS = 3;
 const PLANS = { month: { months: 1, price: 37 }, year: { months: 12, price: 370 } }; // year = 2 months free
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
-const VERSION = "43";
+const VERSION = "44";
 const CHANGES = [
+  ["44", "رسالة أمان واضحة: مش بنطلب باسورد أي منصة · صفحة خصوصية جديدة", "Clear safety note: we never ask for any platform password · new privacy page"],
   ["43", "السعر بقى 37 جنيه في الشهر وأول شهر مجاني · بنترست على كل البوستات · «أحسن وقت» بخريطة وزرار يحط الميعاد لوحده", "Now 37 EGP/month, first month free · Pinterest on every post · “Best time” map with one-tap scheduling"],
   ["42", "بنترست: تطبيقك جاهز ورقمه متكتب — هتلزق المفتاح السري بس", "Pinterest: your app is ready and its ID is pre-filled — just paste the secret"],
   ["41", "تيك توك: البوست بيوصل صندوق تيك توك لوحده · تذكير بضغطة لبروفايل فيسبوك الشخصي", "TikTok: posts land in your TikTok inbox · one-tap reminder for your personal Facebook profile"],
