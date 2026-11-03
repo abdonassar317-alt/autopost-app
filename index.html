@@ -530,7 +530,7 @@ window.delBrand=()=>{sheet(`<div class="wz"><h3>حذف ${esc(brands[curBrand].na
  $("#db-ok").onclick=async()=>{delete brands[curBrand];curBrand="default";closeSheet();try{await saveBrands("delete account");renderBrands()}catch(e){toast(e.message)}}};
 
 // public ids of the owner's developer apps (not secrets) — knowing them here saves a whole GitHub run per connection
-const APP_PUBLIC={fb_app:"1495427845973679",fb_config:"1870198361310565",yt_client:"792170108248-821jlddj1r6o267unapivh3epn2vq18j.apps.googleusercontent.com",tt_key:"sbawk7um46jbdnqb83"};
+const APP_PUBLIC={fb_app:"1495427845973679",fb_config:"1870198361310565",yt_client:"792170108248-821jlddj1r6o267unapivh3epn2vq18j.apps.googleusercontent.com",tt_key:"sbawk7um46jbdnqb83",pin_app:"1633747"};
 // ---- Facebook one tap (Facebook Login for Business): Page + its Instagram. Today it works for people with a role on the
 // AutoPost app (admins / testers) — no Meta review needed. Secrets stay in GitHub Actions (meta-connect.yml).
 async function mWait(step,t0){for(let i=0;i<50;i++){await new Promise(r=>setTimeout(r,2500));try{const t=JSON.parse(await readFile("state/meta.json"));if((t.at||0)>=t0-60000&&(t.step===step||t.step==="error"||(step==="code"&&t.step==="pick")))return t}catch(e){}}throw new Error("GitHub اتأخر — جرّب تاني بعد دقيقة")}
@@ -755,10 +755,9 @@ async function finishLinkedIn(){
 window.wzPinterest=()=>{const b=brands[curBrand];const pinOk=hasSecret(b,"PIN_REFRESH_TOKEN");
  if(pinOk&&b.pinterest?.boards?.length)return pinBoards();
  sheet(`<div class="wz"><h3>ربط بنترست</h3><div class="sub">مجاني. بس البنات بتفضل مخفية لحد ما بنترست يوافق على تطبيقك (Standard access) — لحد كده هيوصلك تذكير.</div><ol class="steps">
-  <li>افتح <a href="https://developers.pinterest.com/apps/" target="_blank" rel="noopener">Pinterest Developers ← My apps</a> واعمل تطبيق (حساب بنترست Business)</li>
-  <li>في التطبيق ضيف Redirect URI: <code dir="ltr">${esc(YT_REDIRECT)}</code></li>
-  <li>انسخ <b>App ID</b> و <b>App secret key</b> والصقهم هنا ← <b>ربط</b> ← وافق</li></ol>
-  <div class="lbl">App ID</div><input id="p-id" dir="ltr" autocomplete="off"><div class="lbl">App secret key</div><input id="p-sec" dir="ltr" type="password" autocomplete="new-password">
+  <li>تطبيقك جاهز (AutoPost by Abdo Nassar) — افتح <a href="https://developers.pinterest.com/apps/${APP_PUBLIC.pin_app}/" target="_blank" rel="noopener">صفحته في Pinterest Developers</a></li>
+  <li>انسخ <b>App secret key</b> والصقه هنا ← <b>ربط</b> ← وافق</li></ol>
+  <div class="lbl">App ID</div><input id="p-id" dir="ltr" autocomplete="off" value="${esc(b.pinterest?.client_id||APP_PUBLIC.pin_app)}"><div class="lbl">App secret key</div><input id="p-sec" dir="ltr" type="password" autocomplete="new-password">
   <div class="nav"><button class="btn pri" id="p-ok">ربط ببنترست</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#p-ok").onclick=async()=>{const id=$("#p-id").value.trim(),sec=$("#p-sec").value.trim();if(!id||!sec)return toast("حط الاتنين");const btn=$("#p-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{await putSecret(sname(b,"PIN_CLIENT_ID"),id);await putSecret(sname(b,"PIN_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
