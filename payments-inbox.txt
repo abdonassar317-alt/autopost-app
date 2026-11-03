@@ -1,25 +1,40 @@
 /**
- * AutoPost — payment inbox (Google Apps Script web app, free, runs on Abdo's Google account).
+ * AutoPost — server (Google Apps Script web app, free, runs on Abdo's Google account).
  *
- * Client app  → POST {action:"submit"}  : transfer screenshot + plan → saved to Drive (private), OCR'd, Abdo gets an email.
- * Client app  → GET  ?action=status     : pending / approved (+ code) / rejected (+ reason).
- * Abdo's app  → GET  ?action=list&key=… : pending requests with the screenshot + what the OCR found.
- * Abdo's app  → POST {action:"decide"}  : approve (with the code signed in his app) or reject.
+ * 1) Payment inbox
+ *   Client app  → POST {action:"submit"}  : transfer screenshot + plan → saved to Drive (private), OCR'd, Abdo gets an email.
+ *   Client app  → GET  ?action=status     : pending / approved (+ code) / rejected (+ reason).
+ *   Abdo's app  → GET  ?action=list&key=… : pending requests with the screenshot + what the OCR found.
+ *   Abdo's app  → POST {action:"decide"}  : approve (with the code signed in his app) or reject.
+ *
+ * 2) Accounts inside the app (no GitHub for clients)
+ *   signup / verify (6-digit code by e-mail) / login / forgot / reset → a signed session (HMAC, 60 days).
+ *   Passwords are stretched in the browser (PBKDF2 150k) and stored here only as salted SHA-256 of that.
+ *
+ * 3) Hosted mode (gateway)
+ *   Every client gets clients/<id>/ in Abdo's private repo. This script holds Abdo's GitHub token (Script Property GH_TOKEN,
+ *   sent once from Abdo's app) and lets a signed-in client touch ONLY its own folder: reads, uploads, commits, its own
+ *   secret vault (sealed in the browser — this script can't read them), and a short whitelist of workflows.
+ *
+ * 4) Wake-up: wake() runs every 5 minutes and starts publishing exactly when state/next.json says a post is due.
  *
  * Only Abdo's app knows ADMIN_KEY. Codes are signed in Abdo's app — this script never holds the signing key.
  *
- * Setup (once): script.google.com ▸ New project ▸ paste this file ▸ save
- *   ▸ run setup() once and allow ▸ Deploy ▸ New deployment ▸ Web app ▸ Execute as: Me ▸ Who has access: Anyone ▸ Deploy.
- *   Copy the web-app URL and the admin key printed by setup() into AutoPost (Settings ▸ Customers & payments ▸ Inbox).
+ * Setup / update: script.google.com ▸ paste this file over the old one ▸ save ▸ run setup() once and allow
+ *   ▸ Deploy ▸ Manage deployments ▸ ✎ ▸ Version: New version ▸ Deploy (the URL stays the same).
+ *   First time only: Deploy ▸ New deployment ▸ Web app ▸ Execute as: Me ▸ Who has access: Anyone.
+ *   Then in AutoPost (Abdo's account): Settings ▸ Customers & payments ▸ "Turn on accounts inside the app".
  */
-const PRICES = { month: 200, year: 1200 };
+const PRICES = { month: 37, year: 370 };
 const FOLDER = "AutoPost payments";
 
 function setup() {
-  DriveApp.getRootFolder(); UrlFetchApp; // asks for the Drive + fetch permissions once
+  DriveApp.getRootFolder(); UrlFetchApp; MailApp.getRemainingDailyQuota(); // asks for Drive + fetch + mail permissions once
   const p = PropertiesService.getScriptProperties();
   if (!p.getProperty("ADMIN_KEY")) p.setProperty("ADMIN_KEY", Utilities.getUuid().replace(/-/g, ""));
+  if (!p.getProperty("SESSION_SECRET")) p.setProperty("SESSION_SECRET", Utilities.getUuid() + Utilities.getUuid());
   folder_();
+  wakeTrigger_();
   Logger.log("ADMIN_KEY = " + p.getProperty("ADMIN_KEY"));
 }
 
@@ -65,8 +80,13 @@ function check_(text, user, plan) {
 
 function doPost(e) {
   let b = {}; try { b = JSON.parse(e.postData.contents); } catch (x) { return out_({ error: "bad request" }); }
+  if (ACCOUNT_OPS[b.action]) {
+    try { return out_(ACCOUNT_OPS[b.action](b)); }
+    catch (x) { return out_({ error: x.code || "server", msg: String(x.message || x).slice(0, 300) }); }
+  }
   if (b.action === "submit") {
-    const user = clean_(b.user), plan = PRICES[b.plan] ? b.plan : "";
+    let user = clean_(b.user); const plan = PRICES[b.plan] ? b.plan : "";
+    if (b.s) { try { user = session_(b.s).id; } catch (x) { return out_({ error: "session" }); } } // hosted accounts: the request is tied to the signed-in account
     if (!user || !plan || !b.image) return out_({ error: "missing" });
     if (String(b.image).length > 4e6) return out_({ error: "image too large" });
     const mine = all_().filter((r) => r.user === user && r.status === "pending");
@@ -111,4 +131,374 @@ function doGet(e) {
     return out_({ requests: rs });
   }
   return out_({ ok: true, app: "AutoPost payment inbox" });
+}
+
+// =====================================================================================================================
+// Accounts inside the app + hosted gateway
+// =====================================================================================================================
+const APP_ORIGIN = "https://abdonassar317-alt.github.io/";
+const TRIAL_DAYS = 30, SESSION_DAYS = 60, CODE_MIN = 15;
+const err_ = (code, msg) => { const e = new Error(msg || code); e.code = code; return e; };
+const prop_ = (k) => db_().getProperty(k);
+const cache_ = () => CacheService.getScriptCache();
+const norm_ = (e) => String(e || "").trim().toLowerCase();
+const okEmail_ = (e) => /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/.test(e);
+const hex_ = (bytes) => bytes.map((b) => ((b + 256) % 256).toString(16).padStart(2, "0")).join("");
+const sha_ = (s) => hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8));
+const b64w_ = (bytes) => Utilities.base64EncodeWebSafe(bytes).replace(/=+$/, "");
+const unb64w_ = (s) => Utilities.base64DecodeWebSafe(s + "=".repeat((4 - s.length % 4) % 4));
+const iso_ = (d) => (d || new Date()).toISOString().replace(/\.\d+Z$/, "Z");
+const same_ = (a, b) => { if (a.length !== b.length) return false; let x = 0; for (let i = 0; i < a.length; i++) x |= a.charCodeAt(i) ^ b.charCodeAt(i); return x === 0; };
+
+// ---- users: Script Properties  u_<id> = {…}, e_<email> = <id>
+const userGet_ = (id) => { const v = prop_("u_" + id); return v ? JSON.parse(v) : null; };
+const userPut_ = (u) => db_().setProperty("u_" + u.id, JSON.stringify(u));
+const userByEmail_ = (email) => { const id = prop_("e_" + email); return id ? userGet_(id) : null; };
+const pub_ = (u) => ({ id: u.id, name: u.name, email: u.email, created: u.created });
+const prefix_ = (id, key) => { const k = String(key || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 16);
+  return "HX" + id.toUpperCase() + (key && key !== "default" && k ? "_" + k : ""); };
+function newId_() {
+  const a = "abcdefghijklmnopqrstuvwxyz", c = a + "0123456789";
+  for (;;) { let id = a[Math.floor(Math.random() * 26)]; for (let i = 0; i < 7; i++) id += c[Math.floor(Math.random() * 36)];
+    if (!prop_("u_" + id)) return id; }
+}
+
+// ---- sessions: base64url(json).hmac — nothing stored; a password reset bumps sv and kills old sessions
+function sign_(o) { const body = b64w_(Utilities.newBlob(JSON.stringify(o)).getBytes());
+  return body + "." + b64w_(Utilities.computeHmacSha256Signature(body, prop_("SESSION_SECRET"))); }
+function session_(tok) {
+  const [body, sig] = String(tok || "").split(".");
+  if (!body || !sig || !same_(sig, b64w_(Utilities.computeHmacSha256Signature(body, prop_("SESSION_SECRET"))))) throw err_("session");
+  const o = JSON.parse(Utilities.newBlob(unb64w_(body)).getDataAsString());
+  const u = o.exp > Date.now() ? userGet_(o.u) : null;
+  if (!u || !u.verified || u.sv !== o.v || u.disabled) throw err_("session");
+  return u;
+}
+const issue_ = (u) => ({ ok: true, session: sign_({ u: u.id, v: u.sv, exp: Date.now() + SESSION_DAYS * 864e5 }), user: pub_(u) });
+
+// ---- 6-digit codes by e-mail (cache, 15 min, 5 tries, 5 e-mails/hour per address)
+function sendCode_(email, purpose, name) {
+  const c = cache_(), rk = "vs:" + email, n = Number(c.get(rk) || 0);
+  if (n >= 5) throw err_("too_many", "too many codes — wait an hour");
+  if (MailApp.getRemainingDailyQuota() < 3) throw err_("mail_quota");
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  c.put("vc:" + purpose + ":" + email, JSON.stringify({ h: sha_(code + email), n: 0 }), CODE_MIN * 60);
+  c.put(rk, String(n + 1), 3600);
+  const ar = purpose === "reset" ? "كود تغيير كلمة السر" : "كود تأكيد حسابك";
+  const en = purpose === "reset" ? "Your password reset code" : "Your AutoPost verification code";
+  MailApp.sendEmail({ to: email, subject: `AutoPost: ${code}`, name: "AutoPost",
+    htmlBody: `<div style="font-family:system-ui,sans-serif;max-width:420px"><p>${name ? "Hi " + String(name).replace(/[<>&]/g, "") + "," : "Hi,"}</p>
+      <p>${en} · ${ar}</p><p style="font-size:30px;font-weight:700;letter-spacing:6px;margin:16px 0">${code}</p>
+      <p style="color:#777;font-size:13px">Valid for ${CODE_MIN} minutes · صالح لمدة ${CODE_MIN} دقيقة. If you didn't ask for this, ignore this e-mail.</p></div>` });
+}
+function checkCode_(email, purpose, code) {
+  const c = cache_(), k = "vc:" + purpose + ":" + email, v = c.get(k);
+  if (!v) throw err_("code_expired");
+  const o = JSON.parse(v);
+  if (o.n >= 5) { c.remove(k); throw err_("code_expired"); }
+  if (!same_(o.h, sha_(String(code || "").trim() + email))) { o.n++; c.put(k, JSON.stringify(o), CODE_MIN * 60); throw err_("code_wrong"); }
+  c.remove(k);
+}
+function failGuard_(email, fail) {
+  const c = cache_(), k = "lf:" + email, n = Number(c.get(k) || 0);
+  if (fail === undefined) { if (n >= 8) throw err_("locked", "too many attempts — try again in 15 minutes"); return; }
+  if (fail) c.put(k, String(n + 1), 900); else c.remove(k);
+}
+const passHash_ = (salt, pass) => sha_(salt + ":" + pass);
+const okPass_ = (p) => /^[0-9a-f]{64}$/.test(String(p || "")); // PBKDF2 output from the app — the real password never leaves the device
+
+// ---- owner stats: daily counters only (no names, no IPs) — st_YYYYMMDD = {o: opens, u: unique devices that day, n: new devices,
+// a: opens while signed in, su: sign-up started, vf: e-mail confirmed, li: logins, ref: {where they came from}}
+const STAT_DAYS = 120;
+const dayKey_ = (d) => Utilities.formatDate(d || new Date(), "Africa/Cairo", "yyyyMMdd");
+function stat_(add, ref) {
+  const lock = LockService.getScriptLock(); if (!lock.tryLock(4000)) return;
+  try {
+    const k = "st_" + dayKey_(), raw = prop_(k), o = raw ? JSON.parse(raw) : {};
+    Object.keys(add).forEach((f) => { o[f] = (o[f] || 0) + add[f]; });
+    if (ref) { o.ref = o.ref || {}; if (o.ref[ref] || Object.keys(o.ref).length < 25) o.ref[ref] = (o.ref[ref] || 0) + 1; }
+    db_().setProperty(k, JSON.stringify(o));
+    if (!raw) { const old = "st_" + dayKey_(new Date(Date.now() - STAT_DAYS * 864e5));
+      Object.keys(db_().getProperties()).filter((x) => x.startsWith("st_") && x < old).forEach((x) => db_().deleteProperty(x)); }
+  } catch (x) {} finally { lock.releaseLock(); }
+}
+const statSafe_ = (add) => { try { stat_(add); } catch (x) {} };
+
+const ACCOUNT_OPS = {
+  hello: () => ({ ok: true, hosted: !!prop_("GH_TOKEN"), version: 4 }),
+
+  // anonymous app-open ping (a random device id, kept only 6 hours in cache to stop double counting)
+  visit: (b) => {
+    const id = String(b.id || "").replace(/[^a-z0-9]/gi, "").slice(0, 24); if (id.length < 8) return { ok: true };
+    const c = cache_(); if (c.get("v_" + id)) return { ok: true }; c.put("v_" + id, "1", 60);
+    const ref = String(b.ref || "").toLowerCase().replace(/[^a-z0-9.-]/g, "").slice(0, 40);
+    stat_({ o: 1, ...(b.today ? { u: 1 } : {}), ...(b.first ? { n: 1 } : {}), ...(b.signed ? { a: 1 } : {}) }, b.first && ref ? ref : "");
+    if (b.s && !c.get("seen_" + id)) { try { const u = session_(b.s); u.seen = iso_(); userPut_(u); c.put("seen_" + id, "1", 3600); } catch (x) {} }
+    return { ok: true };
+  },
+
+  signup: (b) => {
+    if (!prop_("GH_TOKEN")) throw err_("not_ready");
+    const email = norm_(b.email), name = String(b.name || "").trim().slice(0, 60);
+    if (!okEmail_(email)) throw err_("bad_email");
+    if (!name) throw err_("bad_name");
+    if (!okPass_(b.pass)) throw err_("bad_pass");
+    const lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      let u = userByEmail_(email);
+      if (u && u.verified) throw err_("exists");
+      const salt = Utilities.getUuid().replace(/-/g, "");
+      u = { id: u ? u.id : newId_(), name, email, salt, hash: passHash_(salt, b.pass), verified: false, sv: 1, created: iso_() };
+      userPut_(u); db_().setProperty("e_" + email, u.id);
+      sendCode_(email, "verify", name);
+      statSafe_({ su: 1 });
+      return { ok: true, sent: true };
+    } finally { lock.releaseLock(); }
+  },
+
+  resend: (b) => {
+    const email = norm_(b.email), u = userByEmail_(email), purpose = b.purpose === "reset" ? "reset" : "verify";
+    if (u && (purpose === "reset" ? u.verified : !u.verified)) sendCode_(email, purpose, u.name);
+    return { ok: true, sent: true }; // same answer either way: doesn't reveal which e-mails have accounts
+  },
+
+  verify: (b) => {
+    const email = norm_(b.email), u = userByEmail_(email);
+    if (!u) throw err_("code_expired");
+    if (u.verified) throw err_("exists");
+    checkCode_(email, "verify", b.code);
+    u.verified = true; u.verified_at = iso_();
+    initWorkspace_(u);
+    userPut_(u); statSafe_({ vf: 1 });
+    try { MailApp.sendEmail({ to: Session.getEffectiveUser().getEmail(), subject: `AutoPost: عميل جديد — ${u.name}`, body: `${u.name}\n${u.email}\nID: ${u.id}` }); } catch (x) {}
+    return issue_(u);
+  },
+
+  login: (b) => {
+    const email = norm_(b.email); failGuard_(email);
+    const u = userByEmail_(email);
+    if (!u || !okPass_(b.pass) || !same_(u.hash, passHash_(u.salt, b.pass))) { failGuard_(email, true); throw err_("wrong_login"); }
+    failGuard_(email, false);
+    if (!u.verified) { sendCode_(email, "verify", u.name); throw err_("unverified"); }
+    if (u.disabled) throw err_("disabled");
+    u.last = iso_(); userPut_(u); statSafe_({ li: 1 });
+    return issue_(u);
+  },
+
+  forgot: (b) => { const email = norm_(b.email), u = userByEmail_(email); if (u && u.verified) sendCode_(email, "reset", u.name); return { ok: true, sent: true }; },
+
+  reset: (b) => {
+    const email = norm_(b.email), u = userByEmail_(email);
+    if (!u || !u.verified) throw err_("code_expired");
+    if (!okPass_(b.pass)) throw err_("bad_pass");
+    checkCode_(email, "reset", b.code);
+    u.salt = Utilities.getUuid().replace(/-/g, ""); u.hash = passHash_(u.salt, b.pass); u.sv = (u.sv || 1) + 1;
+    userPut_(u); failGuard_(email, false);
+    return issue_(u);
+  },
+
+  me: (b) => { const u = session_(b.s); return { ok: true, user: pub_(u), prefix: prefix_(u.id) }; },
+
+  rename: (b) => { const u = session_(b.s); u.name = String(b.name || "").trim().slice(0, 60) || u.name; userPut_(u); return { ok: true, user: pub_(u) }; },
+
+  // ---- gateway: one call = one thing, always inside clients/<id>/
+  g: (b) => {
+    const u = session_(b.s), op = GATE[b.op];
+    if (!op) throw err_("bad_op");
+    if (!prop_("GH_TOKEN")) throw err_("not_ready");
+    return op(u, b);
+  },
+
+  // ---- admin (Abdo's app only)
+  admin_config: (b) => {
+    if (!admin_(b.key)) throw err_("forbidden");
+    const p = db_();
+    if (b.gh_token) {
+      const repo = String(b.repo || "").trim();
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw err_("bad_repo");
+      const r = UrlFetchApp.fetch("https://api.github.com/repos/" + repo, { muteHttpExceptions: true, headers: { Authorization: "Bearer " + b.gh_token } });
+      if (r.getResponseCode() !== 200) throw err_("bad_token", "GitHub " + r.getResponseCode());
+      p.setProperty("GH_TOKEN", b.gh_token); p.setProperty("GH_REPO", repo);
+    }
+    if (b.vault_pub) p.setProperty("VAULT_PUB", String(b.vault_pub));
+    if (b.owner_email !== undefined) p.setProperty("OWNER_EMAIL", String(b.owner_email || ""));
+    let wake = false; try { wakeTrigger_(); wake = true; } catch (x) {}
+    return { ok: true, hosted: !!p.getProperty("GH_TOKEN"), vault: !!p.getProperty("VAULT_PUB"), wake };
+  },
+  admin_users: (b) => {
+    if (!admin_(b.key)) throw err_("forbidden");
+    const us = Object.entries(db_().getProperties()).filter(([k]) => k.startsWith("u_")).map(([, v]) => JSON.parse(v))
+      .map((u) => ({ id: u.id, name: u.name, email: u.email, verified: !!u.verified, created: u.created, last: u.last || "", disabled: !!u.disabled }));
+    return { ok: true, users: us.sort((a, c) => (a.created < c.created ? 1 : -1)), hosted: !!prop_("GH_TOKEN"), vault: !!prop_("VAULT_PUB") };
+  },
+  admin_stats: (b) => {
+    if (!admin_(b.key)) throw err_("forbidden");
+    const P = db_().getProperties(), days = Object.keys(P).filter((k) => k.startsWith("st_")).sort().slice(-90)
+      .map((k) => ({ day: k.slice(3), ...JSON.parse(P[k]) }));
+    const now = Date.now(), us = Object.keys(P).filter((k) => k.startsWith("u_")).map((k) => JSON.parse(P[k]));
+    const ago = (t, d) => t && now - new Date(t) < d * 864e5;
+    return { ok: true, days, users: { total: us.length, verified: us.filter((u) => u.verified).length,
+      unverified: us.filter((u) => !u.verified).length, active7: us.filter((u) => ago(u.seen || u.last, 7)).length,
+      active30: us.filter((u) => ago(u.seen || u.last, 30)).length, new7: us.filter((u) => u.verified && ago(u.verified_at || u.created, 7)).length } };
+  },
+  admin_disable: (b) => {
+    if (!admin_(b.key)) throw err_("forbidden");
+    const u = userGet_(String(b.id || "")); if (!u) throw err_("not_found");
+    u.disabled = !!b.disabled; if (u.disabled) u.sv = (u.sv || 1) + 1; userPut_(u); return { ok: true };
+  },
+};
+
+// ---------------------------------------------------------------- GitHub (Abdo's token, never sent to clients)
+function gh_(method, path, body, raw) {
+  const o = { method, muteHttpExceptions: true, headers: { Authorization: "Bearer " + prop_("GH_TOKEN"), Accept: raw ? "application/vnd.github.raw" : "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" } };
+  if (body) { o.contentType = "application/json"; o.payload = JSON.stringify(body); }
+  const r = UrlFetchApp.fetch("https://api.github.com/repos/" + prop_("GH_REPO") + path, o), st = r.getResponseCode();
+  if (st >= 400) { const e = err_(st === 404 ? "not_found" : "github", "GitHub " + st + ": " + r.getContentText().slice(0, 160)); e.status = st; throw e; }
+  return raw ? r : st === 204 ? null : JSON.parse(r.getContentText());
+}
+function commitRoot_(entries, message) {
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    for (let a = 0; a < 6; a++) {
+      const ref = gh_("get", "/git/ref/heads/main?t=" + Date.now()), head = gh_("get", "/git/commits/" + ref.object.sha);
+      const tree = gh_("post", "/git/trees", { base_tree: head.tree.sha, tree: entries.map((e) => ({ path: e.path, mode: "100644", type: "blob", sha: e.sha })) });
+      const cm = gh_("post", "/git/commits", { message, tree: tree.sha, parents: [ref.object.sha] });
+      try { gh_("patch", "/git/refs/heads/main", { sha: cm.sha }); return cm.sha; }
+      catch (e) { if (e.status !== 422 || a === 5) throw e; Utilities.sleep(400 * Math.pow(2, a)); }
+    }
+  } finally { lock.releaseLock(); }
+}
+const textBlob_ = (s) => gh_("post", "/git/blobs", { content: s, encoding: "utf-8" }).sha;
+const readText_ = (full) => { try { return gh_("get", "/contents/" + encodeURI(full) + "?ref=main&t=" + Date.now(), null, true).getContentText(); } catch (e) { if (e.status === 404) return null; throw e; } };
+const blobText_ = (sha) => Utilities.newBlob(Utilities.base64Decode(gh_("get", "/git/blobs/" + sha).content.replace(/\s/g, ""))).getDataAsString();
+
+function initWorkspace_(u) {
+  const base = "clients/" + u.id + "/";
+  if (readText_(base + "config/brands.json") !== null) return;
+  const brands = { brands: { default: { name: u.name, secret_prefix: prefix_(u.id), instagram: {}, facebook: {}, linkedin: {}, youtube: { privacy: "public" } } } };
+  commitRoot_([
+    { path: base + "config/brands.json", sha: textBlob_(JSON.stringify(brands, null, 2)) },
+    { path: base + "config/license.json", sha: textBlob_(JSON.stringify({ trial_start: u.verified_at || iso_() }, null, 2)) },
+  ], "new client " + u.id);
+}
+
+// ---------------------------------------------------------------- what a client may touch (relative to clients/<id>/)
+const SEG = "[A-Za-z0-9._-]{1,80}";
+const READ_RE = new RegExp(`^(posts/${SEG}/${SEG}|reviews/${SEG}/${SEG}|config/[a-z_-]{1,30}\\.json|state/[a-z_-]{1,30}\\.json)$`);
+const WRITE_RE = new RegExp(`^(posts/${SEG}/${SEG}|reviews/${SEG}/${SEG}|config/(brands|library|ideas|experiments|license)\\.json|state/next\\.json)$`);
+const safe_ = (p, re) => { p = String(p || ""); if (!re.test(p) || p.split("/").some((x) => x === "." || x === "..")) throw err_("bad_path", p); return p; };
+const base_ = (u) => "clients/" + u.id + "/";
+
+function sanitizeBrands_(u, text) {
+  let o; try { o = JSON.parse(text); } catch (x) { throw err_("bad_json"); }
+  const out = {};
+  for (const [k, v] of Object.entries((o && o.brands) || {})) {
+    const key = String(k).toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 20) || "default";
+    out[key] = Object.assign({}, v, { secret_prefix: prefix_(u.id, key) }); // a client can never point at the owner's or anyone else's secrets
+  }
+  if (!out.default) out.default = { name: u.name, secret_prefix: prefix_(u.id) };
+  return JSON.stringify({ brands: out }, null, 2);
+}
+function sanitizeLicense_(u, text) {
+  let o = {}; try { o = JSON.parse(text) || {}; } catch (x) {}
+  return JSON.stringify(Object.assign(o.code ? { code: String(o.code).slice(0, 2000) } : {}, { trial_start: u.verified_at || u.created }), null, 2); // trial always starts when the account was made
+}
+function bumpNext_(text) {
+  let t = null; try { t = JSON.parse(text).next_due; } catch (x) {}
+  if (!t || isNaN(new Date(t)) || new Date(t) < Date.now() - 864e5 || new Date(t) > Date.now() + 400 * 864e5) return;
+  const cur = (() => { try { return JSON.parse(readText_("state/next.json") || "{}"); } catch (x) { return {}; } })();
+  if (cur.next_due && new Date(cur.next_due) <= new Date(t)) return;
+  commitRoot_([{ path: "state/next.json", sha: textBlob_(JSON.stringify({ next_due: iso_(new Date(t)), checked_at: cur.checked_at || null, set_by: "client" })) }], "next run");
+}
+function subtree_(u) {
+  // clients/<id> only — three small calls instead of listing the whole repo
+  const find = (sha, name) => (gh_("get", "/git/trees/" + sha).tree || []).find((t) => t.path === name && t.type === "tree");
+  const root = gh_("get", "/git/trees/main?t=" + Date.now());
+  const cl = (root.tree || []).find((t) => t.path === "clients" && t.type === "tree"); if (!cl) return [];
+  const me = find(cl.sha, u.id); if (!me) return [];
+  return (gh_("get", "/git/trees/" + me.sha + "?recursive=1").tree || []).filter((t) => t.path !== "secrets.json");
+}
+function vault_(u) { try { return JSON.parse(readText_(base_(u) + "secrets.json") || "{}"); } catch (x) { return {}; } }
+const rate_ = (key, sec) => { const c = cache_(); if (c.get(key)) throw err_("slow_down"); c.put(key, "1", sec); };
+
+const CONNECT = { "linkedin-connect.yml": 1, "tiktok-connect.yml": 1, "youtube-connect.yml": 1, "pinterest-connect.yml": 1, "meta-connect.yml": 1 };
+const GATE = {
+  read: (u, b) => {
+    const p = safe_(b.path, READ_RE);
+    if (b.bin) { const r = gh_("get", "/contents/" + encodeURI(base_(u) + p) + "?ref=main", null, true); return { ok: true, b64: Utilities.base64Encode(r.getBlob().getBytes()), type: r.getHeaders()["Content-Type"] || "" }; }
+    const t = readText_(base_(u) + p); if (t === null) throw err_("not_found");
+    return { ok: true, text: t };
+  },
+  reads: (u, b) => {
+    const ps = (b.paths || []).slice(0, 120).map((p) => safe_(p, READ_RE));
+    const hd = { Authorization: "Bearer " + prop_("GH_TOKEN"), Accept: "application/vnd.github.raw" };
+    const rs = UrlFetchApp.fetchAll(ps.map((p) => ({ url: "https://api.github.com/repos/" + prop_("GH_REPO") + "/contents/" + encodeURI(base_(u) + p) + "?ref=main", headers: hd, muteHttpExceptions: true })));
+    const files = {}; ps.forEach((p, i) => { files[p] = rs[i].getResponseCode() === 200 ? rs[i].getContentText() : null; });
+    return { ok: true, files };
+  },
+  tree: (u) => ({ ok: true, tree: subtree_(u).map((t) => ({ path: t.path, type: t.type, sha: t.sha, size: t.size })) }),
+  blob: (u, b) => {
+    const s = String(b.b64 || ""); if (s.length > 45e6) throw err_("too_large");
+    return { ok: true, sha: gh_("post", "/git/blobs", { content: s, encoding: "base64" }).sha };
+  },
+  commit: (u, b) => {
+    const base = base_(u), out = []; let next = null;
+    for (const e of (b.entries || []).slice(0, 200)) {
+      const p = safe_(e.path, WRITE_RE), sha = e.sha === null ? null : String(e.sha || "");
+      if (sha !== null && !/^[0-9a-f]{40}$/.test(sha)) throw err_("bad_sha");
+      if (p === "state/next.json") { if (sha) next = blobText_(sha); continue; }
+      if (sha && p === "config/brands.json") { out.push({ path: base + p, sha: textBlob_(sanitizeBrands_(u, blobText_(sha))) }); continue; }
+      if (p === "config/license.json") { if (sha) out.push({ path: base + p, sha: textBlob_(sanitizeLicense_(u, blobText_(sha))) }); continue; }
+      out.push({ path: base + p, sha });
+    }
+    const r = out.length ? commitRoot_(out, ("[" + u.id + "] " + String(b.message || "update")).slice(0, 120)) : null;
+    if (next) try { bumpNext_(next); } catch (x) {}
+    return { ok: true, commit: r };
+  },
+  secrets: (u) => ({ ok: true, secrets: Object.keys(vault_(u)).map((name) => ({ name })) }),
+  pubkey: () => { const k = prop_("VAULT_PUB"); if (!k) throw err_("not_ready"); return { ok: true, key: k, key_id: "vault" }; },
+  secret: (u, b) => {
+    const pre = prefix_(u.id);
+    let name = String(b.name || "").toUpperCase().replace(/[^A-Z0-9_]/g, "");
+    if (!name || /^(MEDIA_PUSH_TOKEN|VAULT_KEY|GITHUB_)/.test(name)) throw err_("bad_name");
+    if (!(name === pre || name.indexOf(pre + "_") === 0)) name = pre + "_" + name; // e.g. TELEGRAM_BOT_TOKEN → HX…_TELEGRAM_BOT_TOKEN
+    const val = String(b.value || ""); if (!/^[A-Za-z0-9+/=]{40,20000}$/.test(val)) throw err_("bad_value"); // sealed in the browser
+    const v = vault_(u); v[name] = val;
+    commitRoot_([{ path: base_(u) + "secrets.json", sha: textBlob_(JSON.stringify(v, null, 2)) }], "[" + u.id + "] secret " + name);
+    return { ok: true, name };
+  },
+  dispatch: (u, b) => {
+    const wf = String(b.workflow || ""), inp = b.inputs || {}, pre = prefix_(u.id);
+    let inputs;
+    if (wf === "publish.yml") { rate_("rd:" + u.id, 60); inputs = undefined; }
+    else if (CONNECT[wf]) {
+      const code = String(inp.code || ""), redirect = String(inp.redirect || "");
+      let prefix = String(inp.prefix || "").toUpperCase();
+      if (!/^[\w\-.~%/*!+=]{0,2048}$/.test(code)) throw err_("bad_input");
+      if (redirect.indexOf(APP_ORIGIN) !== 0 || /["'`$\\\s]/.test(redirect)) throw err_("bad_input");
+      if (!(prefix === pre || prefix.indexOf(pre + "_") === 0) || !/^[A-Z0-9_]+$/.test(prefix)) prefix = pre;
+      rate_("rc:" + u.id + wf, 10); inputs = { code, redirect, prefix };
+    } else if (wf === "review-publish.yml") {
+      const rid = String(inp.rid || ""); if (!/^[A-Za-z0-9_-]{1,40}$/.test(rid)) throw err_("bad_input");
+      inputs = { rid, ws: u.id };
+    } else throw err_("bad_op");
+    gh_("post", "/actions/workflows/" + wf + "/dispatches", inputs ? { ref: "main", inputs } : { ref: "main" });
+    return { ok: true };
+  },
+};
+
+// ---------------------------------------------------------------- wake-up: start publishing exactly on time (every 5 minutes)
+function wakeTrigger_() {
+  if (ScriptApp.getProjectTriggers().some((t) => t.getHandlerFunction() === "wake")) return;
+  ScriptApp.newTrigger("wake").timeBased().everyMinutes(5).create();
+}
+function wake() {
+  if (!prop_("GH_TOKEN")) return;
+  const t = readText_("state/next.json"); if (!t) return;
+  const next = JSON.parse(t).next_due;
+  if (!next || new Date(next) > new Date()) return;
+  const p = db_();
+  if (p.getProperty("WAKE_LAST") === next && Date.now() - Number(p.getProperty("WAKE_AT") || 0) < 20 * 60000) return; // a run for this is already going
+  gh_("post", "/actions/workflows/publish.yml/dispatches", { ref: "main" });
+  p.setProperty("WAKE_LAST", next); p.setProperty("WAKE_AT", String(Date.now()));
 }
