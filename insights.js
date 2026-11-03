@@ -61,7 +61,7 @@ function bestTime() {
   const top = enough ? ranked.slice(0, 3).map(r => { const [d, s] = r.key.split("-").map(Number); return { d, s, why: L(`أداء ${Math.round(r.med * 100)}% من المعتاد · ${r.n} بوست`, `${Math.round(r.med * 100)}% of your usual · ${r.n} posts`) }; })
     : START.map(([d, h]) => ({ d, s: slotOf(h), why: L("نقطة بداية للتجربة", "a starting point to test") }));
   // untested slots worth one try (close to the winners, never posted there)
-  const tryNext = (enough ? top : START.map(([d, h]) => ({ d, s: slotOf(h) }))).flatMap(t => [[(t.d + 1) % 7, t.s], [t.d, (t.s + 3) % 24]]).filter(([d, s]) => !posted[d + "-" + s]).slice(0, 2);
+  const tryNext = (enough ? top : START.map(([d, h]) => ({ d, s: slotOf(h) }))).flatMap(t => [[(t.d + 1) % 7, t.s], [t.d, (t.s + 3) % 24]]).filter(([d, s]) => s >= 9 && !posted[d + "-" + s]).slice(0, 2);
   const maxR = Math.max(1, ...Object.values(cell).map(a => median(a)));
   const grid = `<div class="bt-grid"><div></div>${SLOTS.map(s => `<div class="bt-h">${s}</div>`).join("")}` +
     [6, 0, 1, 2, 3, 4, 5].map(d => `<div class="bt-d">${WD(d).replace(/^ال/, "")}</div>` + SLOTS.map(s => { const a = cell[d + "-" + s]; const v = a ? median(a) : null;
