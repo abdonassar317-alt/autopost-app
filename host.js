@@ -128,13 +128,13 @@ function screen(view = "signup", st = {}) {
   const pw = (id, ph) => `<div class="pw"><input id="${id}" type="password" autocomplete="${view === "signin" ? "current-password" : "new-password"}" placeholder="${ph}" dir="ltr"><button type="button" data-eye="${id}">${L("إظهار", "Show")}</button></div>`;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const V = {
-    signup: `<h2>${L("اعمل حسابك", "Create your account")}</h2><div class="sub">${L("3 شهور مجانًا — من غير فيزا ومن غير GitHub.", "3 months free — no card, no GitHub.")}</div>
+    signup: `<h2>${L("اعمل حسابك", "Create your account")}</h2><div class="sub">${L("أول شهر مجانًا، وبعده 37 جنيه بس في الشهر — من غير فيزا.", "First month free, then just 37 EGP a month — no card.")}</div>
       <div class="lbl">${L("الاسم أو اسم البراند", "Name or brand")}</div><input id="a-name" autocomplete="name">
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
       <div class="lbl">${L("كلمة السر", "Password")} <span>${L("8 حروف على الأقل", "8+ characters")}</span></div>${pw("a-pass", "")}
       <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("اعمل الحساب", "Create account")}</button>
       <div class="alt"><span>${L("عندك حساب؟", "Have an account?")}</span><a data-v="signin">${L("سجّل دخول", "Sign in")}</a></div>
-      <ul class="perks"><li>${L("انشر على إنستجرام وفيسبوك ولينكدإن ويوتيوب وتيك توك وأكتر", "Post to Instagram, Facebook, LinkedIn, YouTube, TikTok and more")}</li><li>${L("جدولة، تقويم، مسودات، وموافقة العميل", "Scheduling, calendar, drafts and client approval")}</li><li>${L("بعد الفترة المجانية 200 جنيه في الشهر", "200 EGP/month after the free period")}</li></ul>`,
+      <ul class="perks"><li>${L("انشر على إنستجرام وفيسبوك ولينكدإن ويوتيوب وتيك توك وأكتر", "Post to Instagram, Facebook, LinkedIn, YouTube, TikTok and more")}</li><li>${L("جدولة، تقويم، مسودات، وموافقة العميل", "Scheduling, calendar, drafts and client approval")}</li><li>${L("بعد أول شهر: 37 جنيه بس في الشهر", "After the first month: just 37 EGP/month")}</li></ul>`,
     signin: `<h2>${L("أهلاً بيك تاني", "Welcome back")}</h2><div class="sub">${L("سجّل دخول بإيميلك", "Sign in with your e-mail")}</div>
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
       <div class="lbl">${L("كلمة السر", "Password")}</div>${pw("a-pass", "")}
@@ -191,6 +191,17 @@ if (!sess && !isDemo && !hasGitHub && !returning && ls.get("ap_mode") !== "githu
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", show) : show();
 }
 
+// ---------------------------------------------------------------- anonymous open count for the owner's stats (a random device id, nothing personal; the owner's own visits are skipped)
+if (!hasGitHub && !isDemo && !window.AP_POPUP && !/[?&](code|error)=/.test(location.search)) {
+  try {
+    let vid = ls.get("ap_vid"); const first = !vid; if (!vid) { vid = Array.from(crypto.getRandomValues(new Uint8Array(8)), (x) => x.toString(16).padStart(2, "0")).join(""); ls.set("ap_vid", vid); }
+    const d = new Date(), day = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`, today = ls.get("ap_vday") !== day; ls.set("ap_vday", day);
+    const q = new URLSearchParams(location.search); let ref = q.get("utm_source") || q.get("ref") || ""; if (!ref) { try { ref = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, "") : ""; } catch (e) {} }
+    if (ref && ref === location.hostname) ref = "";
+    setTimeout(() => api({ action: "visit", id: vid, first, today, signed: !!sess, s: sess?.s || undefined, ref: ref.slice(0, 40) }).catch(() => {}), 1500);
+  } catch (e) {}
+}
+
 // ---------------------------------------------------------------- settings: account box (hosted) / turn-on box (owner)
 function settingsBoxes() {
   const set = document.getElementById("settings"); if (!set) return;
@@ -218,7 +229,8 @@ function settingsBoxes() {
     b.innerHTML = `<div class="lbl">${L("حسابات جوه التطبيق (للعملاء)", "Accounts inside the app (clients)")}</div>
       <p class="note">${L("العميل يسجّل بإيميل وباسورد بس، وبياناته تتحفظ في فولدر لوحده في الريبو الخاص بتاعك. إنت مش محتاج تعمل حاجة غير قبول الدفع.", "Clients sign up with e-mail + password only; their data lives in its own folder in your private repo. You only approve payments.")}</p>
       <div id="host-st" class="hint">…</div>
-      <div id="host-k" class="f" style="display:none"><div class="lbl">${L("مفتاح صندوق المدفوعات (ADMIN_KEY)", "Payment-inbox key (ADMIN_KEY)")}</div><input id="host-kin" dir="ltr" autocomplete="off" placeholder="ADMIN_KEY"></div><div class="two f"><button class="btn sm pri" id="host-on">${L("تشغيل / تحديث", "Turn on / refresh")}</button><button class="btn sm" id="host-users">${L("الحسابات", "Accounts")}</button></div>`;
+      <div id="host-k" class="f" style="display:none"><div class="lbl">${L("مفتاح صندوق المدفوعات (ADMIN_KEY)", "Payment-inbox key (ADMIN_KEY)")}</div><input id="host-kin" dir="ltr" autocomplete="off" placeholder="ADMIN_KEY"></div><div class="two f"><button class="btn sm pri" id="host-on">${L("تشغيل / تحديث", "Turn on / refresh")}</button><button class="btn sm" id="host-users">${L("الحسابات", "Accounts")}</button></div>
+      <button class="btn sm pri f" id="host-stats" style="width:100%">📊 ${L("الزوار والتسجيل", "Visitors & sign-ups")}</button><div id="host-sum" class="hint" style="margin-top:6px"></div>`;
     const anchor = document.getElementById("sub-box"); if (anchor) anchor.after(b); else set.appendChild(b);
     const key = () => { const v = b.querySelector("#host-kin")?.value.trim(); if (v) ls.set("ap_inbox_key", v); return ls.get("ap_inbox_key") || ""; };
     if (!ls.get("ap_inbox_key")) b.querySelector("#host-k").style.display = "";
@@ -240,6 +252,36 @@ function settingsBoxes() {
         if (r.error) throw new Error(r.error === "unknown action" ? L("حدّث كود Apps Script الأول", "Update the Apps Script code first") : (r.msg || r.error));
         toast(L("✓ اتشغّل — رابط التسجيل للعملاء هو رابط التطبيق نفسه", "✓ On — clients sign up at the app link itself"), 7000); st();
       } catch (e) { toast(e.message, 8000); } finally { btn.disabled = false; } };
+    // ---- visitors → sign-ups funnel (only you see this; counts only, no personal data)
+    const sumDays = (days, n) => { const cut = new Date(Date.now() - (n - 1) * 864e5), k = `${cut.getFullYear()}${String(cut.getMonth() + 1).padStart(2, "0")}${String(cut.getDate()).padStart(2, "0")}`;
+      const t = { o: 0, u: 0, n: 0, a: 0, su: 0, vf: 0, li: 0, ref: {} };
+      days.filter((d) => d.day >= k).forEach((d) => { ["o", "u", "n", "a", "su", "vf", "li"].forEach((f) => (t[f] += d[f] || 0)); Object.entries(d.ref || {}).forEach(([h, c]) => (t.ref[h] = (t.ref[h] || 0) + c)); });
+      return t; };
+    const loadStats = () => api({ action: "admin_stats", key: key() });
+    (async () => { if (!key()) return; try { const r = await loadStats(); if (r.error) return; const t = sumDays(r.days, 1), w = sumDays(r.days, 7);
+      b.querySelector("#host-sum").innerHTML = L(`النهارده: <b>${t.u}</b> فتحوا · <b>${t.vf}</b> سجّلوا — آخر 7 أيام: <b>${w.u}</b> فتحوا · <b>${w.vf}</b> سجّلوا`, `Today: <b>${t.u}</b> opened · <b>${t.vf}</b> signed up — last 7 days: <b>${w.u}</b> opened · <b>${w.vf}</b> signed up`); } catch (e) {} })();
+    b.querySelector("#host-stats").onclick = async () => {
+      if (!key()) { b.querySelector("#host-k").style.display = ""; return toast(L("الصق مفتاح صندوق المدفوعات الأول", "Paste the payment-inbox key first")); }
+      const r = await loadStats().catch((e) => ({ error: e.message }));
+      if (r.error) return toast(r.error === "bad_op" || r.error === "unknown action" ? L("حدّث كود Apps Script الأول", "Update the Apps Script code first") : r.error, 8000);
+      const pct = (a, z) => (z ? Math.round((a / z) * 100) + "%" : "—"), esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
+      const view = (n) => { const t = sumDays(r.days, n), lost = Math.max(0, t.n - t.su), unconf = Math.max(0, t.su - t.vf);
+        const bar = (v, max, txt, sub) => `<div class="fn"><div class="fn-t"><b>${v}</b> ${txt}${sub ? ` <small class="mut">${sub}</small>` : ""}</div><div class="fn-b"><i style="width:${max ? Math.max(3, Math.round((v / max) * 100)) : 0}%"></i></div></div>`;
+        const refs = Object.entries(t.ref).sort((a, c) => c[1] - a[1]).slice(0, 6);
+        const rows = r.days.slice(-Math.min(n, 30)).reverse().map((d) => `<tr><td>${d.day.slice(6)}/${d.day.slice(4, 6)}</td><td>${d.u || 0}</td><td>${d.n || 0}</td><td>${d.su || 0}</td><td>${d.vf || 0}</td></tr>`).join("");
+        $("#st-out").innerHTML = bar(t.u, t.u, L("فتحوا التطبيق", "opened the app"), L(`(${t.n} أول مرة)`, `(${t.n} first time)`)) +
+          bar(t.su, t.u, L("بدأوا يسجّلوا", "started signing up"), pct(t.su, t.n)) + bar(t.vf, t.u, L("سجّلوا وأكدوا الإيميل", "signed up & confirmed"), pct(t.vf, t.n)) +
+          `<div class="nrow"><div>🚪 <b>${lost}</b> ${L("فتحوا ومسجلوش خالص", "opened but never signed up")} · ✉️ <b>${unconf}</b> ${L("بدأوا ومأكدوش الإيميل", "started but didn't confirm the e-mail")}</div></div>` +
+          `<div class="nrow"><div>👥 ${L("كل الحسابات", "All accounts")}: <b>${r.users.verified}</b> · ${L("نشطين آخر 7 أيام", "active last 7 days")}: <b>${r.users.active7}</b> · ${L("آخر 30", "last 30")}: <b>${r.users.active30}</b> · ${L("مأكدوش", "unconfirmed")}: <b>${r.users.unverified}</b></div></div>` +
+          (refs.length ? `<div class="nrow"><div>🔗 ${L("جم منين", "Came from")}: ${refs.map(([h, c]) => `${esc(h)} <b>${c}</b>`).join(" · ")}</div></div>` : "") +
+          `<table class="st-t"><tr><th>${L("اليوم", "Day")}</th><th>${L("فتحوا", "Opened")}</th><th>${L("جداد", "New")}</th><th>${L("بدأوا", "Started")}</th><th>${L("سجّلوا", "Signed up")}</th></tr>${rows || `<tr><td colspan="5">${L("لسه مفيش زيارات", "No visits yet")}</td></tr>`}</table>`; };
+      sheet(`<div class="wz" data-i18n-skip><h3>📊 ${L("الزوار والتسجيل", "Visitors & sign-ups")}</h3><div class="sub">${L("إنت بس اللي شايف ده. أعداد بس — من غير أسماء أو بيانات للزوار. زياراتك إنت مش محسوبة.", "Only you see this. Counts only — no names or visitor data. Your own visits aren't counted.")}</div>
+        <div class="seg" id="st-seg"><button data-n="1">${L("النهارده", "Today")}</button><button data-n="7" class="on">7 ${L("أيام", "days")}</button><button data-n="30">30 ${L("يوم", "days")}</button><button data-n="90">90</button></div><div id="st-out" class="f"></div>
+        <style>.fn{margin:10px 0}.fn-t{font-size:14px;margin-bottom:4px}.fn-b{height:10px;background:var(--soft);border-radius:6px;overflow:hidden}.fn-b i{display:block;height:100%;background:var(--ink);border-radius:6px}.st-t{width:100%;border-collapse:collapse;margin-top:12px;font-size:13px;text-align:center}.st-t td,.st-t th{border-bottom:1px solid var(--line);padding:6px 2px}</style>
+        <div class="nav"><button class="btn" onclick="closeSheet()">${L("قفل", "Close")}</button></div></div>`);
+      document.querySelectorAll("#st-seg button").forEach((x) => (x.onclick = () => { document.querySelectorAll("#st-seg button").forEach((y) => y.classList.toggle("on", y === x)); view(+x.dataset.n); }));
+      view(7);
+    };
     b.querySelector("#host-users").onclick = async () => {
       if (!key()) return toast(L("الصق مفتاح صندوق المدفوعات الأول", "Paste the payment-inbox key first"));
       const r = await api({ action: "admin_users", key: key() }).catch((e) => ({ error: e.message }));

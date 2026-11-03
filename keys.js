@@ -48,6 +48,9 @@ function quick() {
     [L("بكرة 8 م", "Tomorrow 8 pm"), () => at(1, 20)],
     [L("الجمعة 8 م", "Friday 8 pm"), () => { const d = new Date(); const add = (5 - d.getDay() + 7) % 7 || 7; return at(add, 20); }],
   ];
+  // the best slot picked in «تحليل محتوايا» (saved on this device)
+  try { const b = JSON.parse(localStorage.getItem("ap_best") || "null");
+    if (b && b.day >= 0) opts.unshift([L("أحسن وقت ⭐", "Best time ⭐"), () => { const d = new Date(); let add = (b.day - d.getDay() + 7) % 7; if (!add && d.getHours() >= b.slot + 1) add = 7; return at(add, b.slot + 1); }]); } catch (e) {}
   const row = document.createElement("div"); row.id = "c-quick"; row.className = "chips"; row.style.marginTop = "10px"; row.setAttribute("data-i18n-skip", "");
   row.innerHTML = opts.map(([t], i) => `<div class="chip" data-q="${i}">${t}</div>`).join("");
   box.appendChild(row);
@@ -60,5 +63,5 @@ function quick() {
     h.querySelector("#keys-all").onclick = (ev) => { ev.preventDefault(); help(); };
   }
 }
-document.addEventListener("DOMContentLoaded", quick); setTimeout(quick, 600);
+document.addEventListener("DOMContentLoaded", quick); setTimeout(quick, 600); window.apQuick = () => { document.getElementById("c-quick")?.remove(); quick(); };
 })();

@@ -256,7 +256,7 @@ const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const store={get(k,d){try{return localStorage.getItem(k)??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
 let cfg=window.DEMO_CFG||window.HOST_CFG||{owner:store.get("owner",""),repo:store.get("repo",""),branch:store.get("branch","main"),token:store.get("token","")};
-let brands={},files=[],items=[],filter="upcoming",sel=new Set(["instagram"]);
+let brands={},files=[],items=[],filter="upcoming",sel=new Set((()=>{try{return JSON.parse(localStorage.getItem("ap_sel"))}catch(e){}})()||["instagram"]);
 
 function toast(t,ms=3000){const m=$("#toast");m.textContent=t;m.style.display="block";clearTimeout(m._t);m._t=setTimeout(()=>m.style.display="none",ms)}
 function tab(name){
@@ -319,12 +319,13 @@ function capOf(b,k){b=b||{};const has=n=>hasSecret(b,n);
  if(k==="linkedin")return has("LINKEDIN_TOKEN")?"auto":"off";
  if(k==="youtube")return has("YT_REFRESH_TOKEN")?"auto":"off";
  if(k==="tiktok")return has("TT_REFRESH_TOKEN")&&b.tiktok?.audited?"auto":"manual";
- if(k==="pinterest")return has("PIN_REFRESH_TOKEN")&&b.pinterest?.board_id&&b.pinterest?.approved?"auto":"manual";
+ if(k==="pinterest")return has("PIN_REFRESH_TOKEN")&&b.pinterest?.board_id&&b.pinterest?.approved?"auto":(b.pinterest_wait?"wait":"manual");
  return "manual"}
-const CAPTXT={auto:"",manual:"تذكير",off:"مش متصل"};
+const CAPTXT={auto:"",manual:"تذكير",off:"مش متصل",wait:"بعد موافقة بنترست"};
 function renderChips(){const b=brands[$("#c-brand")?.value||curBrand];
+ if(b?.pinterest_wait&&!localStorage.getItem("ap_pin_added")){sel.add("pinterest");localStorage.setItem("ap_pin_added","1");localStorage.setItem("ap_sel",JSON.stringify([...sel]))}
  $("#c-plats").innerHTML=PLATS.map(([k,n,c])=>{const cp=secretNames?capOf(b,k):(MANUAL.has(k)?"manual":"");return `<div class="chip${sel.has(k)?" on":""}" data-k="${k}" title="${cp==="auto"?"بينزل لوحده":cp==="manual"?"بيوصلك على تليجرام تنشره بضغطة":cp==="off"?"اربطه من الحسابات":""}"><span class="d" style="background:${c}"></span>${n}${CAPTXT[cp]?` <small>${CAPTXT[cp]}</small>`:""}</div>`}).join("");
- document.querySelectorAll("#c-plats .chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on")})}
+ document.querySelectorAll("#c-plats .chip").forEach(ch=>ch.onclick=()=>{const k=ch.dataset.k;sel.has(k)?sel.delete(k):sel.add(k);ch.classList.toggle("on");try{localStorage.setItem("ap_sel",JSON.stringify([...sel]))}catch(e){}})}
 setTimeout(renderChips,0);
 function setDefaultTime(){const d=new Date(Date.now()+3600e3);d.setMinutes(0,0,0);const p=n=>String(n).padStart(2,"0");$("#c-date").value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;$("#c-hour").value=`${p(d.getHours())}:00`}
 setDefaultTime();

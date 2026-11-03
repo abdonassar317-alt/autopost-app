@@ -26,20 +26,62 @@ async function openInsights() {
 }
 
 // ------------------------------------------------------------------ best posting time (needs 10+ posts with the same metric)
-function bestTime() {
-  let h = "";
-  for (const [k, [f, ar]] of Object.entries(METRIC)) {
-    const pts = items.map(x => ({ x, v: x.s[k]?.metrics?.[f], t: new Date(x.s[k]?.at || x.p.time) })).filter(o => typeof o.v === "number");
-    if (pts.length < 10) { h += `<div class="nrow"><div><b>${NM(k)}:</b> ${L(`محتاج 10 بوستات ليها ${ar} على الأقل (عندك ${pts.length}). هيظهر لوحده لما البيانات تكفي.`, `Needs at least 10 posts with ${f} (you have ${pts.length}). Shows up by itself once there is enough data.`)}</div></div>`; continue; }
-    const by = (key) => { const g = {}; pts.forEach(o => (g[key(o.t)] ||= []).push(o.v)); return Object.entries(g).filter(([, a]) => a.length >= 2).map(([kk, a]) => ({ kk, med: median(a), n: a.length })).sort((a, b) => b.med - a.med); };
-    const days = by(t => t.getDay()), hours = by(t => Math.floor(t.getHours() / 3) * 3), all = median(pts.map(o => o.v));
-    const d = days[0], hh = hours[0];
-    h += `<div class="nrow"><div><b>${NM(k)}</b> ${L(`(${pts.length} بوست، الوسيط ${Math.round(all)} ${ar})`, `(${pts.length} posts, median ${Math.round(all)} ${f})`)}:<br>` +
-      (d ? L(`أحسن يوم عندك: <b>${WD(d.kk)}</b> (وسيط ${Math.round(d.med)} من ${d.n} بوست)`, `Your best day: <b>${WD(d.kk)}</b> (median ${Math.round(d.med)} from ${d.n} posts)`) : "") + (hh ? L(` · أحسن وقت: <b>${hh.kk}:00–${+hh.kk + 3}:00</b> (وسيط ${Math.round(hh.med)} من ${hh.n})`, ` · best time: <b>${hh.kk}:00–${+hh.kk + 3}:00</b> (median ${Math.round(hh.med)} from ${hh.n})`) : "") +
-      `<br><small class="mut">مبني على بياناتك. الفرق ممكن يكون صدفة لو العدد صغير — جرّب الميعاد ده أسبوعين وقارن.</small></div></div>`;
+// engagement score per platform, compared to that platform's own median (so YouTube views and Instagram likes can be pooled)
+const SCORE = {
+  instagram: m => (m.likes ?? 0) + 2 * (m.comments ?? 0) + 3 * (m.saves ?? 0) + 3 * (m.shares ?? 0) + (m.reach ? m.reach / 20 : 0),
+  facebook: m => (m.reactions ?? 0) + 2 * (m.comments ?? 0) + 3 * (m.shares ?? 0),
+  youtube: m => (m.views ?? 0) + 5 * (m.likes ?? 0) + 10 * (m.comments ?? 0),
+};
+const SLOTS = [0, 3, 6, 9, 12, 15, 18, 21], slotOf = h => Math.floor(h / 3) * 3;
+const slotTxt = s => EN() ? `${s}:00–${s + 3}:00` : `${s}–${s + 3}`;
+// general starting points when there's no data yet (Egypt, evenings & lunch) — to test, not facts
+const START = [[4, 21], [5, 13], [6, 21], [0, 21], [2, 18]];
+function points() {
+  const pts = [];
+  for (const [k, f] of Object.entries(SCORE)) {
+    const raw = items.map(x => { const m = x.s[k]?.metrics; if (!m || m.unavailable) return null; const v = f(m); return v > 0 || Object.keys(m).some(n => typeof m[n] === "number") ? { x, k, v, t: new Date(x.s[k]?.at || x.p.time) } : null; }).filter(Boolean);
+    const med = median(raw.map(o => o.v)) || 1;
+    raw.forEach(o => pts.push({ ...o, r: o.v / med }));
   }
+  return pts;
+}
+function nextAt(day, slot) { const d = new Date(); d.setMinutes(0, 0, 0); const h = slot + 1; let add = (day - d.getDay() + 7) % 7; if (!add && d.getHours() >= h) add = 7; d.setDate(d.getDate() + add); d.setHours(h); return d; }
+function useSlot(day, slot) { try { localStorage.setItem("ap_best", JSON.stringify({ day: +day, slot: +slot })); } catch (e) {}
+  if (typeof closeSheet === "function") closeSheet(); const d = nextAt(+day, +slot), pad = n => String(n).padStart(2, "0");
+  document.querySelector('.tabs button[data-tab="compose"]')?.click();
+  setTimeout(() => { const dt = $("#c-date"), hr = $("#c-hour"); if (dt) dt.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; if (hr) hr.value = `${pad(d.getHours())}:00`; window.apQuick && window.apQuick();
+    toast(L(`اتحط ${WD(day)} ${pad(d.getHours())}:00 — وهيبقى زرار «أحسن وقت ⭐» تحت التاريخ`, `Set to ${WD(day)} ${pad(d.getHours())}:00 — also saved as the “Best time ⭐” chip`), 6000); }, 120); }
+window.apUseSlot = useSlot;
+function bestTime() {
+  const pts = points(), n = pts.length;
+  const cell = {}; pts.forEach(o => { const key = o.t.getDay() + "-" + slotOf(o.t.getHours()); (cell[key] ||= []).push(o.r); });
+  const posted = {}; items.filter(x => x.p.time && new Date(x.p.time) < new Date()).forEach(x => { const t = new Date(x.p.time); const key = t.getDay() + "-" + slotOf(t.getHours()); posted[key] = (posted[key] || 0) + 1; });
+  const ranked = Object.entries(cell).filter(([, a]) => a.length >= 2).map(([key, a]) => ({ key, med: median(a), n: a.length })).sort((a, b) => b.med - a.med);
+  const enough = n >= 6 && ranked.length >= 2;
+  const top = enough ? ranked.slice(0, 3).map(r => { const [d, s] = r.key.split("-").map(Number); return { d, s, why: L(`أداء ${Math.round(r.med * 100)}% من المعتاد · ${r.n} بوست`, `${Math.round(r.med * 100)}% of your usual · ${r.n} posts`) }; })
+    : START.map(([d, h]) => ({ d, s: slotOf(h), why: L("نقطة بداية للتجربة", "a starting point to test") }));
+  // untested slots worth one try (close to the winners, never posted there)
+  const tryNext = (enough ? top : START.map(([d, h]) => ({ d, s: slotOf(h) }))).flatMap(t => [[(t.d + 1) % 7, t.s], [t.d, (t.s + 3) % 24]]).filter(([d, s]) => !posted[d + "-" + s]).slice(0, 2);
+  const maxR = Math.max(1, ...Object.values(cell).map(a => median(a)));
+  const grid = `<div class="bt-grid"><div></div>${SLOTS.map(s => `<div class="bt-h">${s}</div>`).join("")}` +
+    [6, 0, 1, 2, 3, 4, 5].map(d => `<div class="bt-d">${WD(d).replace(/^ال/, "")}</div>` + SLOTS.map(s => { const a = cell[d + "-" + s]; const v = a ? median(a) : null;
+      const isTop = top.some(t => t.d === d && t.s === s);
+      return `<button class="bt-c${isTop ? " top" : ""}" title="${WD(d)} ${slotTxt(s)}${a ? ` · ${a.length}` : ""}" onclick="apUseSlot(${d},${s})" style="${v != null ? `background:color-mix(in srgb,var(--pri,#2563eb) ${Math.round(15 + 70 * Math.min(1, v / maxR))}%,transparent)` : posted[d + "-" + s] ? "background:var(--soft)" : ""}">${isTop ? "★" : ""}</button>`; }).join("")).join("") + `</div>`;
+  const most = Object.entries(posted).sort((a, b) => b[1] - a[1])[0];
+  const total = Object.values(posted).reduce((a, b) => a + b, 0);
+  let h = `<div class="nrow"><div><b>${enough ? L("أحسن أوقات ليك", "Your best times") : L("ابدأ بالأوقات دي", "Start with these times")}</b>` +
+    `<div class="bt-top">${top.map(t => `<button class="btn sm${t === top[0] ? " pri" : ""}" onclick="apUseSlot(${t.d},${t.s})">${WD(t.d)} ${slotTxt(t.s)}<small>${t.why}</small></button>`).join("")}</div>` +
+    `<small class="mut">${enough ? L(`من ${n} رقم حقيقي (إنستجرام/فيسبوك/يوتيوب)، كل منصة مقارنة بنفسها. اضغط أي وقت يتحطلك في الجدولة.`, `From ${n} real numbers (Instagram/Facebook/YouTube), each platform compared to itself. Tap a time to schedule there.`)
+      : L(`لسه الأرقام قليلة (${n} من 6). دي أوقات شائعة في مصر (بالليل والضهر) كبداية — مش أرقام مؤكدة. انشر فيها أسبوعين والتحليل هيتعلم من أرقامك لوحده.`, `Not enough numbers yet (${n} of 6). These are common times in Egypt (evenings & lunch) as a start — not proven. Post at them for two weeks and this learns from your numbers.`)}</small></div></div>`;
+  h += `<div class="nrow"><div><b>${L("الخريطة", "Map")}</b> <small class="mut">${L("كل ما المربع أغمق = أداء أحسن · رمادي = نزلت فيه ومفيش أرقام · ★ الأحسن", "Darker = better · grey = posted, no numbers · ★ best")}</small>${grid}</div></div>`;
+  if (most && total >= 4 && most[1] / total >= 0.6) { const [d, s] = most[0].split("-").map(Number);
+    h += `<div class="nrow"><div>⚠️ ${L(`${Math.round(most[1] / total * 100)}% من بوستاتك نازلة ${WD(d)} ${slotTxt(s)}. لو نزلت كله في نفس الميعاد مش هنعرف إيه الأحسن — غيّر شوية.`, `${Math.round(most[1] / total * 100)}% of your posts went out ${WD(d)} ${slotTxt(s)}. Same slot every time hides what works best — vary a little.`)}</div></div>`; }
+  if (tryNext.length) h += `<div class="nrow"><div><b>${L("جرّب مرة", "Try once")}</b> — ${L("أوقات قريبة من الأحسن ماجربتهاش:", "slots near your best you haven't tried:")} ${tryNext.map(([d, s]) => `<a href="#" onclick="apUseSlot(${d},${s});return false">${WD(d)} ${slotTxt(s)}</a>`).join(" · ")}</div></div>`;
+  const per = Object.keys(SCORE).map(k => { const c = pts.filter(o => o.k === k).length; return `${NM(k)} ${c}`; }).join(" · ");
+  h += `<div class="nrow"><div><small class="mut">${L("أرقام متاحة:", "Numbers available:")} ${per}. ${L("تيك توك ولينكدإن وبنترست مش بيدّوا أرقام للتطبيقات الجديدة.", "TikTok, LinkedIn and Pinterest don't give numbers to new apps.")}</small></div></div>`;
   $("#in-out").innerHTML = h;
 }
+if (!document.getElementById("bt-css")) { const st = document.createElement("style"); st.id = "bt-css"; st.textContent = `.bt-grid{display:grid;grid-template-columns:auto repeat(8,1fr);gap:3px;margin-top:8px;font-size:11px;direction:ltr}.bt-h{text-align:center;color:var(--mut)}.bt-d{color:var(--mut);padding-inline-end:4px;white-space:nowrap;direction:rtl}.bt-c{aspect-ratio:1.4;border:1px solid var(--line,#ddd);border-radius:5px;background:none;cursor:pointer;font-size:11px;padding:0;color:var(--ink)}.bt-c.top{outline:2px solid var(--pri,#2563eb)}.bt-top{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.bt-top .btn{display:flex;flex-direction:column;align-items:flex-start;line-height:1.3}.bt-top small{font-size:10.5px;opacity:.75;font-weight:400}`; document.head.appendChild(st); }
 
 // ------------------------------------------------------------------ content mix map (last 60 days) — shows repetition, suggests angles, no fixed quotas
 function kindOf(p) { if (p.kind === "video") return "فيديو"; const n = (p.media || []).length; return n > 1 ? "كاروسيل" : n === 1 ? "صورة واحدة" : "نص"; }

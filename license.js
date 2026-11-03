@@ -5,12 +5,13 @@
 "use strict";
 const OWNER = "abdonassar317-alt";
 const PUBLIC_KEY = "Sbg09MltEUuNOc+7mUIOBjW2ZjQFTBkCYu3KuU/tuIY=";
-const TRIAL_DAYS = 90, GRACE_DAYS = 3;
-const PLANS = { month: { months: 1, price: 200 }, year: { months: 12, price: 1200 } }; // year = 50% off
+const TRIAL_DAYS = 30, GRACE_DAYS = 3;
+const PLANS = { month: { months: 1, price: 37 }, year: { months: 12, price: 370 } }; // year = 2 months free
 // Owner contact + payment details (shown to clients). Empty = hidden.
 const CONTACT = { whatsapp: "+20 109 290 0137", email: "abdonassar317@gmail.com", instapay: "abdoazmynassar@instapay", instapay_phone: "01092900137", inbox: "https://script.google.com/macros/s/AKfycbwrvyR0OptBwNgzHDNPCdv9ARgy_OUBzbMWxRCO00T85K_iQeqgOhNZ9H3CimophGEN_w/exec", bank: "" };
-const VERSION = "42";
+const VERSION = "43";
 const CHANGES = [
+  ["43", "السعر بقى 37 جنيه في الشهر وأول شهر مجاني · بنترست على كل البوستات · «أحسن وقت» بخريطة وزرار يحط الميعاد لوحده", "Now 37 EGP/month, first month free · Pinterest on every post · “Best time” map with one-tap scheduling"],
   ["42", "بنترست: تطبيقك جاهز ورقمه متكتب — هتلزق المفتاح السري بس", "Pinterest: your app is ready and its ID is pre-filled — just paste the secret"],
   ["41", "تيك توك: البوست بيوصل صندوق تيك توك لوحده · تذكير بضغطة لبروفايل فيسبوك الشخصي", "TikTok: posts land in your TikTok inbox · one-tap reminder for your personal Facebook profile"],
   ["40", "ربط المنصات بقى أسرع (خطوة واحدة بدل اتنين)", "Faster platform connections (one step instead of two)"],
