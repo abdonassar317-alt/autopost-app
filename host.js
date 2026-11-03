@@ -271,7 +271,7 @@ function hostedConnect() {
   window.wzTikTok = guard(async () => {
     const t = { client_key: APP_PUBLIC.tt_key };
     sessionStorage.setItem("tt_pending", JSON.stringify({ brand: curBrand }));
-    oGo("https://www.tiktok.com/v2/auth/authorize/?" + new URLSearchParams({ client_key: t.client_key, scope: "user.info.basic,video.publish", response_type: "code", redirect_uri: YT_REDIRECT, state: oState("tt") }));
+    oGo("https://www.tiktok.com/v2/auth/authorize/?" + new URLSearchParams({ client_key: t.client_key, scope: "user.info.basic,video.publish,video.upload", response_type: "code", redirect_uri: YT_REDIRECT, state: oState("tt") }));
   });
   const _pin = window.wzPinterest;
   window.wzPinterest = guard(async () => { const b = brands[curBrand];

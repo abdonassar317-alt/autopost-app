@@ -231,25 +231,25 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=40"></script>
-<script src="host.js?v=40"></script>
-<script src="i18n.js?v=40"></script>
-<script src="theme.js?v=40"></script>
-<script src="vendor-nacl.js?v=40"></script>
-<script src="vendor-blake.js?v=40"></script>
-<script src="phase2.js?v=40" defer></script>
-<script src="library.js?v=40" defer></script>
-<script src="plan.js?v=40" defer></script>
-<script src="approval.js?v=40" defer></script>
-<script src="ai.js?v=40" defer></script>
-<script src="insights.js?v=40" defer></script>
-<script src="export.js?v=40" defer></script>
-<script src="license.js?v=40" defer></script>
-<script src="keys.js?v=40" defer></script>
+<script src="demo.js?v=41"></script>
+<script src="host.js?v=41"></script>
+<script src="i18n.js?v=41"></script>
+<script src="theme.js?v=41"></script>
+<script src="vendor-nacl.js?v=41"></script>
+<script src="vendor-blake.js?v=41"></script>
+<script src="phase2.js?v=41" defer></script>
+<script src="library.js?v=41" defer></script>
+<script src="plan.js?v=41" defer></script>
+<script src="approval.js?v=41" defer></script>
+<script src="ai.js?v=41" defer></script>
+<script src="insights.js?v=41" defer></script>
+<script src="export.js?v=41" defer></script>
+<script src="license.js?v=41" defer></script>
+<script src="keys.js?v=41" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
-const NAMES=Object.fromEntries(PLATS.map(p=>[p[0],p[1]]));
+const NAMES={...Object.fromEntries(PLATS.map(p=>[p[0],p[1]])),facebook_profile:"فيسبوك (بروفايلك)"};
 const TITLES={compose:"بوست جديد",list:"المجدول",brands:"الحسابات",settings:"الإعدادات"};
 const $=s=>document.querySelector(s);
 const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
@@ -414,7 +414,7 @@ function renderList(){
   const day=d.toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
   if(day!==last){h+=`<div class="dayh">${day}</div>`;last=day}
   const hm=d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
-  const st=p.platforms.map(k=>{const v=s[k];let c="",t=NAMES[k]||k;if(v?.ok&&v.manual){c="man";t+=" · تذكير"}else if(v?.ok)c="ok";else if(v?.skipped){t+=" · اتلغى"}else if(v?.needs_action){c="bad";t+=" · محتاج تدخل"}else if(v){c="bad";t+=(v.attempts>=3?" · فشل":" · هيتجرب تاني")}
+  const st=[...p.platforms,...Object.keys(s).filter(k=>!p.platforms.includes(k)&&s[k]?.manual)].map(k=>{const v=s[k];let c="",t=NAMES[k]||k;if(v?.ok&&v.manual){c="man";t+=" · تذكير"}else if(v?.ok&&v.inbox){c="man";t+=" · في صندوق تيك توك"}else if(v?.ok)c="ok";else if(v?.skipped){t+=" · اتلغى"}else if(v?.needs_action){c="bad";t+=" · محتاج تدخل"}else if(v){c="bad";t+=(v.attempts>=3?" · فشل":" · هيتجرب تاني")}
    return v?.ok&&v.url?`<a class="${c}" href="${esc(v.url)}" target="_blank" rel="noopener"><i></i>${t} ↗</a>`:`<span class="${c}"><i></i>${t}</span>`}).join("");
   const th=p.kind==="video"?`<div class="vid">${ic("play")}</div>`:`<img data-pid="${id}" data-f="${p.media[0]}" alt="">`;
   h+=`<div class="item"><div class="tm">${hm}</div>${th}<div class="body"><div class="cap">${esc(p.label||p.caption||"بدون كابشن")}</div>
@@ -425,10 +425,10 @@ function renderList(){
 }
 $("#l-search").oninput=e=>{window.listQ=e.target.value;renderList()};
 // ---- one-tap posting for platforms without an open API (TikTok, Snapchat, X)
-const MANUAL_P=["tiktok","snapchat","x"];
+const MANUAL_P=["tiktok","snapchat","x","facebook_profile"];
 const sharedKey=(id,k)=>`shared:${id}:${k}`;
 const isShared=(id,k)=>{try{return localStorage.getItem(sharedKey(id,k))==="1"}catch(e){return false}};
-function manualPending(x){const due=new Date(x.p.time)-Date.now()<3600e3;return due?MANUAL_P.filter(k=>x.p.platforms.includes(k)&&!isShared(x.id,k)):[]}
+function manualPending(x){const due=new Date(x.p.time)-Date.now()<3600e3;return due?MANUAL_P.filter(k=>(x.p.platforms.includes(k)||x.s[k]?.manual)&&!(x.s[k]?.inbox)&&!isShared(x.id,k)):[]}
 function manualBtn(x){const m=manualPending(x);if(!m.length)return"";const k=m[0];
  return `<button class="btn sm pri" style="white-space:nowrap" onclick="shareManual('${x.id}','${k}')">انشر على ${NAMES[k]||k}</button>`}
 window.shareManual=async(id,k)=>{const x=items.find(i=>i.id===id);if(!x)return;const p=x.p;
@@ -439,7 +439,7 @@ window.shareManual=async(id,k)=>{const x=items.find(i=>i.id===id);if(!x)return;c
    await navigator.share({files,text:p.caption||""});
   }else{
    files.forEach(f=>{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=`${id}-${f.name}`;a.click()});
-   window.open(k==="tiktok"?"https://www.tiktok.com/tiktokstudio/upload":k==="x"?"https://x.com/intent/post?text="+encodeURIComponent((p.captions?.x||p.caption||"").slice(0,280)):"https://www.snapchat.com","_blank");
+   window.open(k==="facebook_profile"?"https://www.facebook.com/":k==="tiktok"?"https://www.tiktok.com/tiktokstudio/upload":k==="x"?"https://x.com/intent/post?text="+encodeURIComponent((p.captions?.x||p.caption||"").slice(0,280)):"https://www.snapchat.com","_blank");
   }
   sheet(`<div class="wz"><h3>نزّلته على ${NAMES[k]||k}؟</h3><div class="sub">الكابشن اتنسخ — الصقه في خانة الوصف</div>
    <div class="nav"><button class="btn pri" id="sh-ok">أيوه اتنشر</button><button class="btn" onclick="closeSheet()">لسه</button></div></div>`);
@@ -703,7 +703,7 @@ window.wzTikTok=()=>{
  $("#t-ok").onclick=async()=>{const k=$("#t-key").value.trim(),sec=$("#t-sec").value.trim();if(!k||!sec)return toast("حط الاتنين");const btn=$("#t-ok");btn.disabled=true;btn.textContent="بيحفظ…";
   try{const b=brands[curBrand];await putSecret(sname(b,"TT_CLIENT_KEY"),k);await putSecret(sname(b,"TT_CLIENT_SECRET"),sec);if(cfg.token&&!window.HOST)await putSecret("MEDIA_PUSH_TOKEN",cfg.token);
    sessionStorage.setItem("tt_pending",JSON.stringify({brand:curBrand}));
-   oGo("https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")}))}
+   oGo("https://www.tiktok.com/v2/auth/authorize/?"+new URLSearchParams({client_key:k,scope:"user.info.basic,video.publish,video.upload",response_type:"code",redirect_uri:YT_REDIRECT,state:oState("tt")}))}
   catch(e){toast(e.message,8000);btn.disabled=false;btn.textContent="ربط بتيك توك"}}};
 async function finishTikTok(){
  const q=oCheck("tt");if(!q)return;

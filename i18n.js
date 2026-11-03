@@ -31,6 +31,8 @@ document.documentElement.lang = "en"; document.documentElement.dir = "ltr";
 
 // ---- dictionary: Arabic interface phrase → English (longest phrases are matched first)
 const D = {
+// v41
+"فيسبوك (بروفايلك)": "Facebook (your profile)", "في صندوق تيك توك": "in your TikTok inbox",
 // v36
 "بحث في البوستات…": "Search posts…", "مفيش نتايج": "No results", "الفيديو أكبر من 30 ميجا (الحد في الحساب المُستضاف)": "Video is over 30 MB (hosted account limit)",
 // navigation & titles
