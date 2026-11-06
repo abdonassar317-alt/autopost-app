@@ -29,11 +29,11 @@ async function context(extra = "") {
 
 // ------------------------------------------------------------------ Gemini (free key) — picks the newest free "flash" text model available to the key
 async function models(key) {
-  const cached = ls.get("ap_gemini_model"); if (cached) return [cached];
+  const cached = ls.get("ap_gemini_model");
   try { const r = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=200`)).json();
     const ok = (r.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp|omni/i.test(m.name))
       .map(m => m.name.replace("models/", "")).sort((a, b) => (parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || 0) - parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || 0)) || (/lite/.test(a) - /lite/.test(b)));
-    return ok.length ? ok.slice(0, 6) : ["gemini-flash-latest"]; } catch (e) { return ["gemini-flash-latest"]; } }
+    return [...new Set([cached, ...ok.slice(0, 8), "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite"].filter(Boolean))]; } catch (e) { return [cached, "gemini-flash-latest"].filter(Boolean); } }
 // tries newest first; a model that hangs (>12s) or is unavailable is skipped, and the first one that answers is remembered
 async function gemini(parts, json) {
   const key = ls.get("ap_gemini"); let last = null;
@@ -44,7 +44,7 @@ async function gemini(parts, json) {
         body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}) } }) });
       const d = await r.json(); clearTimeout(t);
       if (r.status === 429) throw new Error("خلصت الحصة المجانية للنهارده أو الدقيقة دي — جرّب كمان شوية أو استخدم «انسخ الـprompt»");
-      if (!r.ok) { last = new Error("Gemini: " + (d.error?.message || r.status)); if (r.status === 404 || r.status >= 500) { if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw last; }
+      if (!r.ok) { last = new Error("Gemini: " + (d.error?.message || r.status)); if (r.status === 404 || r.status === 503 || r.status >= 500) { if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw last; }
       const txt = (d.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
       if (!txt) { last = new Error("Gemini رجّع رد فاضي"); continue; }
       ls.set("ap_gemini_model", m); return txt;
