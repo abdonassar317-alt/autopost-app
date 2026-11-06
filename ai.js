@@ -77,6 +77,7 @@ async function team(parts, json) {
   for (const [p] of order) { try { return await one(p, [{ text: judge }], json); } catch (e) {} }
   return ok[0][1];
 }
+const oneTest = async p => { try { await one(p, [{ text: "رد بكلمة واحدة: تمام" }]); return PROV[p].n.split(" ")[0] + " ✓"; } catch (e) { return PROV[p].n.split(" ")[0] + " ✗ " + e.message.slice(0, 40); } };
 const ask = (parts, json) => prov() === "all" ? team(parts, json) : one(prov(), parts, json);
 // tries newest first; a model that hangs (>12s) or is unavailable is skipped, and the first one that answers is remembered
 async function gemini(parts, json) {
@@ -223,13 +224,17 @@ if (set) { const box = document.createElement("div"); box.className = "box";
   box.innerHTML = `<div class="lbl">الذكاء الاصطناعي <span>اختياري وببلاش</span></div>
    <p class="note">من غير مفتاح: المساعد بيجهّز الطلب وانت تلصقه في أي شات مجاني. بمفتاح Gemini مجاني من <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> بيكتب جوه الأداة على طول. المفتاح بيتحفظ على الجهاز ده بس. اللي بتبعته بيروح لجوجل، وفي الخطة المجانية جوجل ممكن تستخدمه لتحسين منتجاتها — ماتحطش بيانات سرية.</p>
    <select id="ai-prov"><option value="all">🤝 الكل مع بعض (أحسن نتيجة)</option>${Object.entries(PROV).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
-   <div class="two"><input id="ai-key" type="password" autocomplete="off" placeholder="المفتاح (اختياري)" dir="ltr"><button class="btn" id="ai-test">حفظ واختبار</button></div>
-   <p class="note" id="ai-getkey"></p>`;
+   <div id="ai-keys">${Object.entries(PROV).map(([k, v]) => `<div class="two"><input class="aik" data-p="${k}" type="password" autocomplete="off" placeholder="مفتاح ${v.n}" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="${v.link}">هات المفتاح</a></div>`).join("")}</div>
+   <button class="btn pri" id="ai-test">حفظ كل المفاتيح واختبار</button>
+   <p class="note">ChatGPT وClaude مدفوعين (رصيد API منفصل عن اشتراك الشات). الباقي فيه مجاني. سيب فاضي أي واحد مش عايزه. التسجيل الصوتي بيشتغل مع Gemini بس.</p>`;
   set.insertBefore(box, set.children[1]);
-  const sync = () => { const p = $("#ai-prov").value; if (p === "all") { $("#ai-key").value = ""; $("#ai-key").disabled = true; $("#ai-getkey").textContent = `كل مفتاح تحفظه من القايمة هيشتغل مع التانيين: كل واحد بيكتب مسودة، وبعدين واحد بيدمج أحسن ما فيهم. مفاتيح محفوظة دلوقتي: ${keyed().length}. لازم تحفظ كل مفتاح بنفسه (اختار الشركة، الصق المفتاح، حفظ واختبار) وبعدين ارجع هنا.`; return; } $("#ai-key").disabled = false; $("#ai-key").value = ls.get(PROV[p].k); $("#ai-getkey").innerHTML = `هات المفتاح من <a href="${PROV[p].link}" target="_blank" rel="noopener">هنا</a>` + (["openai", "claude"].includes(p) ? " — API مدفوع برصيد منفصل عن اشتراك الشات." : p === "gemini" ? "" : " — النص بس، من غير تسجيل صوتي."); };
-  $("#ai-prov").value = prov(); sync(); $("#ai-prov").onchange = () => { ls.set("ap_ai_prov", $("#ai-prov").value); sync(); };
-  $("#ai-test").onclick = async () => { const p = $("#ai-prov").value, k = $("#ai-key").value.trim(); ls.set("ap_ai_prov", p); if (p === "all") { try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); return toast(`شغال ✓ ${keyed().length} مساعدين مع بعض — ${t.slice(0, 20)}`, 6000); } catch (e) { return toast(e.message, 8000); } } ls.set(PROV[p].k, k); if (p === "gemini") ls.set("ap_gemini_model", ""); if (!k) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
-    try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); toast(`شغال ✓ ${p === "gemini" ? "(" + ls.get("ap_gemini_model") + ")" : PROV[p].n} — ${t.slice(0, 20)}`, 6000); } catch (e) { toast(e.message, 8000); } }; }
+  const kin = () => [...box.querySelectorAll(".aik")];
+  kin().forEach(i => { i.value = ls.get(PROV[i.dataset.p].k); });
+  $("#ai-prov").value = prov(); $("#ai-prov").onchange = () => ls.set("ap_ai_prov", $("#ai-prov").value);
+  $("#ai-test").onclick = async () => { kin().forEach(i => { const v = i.value.trim(); if (v !== ls.get(PROV[i.dataset.p].k)) { ls.set(PROV[i.dataset.p].k, v); if (i.dataset.p === "gemini") ls.set("ap_gemini_model", ""); } });
+    const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
+    const res = await Promise.all(ks.map(p => oneTest(p)));
+    toast(res.join("  ·  "), 9000); }; }
 
 const css = document.createElement("style");
 css.textContent = `.aig{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.aig .btn{justify-content:center;font-size:13px}#ai-out textarea{width:100%}`;
