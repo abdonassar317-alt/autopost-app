@@ -61,6 +61,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .th .ctl svg.i{width:14px;height:14px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.chk{display:flex;align-items:center;gap:8px;margin:7px 0;font-size:14px}.chk input{width:auto;appearance:auto;margin:0}
 .chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px 7px 14px;cursor:pointer;user-select:none;background:var(--s);font-size:14px}
 .chip .d{width:9px;height:9px;border-radius:50%}
 .chip small{color:var(--mut);font-size:11.5px}
@@ -173,6 +174,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
   <div class="chips" id="c-plats"></div>
   <p class="hint">المنصات المكتوب جنبها «تذكير» هيوصلك على تليجرام في الميعاد الصور والكابشن جاهزين تنزلهم بنفسك.</p>
  </div>
+ <div class="box hide" id="c-tt"></div>
  <div class="box hide" id="c-check"></div>
  <div class="prog" id="c-bar"><i></i></div>
 </section>
@@ -231,21 +233,22 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 <div class="sheet" id="sheet"><div class="p" id="sheet-p"></div></div>
 <div class="toast" id="toast"></div>
 
-<script src="demo.js?v=44"></script>
-<script src="host.js?v=44"></script>
-<script src="i18n.js?v=44"></script>
-<script src="theme.js?v=44"></script>
-<script src="vendor-nacl.js?v=44"></script>
-<script src="vendor-blake.js?v=44"></script>
-<script src="phase2.js?v=44" defer></script>
-<script src="library.js?v=44" defer></script>
-<script src="plan.js?v=44" defer></script>
-<script src="approval.js?v=44" defer></script>
-<script src="ai.js?v=44" defer></script>
-<script src="insights.js?v=44" defer></script>
-<script src="export.js?v=44" defer></script>
-<script src="license.js?v=44" defer></script>
-<script src="keys.js?v=44" defer></script>
+<script src="demo.js?v=45"></script>
+<script src="host.js?v=45"></script>
+<script src="i18n.js?v=45"></script>
+<script src="theme.js?v=45"></script>
+<script src="vendor-nacl.js?v=45"></script>
+<script src="vendor-blake.js?v=45"></script>
+<script src="phase2.js?v=45" defer></script>
+<script src="library.js?v=45" defer></script>
+<script src="plan.js?v=45" defer></script>
+<script src="approval.js?v=45" defer></script>
+<script src="ai.js?v=45" defer></script>
+<script src="insights.js?v=45" defer></script>
+<script src="export.js?v=45" defer></script>
+<script src="license.js?v=45" defer></script>
+<script src="keys.js?v=45" defer></script>
+<script src="tiktok.js?v=45" defer></script>
 <script>
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
@@ -349,6 +352,7 @@ async function save(now,draft){
  if(hasVid&&files.length>1)return toast("الفيديو لازم يبقى لوحده في البوست");
  if(files.length>10&&plats.includes("instagram"))return toast("إنستجرام بيقبل لحد 10 صور");
  if(!draft&&window.checkBlock){const m=await checkBlock(plats);if(m)return toast(m,7000)}
+ const tt=!draft&&window.ttCollect?ttCollect(plats):null;if(tt&&tt.err)return toast(tt.err,7000);
  let when=now?new Date(Date.now()-60e3):new Date(`${$("#c-date").value}T${$("#c-hour").value||"00:00"}`);
  if(draft&&isNaN(when))when=new Date(Date.now()+864e5);
  if(isNaN(when))return toast("اختار الميعاد");
@@ -367,6 +371,7 @@ async function save(now,draft){
   const post={brand:$("#c-brand").value,time:when.toISOString().replace(/\.\d+Z$/,"Z"),kind:hasVid?"video":"images",media,platforms:plats,caption:$("#c-caption").value};
   const caps=window.perCaps?perCaps(plats):{};if(Object.keys(caps).length)post.captions=caps;if(draft)post.draft=true;
   if(hasVid&&$("#c-title").value)post.title=$("#c-title").value;
+  if(tt)post.tiktok=tt;
   changes.push({path:`posts/${pid}/post.json`,b64:utf8b64(JSON.stringify(post,null,2))});
   await commit(changes,`schedule ${pid}`,p=>setP(.5+p/2));
   if(now&&!(await runNow()))warn=" — هينزل في أول دورة خلال 15 دقيقة";
