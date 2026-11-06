@@ -7,10 +7,10 @@
 const NM = k => (typeof NAMES !== "undefined" && NAMES[k]) || k;
 const LIMITS = { instagram: 2200, facebook: 5000, linkedin: 3000, youtube: 5000, pinterest: 500, tiktok: 2200, snapchat: 250, x: 280 };
 const ls = { get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
-const PROV = { gemini: { n: "Gemini (مجاني)", k: "ap_gemini", link: "https://aistudio.google.com/apikey" },
+const PROV = { openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai", link: "https://platform.openai.com/api-keys", url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
+  gemini: { n: "Gemini (مجاني)", k: "ap_gemini", link: "https://aistudio.google.com/apikey" },
   groq: { n: "Groq (مجاني)", k: "ap_key_groq", link: "https://console.groq.com/keys", url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
-  openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" },
-  openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai", link: "https://platform.openai.com/api-keys", url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" } };
+  openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" } };
 const prov = () => (PROV[ls.get("ap_ai_prov")] || ls.get("ap_ai_prov") === "all") ? ls.get("ap_ai_prov") : "gemini";
 const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
 const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);
@@ -66,7 +66,7 @@ async function team(parts, json) {
   const task = parts.map(x => x.text || "").join("\n");
   const judge = `ده الطلب الأصلي:\n"""\n${task}\n"""\n\nوده ${ok.length} ردود من مساعدين مختلفين:\n` + ok.map(([p, t], i) => `--- رد ${i + 1} ---\n${t}`).join("\n\n") +
     `\n\nاختار أحسن ما في كل رد وادمجهم في رد نهائي واحد أفضل منهم كلهم، وصحّح أي غلط أو حشو. التزم بنفس الصيغة والشكل اللي الطلب الأصلي طلبها بالظبط${json ? " (JSON صالح فقط)" : ""}. اكتب الرد النهائي بس من غير شرح.`;
-  const order = [ok.find(([p]) => p === "gemini"), ...ok].filter(Boolean);
+  const order = [ok.find(([p]) => p === "openai"), ok.find(([p]) => p === "gemini"), ...ok].filter(Boolean);
   for (const [p] of order) { try { return await one(p, [{ text: judge }], json); } catch (e) {} }
   return ok[0][1];
 }
