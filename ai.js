@@ -11,8 +11,9 @@ const PROV = { gemini: { n: "Gemini (مجاني)", k: "ap_gemini", link: "https:
   groq: { n: "Groq (مجاني)", k: "ap_key_groq", link: "https://console.groq.com/keys", url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
   openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" },
   openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai", link: "https://platform.openai.com/api-keys", url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" } };
-const prov = () => PROV[ls.get("ap_ai_prov")] ? ls.get("ap_ai_prov") : "gemini";
-const hasKey = () => !!ls.get(PROV[prov()].k);
+const prov = () => (PROV[ls.get("ap_ai_prov")] || ls.get("ap_ai_prov") === "all") ? ls.get("ap_ai_prov") : "gemini";
+const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
+const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);
 
 // ------------------------------------------------------------------ style memory (examples the user picks, per account; stored in config/library.json)
 let lib = null;
@@ -52,7 +53,24 @@ async function oai(p, parts, json) {
     if (!r.ok) throw new Error(P.n + ": " + (d.error?.message || r.status));
     const txt = (d.choices?.[0]?.message?.content || "").trim(); if (!txt) throw new Error("رد فاضي"); return txt;
   } catch (e) { if (e.name === "AbortError") throw new Error(P.n + " بطيء — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
-const ask = (parts, json) => prov() === "gemini" ? gemini(parts, json) : oai(prov(), parts, json);
+const one = (p, parts, json) => p === "gemini" ? gemini(parts, json) : oai(p, parts, json);
+// "all together": every provider with a key drafts in parallel, then one of them merges the best parts into the final answer
+async function team(parts, json) {
+  const ks = keyed(); if (!ks.length) throw new Error("ضيف مفتاح واحد على الأقل");
+  if (parts.some(x => x.inline_data)) { if (ks.includes("gemini")) return gemini(parts, json); throw new Error("التسجيل الصوتي محتاج Gemini"); }
+  if (ks.length === 1) return one(ks[0], parts, json);
+  const res = await Promise.allSettled(ks.map(p => one(p, parts, json).then(t => [p, t])));
+  const ok = res.filter(r => r.status === "fulfilled").map(r => r.value);
+  if (!ok.length) throw res[0].reason;
+  if (ok.length === 1) return ok[0][1];
+  const task = parts.map(x => x.text || "").join("\n");
+  const judge = `ده الطلب الأصلي:\n"""\n${task}\n"""\n\nوده ${ok.length} ردود من مساعدين مختلفين:\n` + ok.map(([p, t], i) => `--- رد ${i + 1} ---\n${t}`).join("\n\n") +
+    `\n\nاختار أحسن ما في كل رد وادمجهم في رد نهائي واحد أفضل منهم كلهم، وصحّح أي غلط أو حشو. التزم بنفس الصيغة والشكل اللي الطلب الأصلي طلبها بالظبط${json ? " (JSON صالح فقط)" : ""}. اكتب الرد النهائي بس من غير شرح.`;
+  const order = [ok.find(([p]) => p === "gemini"), ...ok].filter(Boolean);
+  for (const [p] of order) { try { return await one(p, [{ text: judge }], json); } catch (e) {} }
+  return ok[0][1];
+}
+const ask = (parts, json) => prov() === "all" ? team(parts, json) : one(prov(), parts, json);
 // tries newest first; a model that hangs (>12s) or is unavailable is skipped, and the first one that answers is remembered
 async function gemini(parts, json) {
   const key = ls.get("ap_gemini"); let last = null;
@@ -197,13 +215,13 @@ const set = $("#settings");
 if (set) { const box = document.createElement("div"); box.className = "box";
   box.innerHTML = `<div class="lbl">الذكاء الاصطناعي <span>اختياري وببلاش</span></div>
    <p class="note">من غير مفتاح: المساعد بيجهّز الطلب وانت تلصقه في أي شات مجاني. بمفتاح Gemini مجاني من <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> بيكتب جوه الأداة على طول. المفتاح بيتحفظ على الجهاز ده بس. اللي بتبعته بيروح لجوجل، وفي الخطة المجانية جوجل ممكن تستخدمه لتحسين منتجاتها — ماتحطش بيانات سرية.</p>
-   <select id="ai-prov">${Object.entries(PROV).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
+   <select id="ai-prov"><option value="all">🤝 الكل مع بعض (أحسن نتيجة)</option>${Object.entries(PROV).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
    <div class="two"><input id="ai-key" type="password" autocomplete="off" placeholder="المفتاح (اختياري)" dir="ltr"><button class="btn" id="ai-test">حفظ واختبار</button></div>
    <p class="note" id="ai-getkey"></p>`;
   set.insertBefore(box, set.children[1]);
-  const sync = () => { const p = $("#ai-prov").value; $("#ai-key").value = ls.get(PROV[p].k); $("#ai-getkey").innerHTML = `هات المفتاح من <a href="${PROV[p].link}" target="_blank" rel="noopener">هنا</a>` + (p === "openai" ? " — ChatGPT API مدفوع (رصيد منفصل عن اشتراك ChatGPT)." : p === "gemini" ? "" : " — النص بس، من غير تسجيل صوتي."); };
+  const sync = () => { const p = $("#ai-prov").value; if (p === "all") { $("#ai-key").value = ""; $("#ai-key").disabled = true; $("#ai-getkey").textContent = `كل مفتاح تحفظه من القايمة هيشتغل مع التانيين: كل واحد بيكتب مسودة، وبعدين واحد بيدمج أحسن ما فيهم. مفاتيح محفوظة دلوقتي: ${keyed().length}. لازم تحفظ كل مفتاح بنفسه (اختار الشركة، الصق المفتاح، حفظ واختبار) وبعدين ارجع هنا.`; return; } $("#ai-key").disabled = false; $("#ai-key").value = ls.get(PROV[p].k); $("#ai-getkey").innerHTML = `هات المفتاح من <a href="${PROV[p].link}" target="_blank" rel="noopener">هنا</a>` + (p === "openai" ? " — ChatGPT API مدفوع (رصيد منفصل عن اشتراك ChatGPT)." : p === "gemini" ? "" : " — النص بس، من غير تسجيل صوتي."); };
   $("#ai-prov").value = prov(); sync(); $("#ai-prov").onchange = () => { ls.set("ap_ai_prov", $("#ai-prov").value); sync(); };
-  $("#ai-test").onclick = async () => { const p = $("#ai-prov").value, k = $("#ai-key").value.trim(); ls.set("ap_ai_prov", p); ls.set(PROV[p].k, k); if (p === "gemini") ls.set("ap_gemini_model", ""); if (!k) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
+  $("#ai-test").onclick = async () => { const p = $("#ai-prov").value, k = $("#ai-key").value.trim(); ls.set("ap_ai_prov", p); if (p === "all") { try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); return toast(`شغال ✓ ${keyed().length} مساعدين مع بعض — ${t.slice(0, 20)}`, 6000); } catch (e) { return toast(e.message, 8000); } } ls.set(PROV[p].k, k); if (p === "gemini") ls.set("ap_gemini_model", ""); if (!k) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
     try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); toast(`شغال ✓ ${p === "gemini" ? "(" + ls.get("ap_gemini_model") + ")" : PROV[p].n} — ${t.slice(0, 20)}`, 6000); } catch (e) { toast(e.message, 8000); } }; }
 
 const css = document.createElement("style");
