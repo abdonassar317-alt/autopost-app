@@ -10,6 +10,10 @@ const ls = { get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } 
 const PROV = { openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai", link: "https://platform.openai.com/api-keys", url: "https://api.openai.com/v1/chat/completions", model: "gpt-4o-mini" },
   gemini: { n: "Gemini (مجاني)", k: "ap_gemini", link: "https://aistudio.google.com/apikey" },
   groq: { n: "Groq (مجاني)", k: "ap_key_groq", link: "https://console.groq.com/keys", url: "https://api.groq.com/openai/v1/chat/completions", model: "llama-3.3-70b-versatile" },
+  claude: { n: "Claude (مدفوع)", k: "ap_key_claude", link: "https://console.anthropic.com/settings/keys", url: "https://api.anthropic.com/v1/messages", model: "claude-haiku-4-5" },
+  mistral: { n: "Mistral (فيه مجاني)", k: "ap_key_mistral", link: "https://console.mistral.ai/api-keys", url: "https://api.mistral.ai/v1/chat/completions", model: "mistral-small-latest" },
+  cerebras: { n: "Cerebras (مجاني)", k: "ap_key_cerebras", link: "https://cloud.cerebras.ai/platform", url: "https://api.cerebras.ai/v1/chat/completions", model: "llama-3.3-70b" },
+  deepseek: { n: "DeepSeek (رخيص)", k: "ap_key_deepseek", link: "https://platform.deepseek.com/api_keys", url: "https://api.deepseek.com/chat/completions", model: "deepseek-chat" },
   openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" } };
 const prov = () => (PROV[ls.get("ap_ai_prov")] || ls.get("ap_ai_prov") === "all") ? ls.get("ap_ai_prov") : "gemini";
 const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
@@ -44,14 +48,17 @@ async function models(key) {
 async function oai(p, parts, json) {
   const P = PROV[p], key = ls.get(P.k); if (parts.some(x => x.inline_data)) throw new Error("التسجيل الصوتي شغال مع Gemini بس — اختار Gemini أو اكتب الفكرة نص");
   const c = new AbortController(), t = setTimeout(() => c.abort(), 30000);
-  try { const r = await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-      body: JSON.stringify({ model: P.model, temperature: 0.8, messages: [{ role: "user", content: parts.map(x => x.text || "").join("\n") }], ...(json && p !== "openrouter" ? { response_format: { type: "json_object" } } : {}) }) });
+  const text = parts.map(x => x.text || "").join("\n");
+  try { const r = p === "claude"
+      ? await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: P.model, max_tokens: 2000, temperature: 0.8, messages: [{ role: "user", content: text }] }) })
+      : await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
+      body: JSON.stringify({ model: P.model, temperature: 0.8, messages: [{ role: "user", content: text }], ...(json && ["groq", "openai", "mistral", "deepseek"].includes(p) ? { response_format: { type: "json_object" } } : {}) }) });
     const d = await r.json().catch(() => ({}));
     if (r.status === 429) throw new Error("خلصت الحصة المجانية — جرّب بعد شوية");
     if (r.status === 401) throw new Error("المفتاح غلط أو منتهي");
     if (r.status === 402 || (r.status === 429 && p === "openai")) throw new Error("حسابك محتاج رصيد");
     if (!r.ok) throw new Error(P.n + ": " + (d.error?.message || r.status));
-    const txt = (d.choices?.[0]?.message?.content || "").trim(); if (!txt) throw new Error("رد فاضي"); return txt;
+    const txt = (p === "claude" ? (d.content || []).map(x => x.text || "").join("") : (d.choices?.[0]?.message?.content || "")).trim(); if (!txt) throw new Error("رد فاضي"); return txt;
   } catch (e) { if (e.name === "AbortError") throw new Error(P.n + " بطيء — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
 const one = (p, parts, json) => p === "gemini" ? gemini(parts, json) : oai(p, parts, json);
 // "all together": every provider with a key drafts in parallel, then one of them merges the best parts into the final answer
@@ -66,7 +73,7 @@ async function team(parts, json) {
   const task = parts.map(x => x.text || "").join("\n");
   const judge = `ده الطلب الأصلي:\n"""\n${task}\n"""\n\nوده ${ok.length} ردود من مساعدين مختلفين:\n` + ok.map(([p, t], i) => `--- رد ${i + 1} ---\n${t}`).join("\n\n") +
     `\n\nاختار أحسن ما في كل رد وادمجهم في رد نهائي واحد أفضل منهم كلهم، وصحّح أي غلط أو حشو. التزم بنفس الصيغة والشكل اللي الطلب الأصلي طلبها بالظبط${json ? " (JSON صالح فقط)" : ""}. اكتب الرد النهائي بس من غير شرح.`;
-  const order = [ok.find(([p]) => p === "openai"), ok.find(([p]) => p === "gemini"), ...ok].filter(Boolean);
+  const order = [ok.find(([p]) => p === "claude"), ok.find(([p]) => p === "openai"), ok.find(([p]) => p === "gemini"), ...ok].filter(Boolean);
   for (const [p] of order) { try { return await one(p, [{ text: judge }], json); } catch (e) {} }
   return ok[0][1];
 }
@@ -219,7 +226,7 @@ if (set) { const box = document.createElement("div"); box.className = "box";
    <div class="two"><input id="ai-key" type="password" autocomplete="off" placeholder="المفتاح (اختياري)" dir="ltr"><button class="btn" id="ai-test">حفظ واختبار</button></div>
    <p class="note" id="ai-getkey"></p>`;
   set.insertBefore(box, set.children[1]);
-  const sync = () => { const p = $("#ai-prov").value; if (p === "all") { $("#ai-key").value = ""; $("#ai-key").disabled = true; $("#ai-getkey").textContent = `كل مفتاح تحفظه من القايمة هيشتغل مع التانيين: كل واحد بيكتب مسودة، وبعدين واحد بيدمج أحسن ما فيهم. مفاتيح محفوظة دلوقتي: ${keyed().length}. لازم تحفظ كل مفتاح بنفسه (اختار الشركة، الصق المفتاح، حفظ واختبار) وبعدين ارجع هنا.`; return; } $("#ai-key").disabled = false; $("#ai-key").value = ls.get(PROV[p].k); $("#ai-getkey").innerHTML = `هات المفتاح من <a href="${PROV[p].link}" target="_blank" rel="noopener">هنا</a>` + (p === "openai" ? " — ChatGPT API مدفوع (رصيد منفصل عن اشتراك ChatGPT)." : p === "gemini" ? "" : " — النص بس، من غير تسجيل صوتي."); };
+  const sync = () => { const p = $("#ai-prov").value; if (p === "all") { $("#ai-key").value = ""; $("#ai-key").disabled = true; $("#ai-getkey").textContent = `كل مفتاح تحفظه من القايمة هيشتغل مع التانيين: كل واحد بيكتب مسودة، وبعدين واحد بيدمج أحسن ما فيهم. مفاتيح محفوظة دلوقتي: ${keyed().length}. لازم تحفظ كل مفتاح بنفسه (اختار الشركة، الصق المفتاح، حفظ واختبار) وبعدين ارجع هنا.`; return; } $("#ai-key").disabled = false; $("#ai-key").value = ls.get(PROV[p].k); $("#ai-getkey").innerHTML = `هات المفتاح من <a href="${PROV[p].link}" target="_blank" rel="noopener">هنا</a>` + (["openai", "claude"].includes(p) ? " — API مدفوع برصيد منفصل عن اشتراك الشات." : p === "gemini" ? "" : " — النص بس، من غير تسجيل صوتي."); };
   $("#ai-prov").value = prov(); sync(); $("#ai-prov").onchange = () => { ls.set("ap_ai_prov", $("#ai-prov").value); sync(); };
   $("#ai-test").onclick = async () => { const p = $("#ai-prov").value, k = $("#ai-key").value.trim(); ls.set("ap_ai_prov", p); if (p === "all") { try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); return toast(`شغال ✓ ${keyed().length} مساعدين مع بعض — ${t.slice(0, 20)}`, 6000); } catch (e) { return toast(e.message, 8000); } } ls.set(PROV[p].k, k); if (p === "gemini") ls.set("ap_gemini_model", ""); if (!k) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
     try { const t = await ask([{ text: "رد بكلمة واحدة: تمام" }]); toast(`شغال ✓ ${p === "gemini" ? "(" + ls.get("ap_gemini_model") + ")" : PROV[p].n} — ${t.slice(0, 20)}`, 6000); } catch (e) { toast(e.message, 8000); } }; }
