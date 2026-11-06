@@ -28,20 +28,31 @@ async function context(extra = "") {
 }
 
 // ------------------------------------------------------------------ Gemini (free key) — picks the newest free "flash" text model available to the key
-async function model(key) {
-  const cached = ls.get("ap_gemini_model"); if (cached) return cached;
+async function models(key) {
+  const cached = ls.get("ap_gemini_model"); if (cached) return [cached];
   try { const r = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=200`)).json();
-    const ok = (r.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp/i.test(m.name))
+    const ok = (r.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp|omni/i.test(m.name))
       .map(m => m.name.replace("models/", "")).sort((a, b) => (parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || 0) - parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || 0)) || (/lite/.test(a) - /lite/.test(b)));
-    const m = ok[0] || "gemini-flash-latest"; ls.set("ap_gemini_model", m); return m; } catch (e) { return "gemini-flash-latest"; } }
+    return ok.length ? ok.slice(0, 6) : ["gemini-flash-latest"]; } catch (e) { return ["gemini-flash-latest"]; } }
+// tries newest first; a model that hangs (>12s) or is unavailable is skipped, and the first one that answers is remembered
 async function gemini(parts, json) {
-  const key = ls.get("ap_gemini"); const m = await model(key);
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}) } }) });
-  const d = await r.json();
-  if (!r.ok) { if (r.status === 429) throw new Error("خلصت الحصة المجانية للنهارده أو الدقيقة دي — جرّب كمان شوية أو استخدم «انسخ الـprompt»"); if (r.status === 404) { ls.set("ap_gemini_model", ""); } throw new Error("Gemini: " + (d.error?.message || r.status)); }
-  return (d.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
+  const key = ls.get("ap_gemini"); let last = null;
+  for (const m of await models(key)) {
+    const c = new AbortController(), t = setTimeout(() => c.abort(), 12000);
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}) } }) });
+      const d = await r.json(); clearTimeout(t);
+      if (r.status === 429) throw new Error("خلصت الحصة المجانية للنهارده أو الدقيقة دي — جرّب كمان شوية أو استخدم «انسخ الـprompt»");
+      if (!r.ok) { last = new Error("Gemini: " + (d.error?.message || r.status)); if (r.status === 404 || r.status >= 500) { if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw last; }
+      const txt = (d.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
+      if (!txt) { last = new Error("Gemini رجّع رد فاضي"); continue; }
+      ls.set("ap_gemini_model", m); return txt;
+    } catch (e) { clearTimeout(t); if (e.name === "AbortError") { last = new Error("Gemini بطيء"); if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw e; }
+  }
+  throw last || new Error("Gemini مش متاح دلوقتي");
 }
+
 const parseJSON = t => { const m = t.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, t]; const s = m[1].trim(); const i = Math.min(...["{", "["].map(c => { const k = s.indexOf(c); return k < 0 ? 1e9 : k; }));
   try { return JSON.parse(s.slice(i)); } catch (e) { const j = Math.max(s.lastIndexOf("}"), s.lastIndexOf("]")); return JSON.parse(s.slice(i, j + 1)); } };
 
