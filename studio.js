@@ -3,6 +3,7 @@
 "use strict";
 const $ = s => document.querySelector(s), ls = { get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 const toast = (t, ms) => window.toast && window.toast(t, ms);
+const pushKeys = () => { try { window.apSyncKeys && window.apSyncKeys.push().then(ok => ok && toast("المفتاح اتزامن لباقي أجهزتك ✓", 3000)).catch(() => {}); } catch (e) {} };
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const NICHES = { any: "أي مجال (عام)", ads: "إعلان منتج / خدمة", edu: "تعليمي ونصايح", re: "عقارات", food: "أكل ومطاعم", fit: "صحة ولياقة", beauty: "موضة وجمال", tech: "تقنية وذكاء اصطناعي", travel: "سفر وأماكن", kids: "أطفال وقصص", motiv: "تحفيز وتطوير ذات", fun: "كوميدي وترفيه", news: "أخبار وترند", custom: "مجال تاني (اكتبه)" };
 const niche = () => { const k = ($("#st-style") || {}).value || "any", c = ($("#st-niche") || {}).value || ""; return k === "custom" ? (c.trim() || "أي مجال") : k === "any" ? "أي مجال — نوّع الأفكار بين مجالات مختلفة ومتجددة" : NICHES[k]; };
@@ -192,7 +193,7 @@ $("#st-fmt").value = state.fmt || "vert"; $("#st-q").value = state.q || "std"; d
 $("#st-fmt").onchange = () => { state.fmt = $("#st-fmt").value; save(); dimTxt(); render(); };
 const ipSync = () => { const p = ip(); $("#st-ipk").classList.toggle("hide", p === "pol"); if (p !== "pol") { $("#st-ipkey").value = ls.get(IP[p].k); $("#st-iplink").href = IP[p].link; } };
 $("#st-ip").value = ip(); ipSync(); $("#st-ip").onchange = () => { state.ip = $("#st-ip").value; save(); ipSync(); render(); };
-$("#st-ipkey").onchange = e => ls.set(IP[ip()].k, e.target.value.trim());
+$("#st-ipkey").onchange = e => { ls.set(IP[ip()].k, e.target.value.trim()); pushKeys(); };
 $("#st-im").value = state.im === undefined ? "flux" : state.im; $("#st-im").onchange = () => { state.im = $("#st-im").value; save(); render(); };
 $("#st-q").onchange = () => { state.q = $("#st-q").value; save(); dimTxt(); render(); };
 if (state.idea) $("#st-idea").value = state.idea; render();
@@ -287,7 +288,7 @@ $("#st-i2v").onclick = () => { gallery.forEach(x => state.scenes.push({ narratio
 
 // -------- AI video (fal.ai queue API), alone
 $("#st-vm").onchange = () => $("#st-vcustom").classList.toggle("hide", $("#st-vm").value !== "custom");
-$("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => ls.set("ap_key_fal", e.target.value.trim());
+$("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => { ls.set("ap_key_fal", e.target.value.trim()); pushKeys(); };
 const toData = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
 const ENG = { fal: "", veo: "بيستخدم مفتاح Gemini اللي في الإعدادات. Veo مفيهوش حصة مجانية، ولازم تفعّل الدفع في Google AI Studio، وبيظهر في حسابك بس لو متاح.", sora: "بيستخدم مفتاح OpenAI اللي في الإعدادات (خانة ChatGPT). Sora بيتحاسب بالثانية من رصيد الـAPI، ولازم الحساب يكون مسموح له بيه." };
 const engSync = () => { const e = $("#st-veng").value; $("#st-falbox").classList.toggle("hide", e !== "fal"); const n = $("#st-vengnote"); n.textContent = ENG[e]; n.classList.toggle("hide", !ENG[e]); };
@@ -363,7 +364,7 @@ $("#st-ago").onclick = async () => { const text = $("#st-atx").value.trim(), b =
 $("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if (!t) return toast("اكتب فكرة الأول"); if (!window.APAI || !window.APAI.hasKey()) return toast("ضيف مفتاح AI في الإعدادات", 5000); const b = $("#st-awrite"); b.disabled = true;
   try { const p = amode === "voice" ? `اكتب تعليق صوتي قصير بالعامية المصرية عن الفكرة دي، مناسب للقراءة بصوت (حوالي 20 ثانية)، من غير عناوين ولا علامات. المجال: ${niche()}\nالفكرة: ${t}` : `اكتب كلمات أغنية قصيرة (مذهب وكوبليه) عن الفكرة دي، ${$("#st-apurp").selectedOptions[0].text !== "عامة" ? "الغرض: " + $("#st-apurp").selectedOptions[0].text + "،" : ""} وفي أول سطر وصف الأسلوب الموسيقي بين أقواس. اللغة حسب الفكرة (عامية مصرية افتراضياً).\nالفكرة: ${t}`;
     $("#st-atx").value = await window.APAI.ask([{ text: p }]); } catch (e) { toast(e.message, 6000); } finally { b.disabled = false; } };
-$("#st-akey").value = ls.get("ap_key_eleven"); $("#st-akey").onchange = e => ls.set("ap_key_eleven", e.target.value.trim());
+$("#st-akey").value = ls.get("ap_key_eleven"); $("#st-akey").onchange = e => { ls.set("ap_key_eleven", e.target.value.trim()); pushKeys(); };
 const aeSync = () => $("#st-akbox").classList.toggle("hide", $("#st-aeng").value !== "eleven"); $("#st-aeng").onchange = aeSync; aeSync();
 setA("voice");
 })();

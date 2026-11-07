@@ -246,8 +246,21 @@ if (set) { const box = document.createElement("div"); box.className = "box";
   $("#ai-imp").onclick = async () => { const code = (prompt("الصق الكود هنا:") || "").trim(); if (!code.startsWith("APK1.")) return code && toast("الكود مش صح"); const pw = prompt("كلمة السر:"); if (!pw) return;
     try { const u = unb64(code.slice(5)), data = JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(16, 28) }, await kdf(pw, u.slice(0, 16)), u.slice(28)))); let n = 0; Object.entries(data).forEach(([k, v]) => { if (/^ap_key_|^ap_gemini$/.test(k) && typeof v === "string") { ls.set(k, v); n++; } }); kin().forEach(i => { i.value = ls.get(PROV[i.dataset.p].k); }); toast(`اتضافوا ${n} مفتاح ✓`, 5000); }
     catch (e) { toast("كلمة السر غلط أو الكود تالف"); } };
+
+  // ---- automatic sync between your devices: keys are encrypted (AES-GCM, key derived from your GitHub token + repo) and stored in the private repo (config/ai-keys.json)
+  const canSync = () => typeof cfg !== "undefined" && cfg.token && cfg.owner && cfg.repo && !window.DEMO_CFG && typeof commit === "function";
+  const sKey = async salt => crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, await crypto.subtle.importKey("raw", enc.encode("autopost|" + cfg.owner + "/" + cfg.repo + "|" + cfg.token), "PBKDF2", false, ["deriveKey"]), { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  async function syncPush() { if (!canSync()) return false; const data = {}; KEYS().forEach(k => { if (ls.get(k)) data[k] = ls.get(k); }); if (!Object.keys(data).length) return false;
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await sKey(salt), enc.encode(JSON.stringify(data))));
+    await commit([{ path: "config/ai-keys.json", b64: utf8b64(JSON.stringify({ v: 1, blob: b64(new Uint8Array([...salt, ...iv, ...ct])) })) }], "sync AI keys (encrypted)"); return true; }
+  async function syncPull() { if (!canSync()) return 0; let j; try { j = JSON.parse(await readFile("config/ai-keys.json")); } catch (e) { return 0; }
+    try { const u = unb64(j.blob), data = JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(16, 28) }, await sKey(u.slice(0, 16)), u.slice(28)))); let n = 0;
+      Object.entries(data).forEach(([k, v]) => { if (/^ap_key_|^ap_gemini$/.test(k) && typeof v === "string" && v && !ls.get(k)) { ls.set(k, v); n++; } }); if (n) { kin().forEach(i => { i.value = ls.get(PROV[i.dataset.p].k); }); } return n; }
+    catch (e) { return -1; } }
+  window.apSyncKeys = { push: syncPush, pull: syncPull };
+  setTimeout(async () => { const n = await syncPull(); if (n > 0) toast(`اتجابوا ${n} مفتاح AI من حسابك ✓`, 5000); else if (n < 0) toast("مفاتيح AI المتزامنة اتحفظت بتوكن تاني — استخدم «استلم مفاتيح» بكلمة السر", 7000); }, 2500);
   $("#ai-test").onclick = async () => { kin().forEach(i => { const v = i.value.trim(); if (v !== ls.get(PROV[i.dataset.p].k)) { ls.set(PROV[i.dataset.p].k, v); if (i.dataset.p === "gemini") ls.set("ap_gemini_model", ""); } });
-    const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
+    const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); syncPush().then(ok => ok && toast("المفاتيح اتزامنت لباقي أجهزتك ✓", 3500)).catch(() => {}); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
     const res = await Promise.all(ks.map(p => oneTest(p)));
     toast(res.join("  ·  "), 9000); }; }
 
