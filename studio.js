@@ -34,8 +34,44 @@ const IMGM = { flux: "Flux (أحسن جودة)", turbo: "Turbo (أسرع)", "": 
 const imgUrl = (p, seed) => { const [w, h] = dims(), m = state.im === undefined ? "flux" : state.im; return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}${m ? "&model=" + m : ""}`; };
 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
-sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
- <textarea id="st-idea" rows="3" placeholder="مثال: فيديو 30 ثانية لشقة 3 غرف في التجمع الخامس، تشطيب سوبر لوكس"></textarea>
+sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-m="img">🖼 صور</button><button class="btn sm" data-m="vid">🎥 فيديو (AI)</button><button class="btn sm" data-m="show">🎞 صور ← فيديو</button></div>
+ <div class="box">
+  <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
+ <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+ <div class="lbl">الجودة</div>
+ <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+<p class="note" id="st-dim"></p>
+ <div class="lbl">النوع <span>بيأثر على الأفكار والبرومبت</span></div>
+ <select id="st-style">${Object.entries({ tips: "نصايح تصوير", re: "عقاري", kids: "أطفال", free: "حر" }).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+ <div id="st-provbox"> <div class="lbl">مصدر الصور</div>
+ <select id="st-ip">${Object.entries(IP).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
+ <div class="two hide" id="st-ipk"><input id="st-ipkey" type="password" autocomplete="off" placeholder="المفتاح" dir="ltr"><a class="btn sm" id="st-iplink" target="_blank" rel="noopener">هات المفتاح</a></div>
+ <div class="lbl">موديل Pollinations</div>
+ <select id="st-im">${Object.entries(IMGM).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+</div></div>
+
+ <div id="m-img"><div class="box"><div class="lbl">برومبت الصور</div>
+  <textarea id="st-ipr" rows="3" placeholder="مثال: إضاءة النافذة الجانبية في تصوير بورتريه"></textarea>
+  <label class="chk"><input type="checkbox" id="st-enh" checked> الـAI يحسّن البرومبت لوحده (بالإنجليزي، تفاصيل أكتر)</label>
+  <div class="two"><select id="st-icount">${[1, 2, 3, 4, 6].map(n => `<option ${n === 2 ? "selected" : ""}>${n}</option>`).join("")}</select><button class="btn pri" id="st-igo">🖼 ولّد الصور</button></div>
+  <div id="st-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px"></div>
+  <button class="btn hide" id="st-i2v">🎞 حوّل الصور دي لفيديو بصوت</button></div></div>
+
+ <div id="m-vid" class="hide"><div class="box"><div class="lbl">توليد فيديو بالـAI <span>مدفوع غالباً (رصيد تجريبي عند التسجيل)</span></div>
+  <textarea id="st-vpr" rows="3" placeholder="مثال: لقطة سينمائية بطيئة لغرفة معيشة فاخرة والستارة بتتحرك مع الهواء"></textarea>
+  <label class="chk"><input type="checkbox" id="st-venh" checked> الـAI يحسّن البرومبت لوحده</label>
+  <div class="lbl">الموديل (fal.ai)</div>
+  <select id="st-vm"><option value="fal-ai/ltx-video">LTX Video — نص ← فيديو (رخيص)</option><option value="fal-ai/ltx-video/image-to-video">LTX Video — صورة ← فيديو</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
+  <input id="st-vcustom" class="hide" dir="ltr" placeholder="مثال: fal-ai/wan/v2.2-a14b/text-to-video">
+  <div class="two"><input id="st-vkey" type="password" autocomplete="off" placeholder="مفتاح fal.ai" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://fal.ai/dashboard/keys">هات المفتاح</a></div>
+  <label class="btn sm" style="display:block;text-align:center">🖼 صورة بداية للفيديو (لموديلات صورة ← فيديو)<input type="file" id="st-vimg" accept="image/*" hidden></label>
+  <button class="btn pri" id="st-vgo">🎥 ولّد الفيديو</button>
+  <p class="note" id="st-vprog">التوليد بياخد دقيقة أو أكتر، وبيتحاسب على رصيد fal.ai. الفيديو الناتج قصير (كام ثانية).</p>
+  <video id="st-vout" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
+  <a class="btn hide" id="st-vdl" target="_blank" rel="noopener" download>تحميل / فتح الفيديو</a></div></div>
+
+ <div id="m-show" class="hide"><div class="box"><div class="lbl">الفكرة</div>
+ <textarea id="st-idea" rows="3" placeholder="مثال: 5 نصايح للإضاءة الطبيعية في التصوير بالموبايل"></textarea>
  <div class="box" style="margin:8px 0"><div class="lbl">صورك أنت <span>اختياري — الصور مبتتخزنش بعد قفل الصفحة</span></div>
   <label class="btn sm" style="display:block;text-align:center">➕ أضف صور ليك كمشاهد<input type="file" id="st-own" accept="image/*" multiple hidden></label>
   <div class="two"><label class="btn sm" style="text-align:center">🎞 صورة البداية<input type="file" id="st-in" accept="image/*" hidden></label><input id="st-in-t" placeholder="عنوان على البداية (اختياري)"></div>
@@ -43,28 +79,18 @@ sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
   <p class="note" id="st-fr"></p></div>
  <div class="two"><button class="btn" id="st-sug">🎲 اقترح أفكار</button><button class="btn pri" id="st-auto">⚡ فكرة ومشاهد لوحدك</button></div>
  <div id="st-ideas"></div>
- <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
- <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
- <div class="lbl">الجودة</div>
- <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
- <div class="lbl">مصدر الصور</div>
- <select id="st-ip">${Object.entries(IP).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
- <div class="two hide" id="st-ipk"><input id="st-ipkey" type="password" autocomplete="off" placeholder="المفتاح" dir="ltr"><a class="btn sm" id="st-iplink" target="_blank" rel="noopener">هات المفتاح</a></div>
- <div class="lbl">موديل Pollinations</div>
- <select id="st-im">${Object.entries(IMGM).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
  <label class="chk"><input type="checkbox" id="st-dir" checked> مخرج AI يراجع السيناريو (فريقك كله يشتغل: واحد يكتب وواحد يراجع)</label>
- <p class="note" id="st-dim"></p>
- <div class="two"><select id="st-style">${Object.entries({ re: "عقاري", kids: "أطفال", tips: "نصايح تصوير", free: "حر" }).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
- <select id="st-n">${[3, 4, 5, 6, 8].map(n => `<option ${n === 5 ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+
+ <select id="st-n">${[3, 4, 5, 6, 8].map(n => `<option ${n === 5 ? "selected" : ""}>${n}</option>`).join("")}</select>
  <button class="btn pri" id="st-go">اكتب المشاهد</button>
- <p class="note">الكتابة بفريق الـAI اللي في الإعدادات. الصور من Pollinations (مجاني، من غير مفتاح)، وبروبمت الصورة بيتبعت لهم. مفيش حاجة بتتنشر لوحدها.</p></div>
+ <p class="note">الكتابة بفريق الـAI اللي في الإعدادات. مفيش حاجة بتتنشر لوحدها.</p></div>
  <div id="st-scenes"></div>
  <div class="box hide" id="st-vid"><div class="lbl">الفيديو <span>الصوت والتجميع جوه المتصفح، ببلاش</span></div>
   <select id="st-voice"><option value="Kore">صوت: هادي (Kore)</option><option value="Puck">صوت: شبابي (Puck)</option><option value="Charon">صوت: رصين (Charon)</option><option value="Aoede">صوت: ناعم (Aoede)</option></select>
   <button class="btn pri" id="st-mk">🎬 اصنع الفيديو</button>
   <p class="note" id="st-prog">سيب التاب مفتوح وظاهر وقت التصنيع، لأن المتصفح بيوقف التصنيع لو التاب اتخبّى. الصوت بيستخدم مفتاح Gemini بتاعك.</p>
   <video id="st-video" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
-  <a class="btn hide" id="st-dl">تحميل الفيديو</a></div>`;
+  <a class="btn hide" id="st-dl">تحميل الفيديو</a></div></div>`;
 const host = document.querySelector("main") || document.body; host.appendChild(sec);
 
 const frTxt = () => { $("#st-fr").textContent = `بداية: ${intro ? "✓" : "—"} · نهاية: ${outro ? "✓" : "—"} (كل واحدة بتظهر حوالي 2.5 ثانية)`; };
@@ -197,4 +223,47 @@ async function makeVideo() {
   } catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 7000); } finally { btn.disabled = false; }
 }
 $("#st-mk").onclick = makeVideo; frTxt();
+
+// ---------------------------------------------------------------- modes: images only / AI video only / images -> narrated video
+const MODES = ["img", "vid", "show"];
+function setMode(m) { state.mode = m; save(); MODES.forEach(k => $("#m-" + k).classList.toggle("hide", k !== m));
+  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid"); }
+document.querySelectorAll("#st-modes [data-m]").forEach(b => b.onclick = () => setMode(b.dataset.m));
+
+async function enhance(text, kind) { // AI turns a short idea into a detailed English prompt
+  if (!window.APAI || !window.APAI.hasKey()) return text;
+  try { const t = await window.APAI.ask([{ text: `حوّل الفكرة دي لبرومبت إنجليزي واحد مفصّل ${kind === "video" ? "لتوليد فيديو قصير (حركة الكاميرا، الحركة في المشهد، الإضاءة، الأسلوب)" : "لتوليد صورة (العناصر، الإضاءة، زاوية الكاميرا، الأسلوب، الألوان)"}، من غير أي نص مكتوب داخل الصورة.\nنوع المحتوى: ${STYLES[$("#st-style").value]}\nالشكل: ${FMT[state.fmt || "vert"][0]}\nالفكرة: ${text}\nرجّع البرومبت بس من غير شرح ولا علامات.` }]); return t.replace(/^["'`\s]+|["'`\s]+$/g, "") || text; }
+  catch (e) { return text; } }
+
+// -------- images only
+let gallery = [];
+function drawGallery() { const g = $("#st-grid"); g.innerHTML = gallery.map((x, i) => `<div><div style="aspect-ratio:${FMT[state.fmt || "vert"][1]}/${FMT[state.fmt || "vert"][2]};background:#0002;border-radius:10px;overflow:hidden"><img src="${x.url}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت'"></div><a class="btn sm" style="display:block;text-align:center;margin-top:4px" href="${x.url}" target="_blank" rel="noopener" download="image-${i + 1}.png">فتح / حفظ</a></div>`).join(""); $("#st-i2v").classList.toggle("hide", !gallery.length); }
+$("#st-igo").onclick = async () => { const raw = $("#st-ipr").value.trim(); if (!raw) return toast("اكتب برومبت الصور"); const n = +$("#st-icount").value, b = $("#st-igo"); b.disabled = true; b.textContent = "بيشتغل…";
+  try { const prompt = $("#st-enh").checked ? await enhance(raw, "image") : raw; gallery = [];
+    for (let i = 0; i < n; i++) { if (ip() === "pol") { const seed = Math.floor(Math.random() * 1e6); gallery.push({ url: imgUrl(prompt, seed), prompt }); }
+      else { const sc = { image_prompt: prompt }; await genKeyed(sc); gallery.push({ url: sc.url, prompt }); } drawGallery(); }
+    toast("الصور اتولّدت" + ($("#st-enh").checked ? " — البرومبت: " + prompt.slice(0, 80) : ""), 6000); }
+  catch (e) { toast(e.message, 8000); } finally { b.disabled = false; b.textContent = "🖼 ولّد الصور"; } };
+$("#st-i2v").onclick = () => { gallery.forEach(x => state.scenes.push({ narration: "", image_prompt: x.prompt, own: true, url: x.url, seed: 1 })); setMode("show"); render(); toast("اكتب تعليق لكل صورة (أو سيبه فاضي) وبعدين «اصنع الفيديو»", 6000); };
+
+// -------- AI video (fal.ai queue API), alone
+$("#st-vm").onchange = () => $("#st-vcustom").classList.toggle("hide", $("#st-vm").value !== "custom");
+$("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => ls.set("ap_key_fal", e.target.value.trim());
+const toData = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
+$("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), key = ls.get("ap_key_fal"), prog = $("#st-vprog"), b = $("#st-vgo");
+  let model = $("#st-vm").value === "custom" ? $("#st-vcustom").value.trim() : $("#st-vm").value; if (!raw && !$("#st-vimg").files[0]) return toast("اكتب برومبت الفيديو"); if (!key) return toast("ضيف مفتاح fal.ai الأول", 6000); if (!model) return toast("اكتب اسم الموديل");
+  b.disabled = true; $("#st-vout").classList.add("hide"); $("#st-vdl").classList.add("hide");
+  try { prog.textContent = "بجهّز البرومبت…"; const prompt = $("#st-venh").checked && raw ? await enhance(raw, "video") : raw; const body = { prompt }; const f = $("#st-vimg").files[0]; if (f) body.image_url = await toData(f);
+    const H = { Authorization: "Key " + key, "Content-Type": "application/json" };
+    const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: H, body: JSON.stringify(body) }); const q = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error("fal.ai: " + (q.detail?.[0]?.msg || q.detail || r.status) + (r.status === 403 || r.status === 401 ? " (المفتاح أو الرصيد)" : ""));
+    const t0 = Date.now(); let st = q;
+    while (Date.now() - t0 < 600000) { await wait(4000); const sr = await fetch(q.status_url, { headers: H }); st = await sr.json().catch(() => ({})); prog.textContent = `بيتولّد… ${st.status || ""}${st.queue_position != null ? " (الدور " + st.queue_position + ")" : ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED" || sr.status >= 400 && sr.status !== 429) throw new Error("fal.ai: فشل التوليد"); }
+    if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني");
+    const rr = await fetch(q.response_url, { headers: H }), res = await rr.json(); const url = res.video?.url || res.videos?.[0]?.url; if (!url) throw new Error("مفيش فيديو في الرد: " + JSON.stringify(res).slice(0, 120));
+    const v = $("#st-vout"); v.src = url; v.classList.remove("hide"); const a = $("#st-vdl"); a.href = url; a.classList.remove("hide"); prog.textContent = "خلص ✓ " + (prompt ? "— البرومبت: " + prompt.slice(0, 100) : ""); }
+  catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
+
+$("#st-style").value = state.style || "tips"; $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); };
+setMode(MODES.includes(state.mode) ? state.mode : "img");
 })();
