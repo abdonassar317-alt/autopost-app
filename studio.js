@@ -84,7 +84,8 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <textarea id="st-atx" rows="5" placeholder="اكتب النص اللي يتقال، أو وصف الأغنية (النوع، المزاج، اللغة)"></textarea>
   <button class="btn sm" id="st-awrite">✍️ فريق الـAI يكتب النص / الكلمات</button>
   <div id="a-voice"><div class="lbl">مين يقرا؟</div>
-   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="cb">Chatterbox (مفتوح المصدر، عربي) — مجاني</option><option value="om">OmniVoice (مفتوح المصدر، عربي مصري) — مجاني</option><option value="eleven">ElevenLabs — رصيد مجاني شهري (للاستخدام غير التجاري)</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="om">OmniVoice (مفتوح المصدر، عربي مصري) — مجاني</option><option value="cb">Chatterbox (مفتوح المصدر، عربي) — مجاني، يحتاج توكن HF</option><option value="eleven">ElevenLabs — رصيد مجاني شهري (للاستخدام غير التجاري)</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <div class="two hide" id="st-ahfbox"><input class="hftok2" type="password" autocomplete="off" placeholder="توكن Hugging Face مجاني (بيزوّد الحصة)" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://huggingface.co/settings/tokens">هات التوكن</a></div>
    <div class="two hide" id="st-akbox"><input id="st-akey" type="password" autocomplete="off" placeholder="مفتاح ElevenLabs" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://elevenlabs.io/app/settings/api-keys">هات المفتاح</a></div>
    <select id="st-avoice"><option value="Kore">Kore — هادي</option><option value="Puck">Puck — شبابي</option><option value="Charon">Charon — رصين</option><option value="Aoede">Aoede — ناعم</option></select>
    <input id="st-astyle" placeholder="أسلوب الأداء (اختياري): حماسي / هادي / إعلان فخم" dir="rtl"></div>
@@ -109,6 +110,7 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   </div>
    <div class="lbl">مين يولّد الموسيقى؟</div>
    <select id="st-seng"><option value="mm">MiniMax Music 3 (مفتوح/مجاني، أغنية بصوت مغني) — HF</option><option value="mg">MusicGen (مفتوح المصدر، موسيقى بدون غنا) — HF</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
+   <div class="two hide" id="st-shfbox"><input class="hftok2" type="password" autocomplete="off" placeholder="توكن Hugging Face مجاني (بيزوّد الحصة)" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://huggingface.co/settings/tokens">هات التوكن</a></div>
    <div id="st-salt" class="hide"><select id="st-sm"><option value="fal-ai/stable-audio">Stable Audio — موسيقى</option><option value="fal-ai/minimax-music">MiniMax Music — أغنية بكلمات</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
    <input id="st-scustom" class="hide" dir="ltr" placeholder="slug من fal.ai"><p class="note">مفتاح fal.ai هو نفسه اللي في وضع الفيديو.</p></div>
    <p class="note">Lyria وfal مفيهمش حصة مجانية دايمة؛ لو الحساب مفيهوش رصيد هتظهر رسالة خطأ.</p></div>
@@ -314,7 +316,8 @@ $("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => { ls.s
 const toData = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
 const ENG = { hf: "مجاني ومن غير مفتاح. بيشتغل على سيرفرات Hugging Face العامة (ZeroGPU)، وليك حصة GPU يومية صغيرة (حوالي دقيقتين بدون حساب، وأكتر بتوكن مجاني). ممكن تستنى في الدور، والفيديو قصير (2–4 ثواني).", fal: "", veo: "بيستخدم مفتاح Gemini اللي في الإعدادات. Veo مفيهوش حصة مجانية، ولازم تفعّل الدفع في Google AI Studio، وبيظهر في حسابك بس لو متاح.", sora: "بيستخدم مفتاح OpenAI اللي في الإعدادات (خانة ChatGPT). Sora بيتحاسب بالثانية من رصيد الـAPI، ولازم الحساب يكون مسموح له بيه." };
 const engSync = () => { const e = $("#st-veng").value; $("#st-falbox").classList.toggle("hide", e !== "fal"); $("#st-hfbox").classList.toggle("hide", e !== "hf"); const n = $("#st-vengnote"); n.textContent = ENG[e]; n.classList.toggle("hide", !ENG[e]); };
-$("#st-hftok").value = ls.get("ap_key_hf"); $("#st-hftok").onchange = e => { ls.set("ap_key_hf", e.target.value.trim()); pushKeys(); };
+document.querySelectorAll(".hftok2").forEach(i => { i.value = ls.get("ap_key_hf"); i.onchange = e => { ls.set("ap_key_hf", e.target.value.trim()); document.querySelectorAll(".hftok2,#st-hftok").forEach(x => x.value = e.target.value.trim()); pushKeys(); }; });
+$("#st-hftok").value = ls.get("ap_key_hf"); $("#st-hftok").onchange = e => { ls.set("ap_key_hf", e.target.value.trim()); document.querySelectorAll(".hftok2").forEach(x => x.value = e.target.value.trim()); pushKeys(); };
 $("#st-veng").value = state.veng || "hf"; engSync(); $("#st-veng").onchange = () => { state.veng = $("#st-veng").value; save(); engSync(); };
 const vsize = () => { const f = state.fmt || "vert"; return f === "wide" ? ["1280x720", "16:9"] : f === "vert" ? ["720x1280", "9:16"] : ["720x1280", "9:16"]; };
 // -------- Open-source models via Hugging Face Spaces (Gradio REST API)
@@ -329,7 +332,7 @@ async function hfCall(id, api, data, prog, label, re) { const base = hfBase(id),
   const tick = setInterval(() => { prog.textContent = `${label} — بيتولّد (ممكن يستنى في الدور)… ${Math.round((Date.now() - t0) / 1000)} ث`; }, 1000);
   try { const c = new AbortController(), to = setTimeout(() => c.abort(), 600000); let txt; try { txt = await (await fetch(base + "/gradio_api/call/" + api + "/" + j.event_id, { headers: hfH(), signal: c.signal })).text(); } finally { clearTimeout(to); }
     const ev = [...txt.matchAll(/event: (\w+)\s*\ndata: ([^\n]*)/g)].pop(); if (!ev) throw new Error("رد فاضي من السيرفر");
-    if (ev[1] === "error") { let m = ev[2]; try { m = JSON.parse(m); } catch (e) {} const ms = (typeof m === "string" ? m : JSON.stringify(m)); throw new Error(/quota|GPU|exceeded/i.test(ms) ? "حصة الـGPU المجانية خلصت النهارده — حط توكن Hugging Face أو جرّب بكره" : "Hugging Face: " + (ms === "null" ? "فشل التوليد (السيرفر مشغول؟)" : ms.slice(0, 160))); }
+    if (ev[1] === "error") { let m = ev[2]; try { m = JSON.parse(m); } catch (e) {} const ms = (typeof m === "string" ? m : JSON.stringify(m)); throw new Error(/quota|GPU|exceeded/i.test(ms) ? "حصة الـGPU المجانية خلصت النهارده — حط توكن Hugging Face أو جرّب بكره" : "Hugging Face: " + (ms === "null" ? "السيرفر رفض — غالباً حصة الـGPU المجانية للزوار خلصت. حط توكن Hugging Face مجاني (من خانة التوكن) وجرّب تاني" : ms.slice(0, 160))); }
     const out = JSON.parse(ev[2]), f = hfFind(out, re); if (!f) throw new Error("مفيش ملف في الرد: " + ev[2].slice(0, 100)); const url = typeof f === "string" ? f : base + "/gradio_api/file=" + f.path; return url; }
   catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearInterval(tick); } }
 const hfBlob = async url => { const r = await fetch(url, { headers: hfH() }); if (!r.ok) throw new Error("تحميل الملف فشل " + r.status); return await r.blob(); };
@@ -376,7 +379,7 @@ var amode = "voice";
 function nicheVis() { $("#st-nichebox").classList.toggle("hide", state.mode === "song"); }
 function setA(a) { amode = a; nicheVis(); $("#st-atitle").textContent = a === "voice" ? "🎙 تعليق صوتي" : "🎵 أغنية / موسيقى"; $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
   $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; }
-const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
+const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); $("#st-shfbox").classList.toggle("hide", !/^(mm|mg)$/.test($("#st-seng").value)); }; $("#st-seng").onchange = seSync; seSync();
 $("#st-sm").onchange = () => $("#st-scustom").classList.toggle("hide", $("#st-sm").value !== "custom");
 
 const SG = id => { const e = $("#st-sg-" + id); return e ? e.value : ""; };
@@ -425,5 +428,5 @@ $("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if 
   try { const p = amode === "voice" ? `اكتب تعليق صوتي قصير بالعامية المصرية عن الفكرة دي، مناسب للقراءة بصوت (حوالي 20 ثانية)، من غير عناوين ولا علامات. المجال: ${niche()}\nالفكرة: ${t}` : `اكتب كلمات أغنية قصيرة (مذهب وكوبليه) عن الفكرة دي، ${$("#st-apurp").selectedOptions[0].text !== "عامة" ? "الغرض: " + $("#st-apurp").selectedOptions[0].text + "،" : ""} وفي أول سطر وصف الأسلوب الموسيقي بين أقواس. اللغة والأسلوب حسب المواصفات دي: ${songSpec()}\nالفكرة: ${t}`;
     $("#st-atx").value = await window.APAI.ask([{ text: p }]); } catch (e) { toast(e.message, 6000); } finally { b.disabled = false; } };
 $("#st-akey").value = ls.get("ap_key_eleven"); $("#st-akey").onchange = e => { ls.set("ap_key_eleven", e.target.value.trim()); pushKeys(); };
-const aeSync = () => $("#st-akbox").classList.toggle("hide", $("#st-aeng").value !== "eleven"); $("#st-aeng").onchange = aeSync; aeSync();
+const aeSync = () => { $("#st-akbox").classList.toggle("hide", $("#st-aeng").value !== "eleven"); $("#st-ahfbox").classList.toggle("hide", !/^(om|cb)$/.test($("#st-aeng").value)); }; $("#st-aeng").onchange = aeSync; aeSync();
 })();
