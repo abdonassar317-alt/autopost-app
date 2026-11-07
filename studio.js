@@ -6,8 +6,9 @@ const toast = (t, ms) => window.toast && window.toast(t, ms);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const STYLES = { re: "إعلان عقاري فاخر: لقطات سينمائية للمبنى والتشطيبات والإضاءة الطبيعية", kids: "قصة أطفال لطيفة بألوان زاهية ورسوم كرتونية بسيطة", tips: "نصائح تعليمية في التصوير والإضاءة بصور واقعية واضحة", free: "حسب الفكرة" };
 let state = (() => { try { return JSON.parse(ls.get("ap_studio")) || {}; } catch (e) { return {}; } })();
-state.scenes = state.scenes || [];
-const save = () => ls.set("ap_studio", JSON.stringify(state));
+state.scenes = (state.scenes || []).filter(x => !x.own); let intro = null, outro = null;
+const save = () => ls.set("ap_studio", JSON.stringify({ ...state, scenes: state.scenes.filter(x => !x.own) }));
+const src = s => s.own ? s.url : imgUrl(s.image_prompt, s.seed);
 // where the video will be used -> shape; quality -> size of the shortest edge
 const FMT = { vert: ["تيك توك / ريلز / شورتس (9:16)", 9, 16], wide: ["يوتيوب / فيديو عريض (16:9)", 16, 9], feed: ["إنستجرام فيد (4:5)", 4, 5], sq: ["مربع: فيسبوك / لينكدإن (1:1)", 1, 1] };
 const QUAL = { draft: ["مسودة سريعة (540)", 540], std: ["عادي (720)", 720], high: ["عالي (1080)", 1080] };
@@ -18,6 +19,11 @@ const imgUrl = (p, seed) => { const [w, h] = dims(), m = state.im === undefined 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
 sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
  <textarea id="st-idea" rows="3" placeholder="مثال: فيديو 30 ثانية لشقة 3 غرف في التجمع الخامس، تشطيب سوبر لوكس"></textarea>
+ <div class="box" style="margin:8px 0"><div class="lbl">صورك أنت <span>اختياري — الصور مبتتخزنش بعد قفل الصفحة</span></div>
+  <label class="btn sm" style="display:block;text-align:center">➕ أضف صور ليك كمشاهد<input type="file" id="st-own" accept="image/*" multiple hidden></label>
+  <div class="two"><label class="btn sm" style="text-align:center">🎞 صورة البداية<input type="file" id="st-in" accept="image/*" hidden></label><input id="st-in-t" placeholder="عنوان على البداية (اختياري)"></div>
+  <div class="two"><label class="btn sm" style="text-align:center">🏁 صورة النهاية<input type="file" id="st-out" accept="image/*" hidden></label><input id="st-out-t" placeholder="نص النهاية: رقمك / اسم الحساب"></div>
+  <p class="note" id="st-fr"></p></div>
  <div class="two"><button class="btn" id="st-sug">🎲 اقترح أفكار</button><button class="btn pri" id="st-auto">⚡ فكرة ومشاهد لوحدك</button></div>
  <div id="st-ideas"></div>
  <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
@@ -41,22 +47,29 @@ sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
   <a class="btn hide" id="st-dl">تحميل الفيديو</a></div>`;
 const host = document.querySelector("main") || document.body; host.appendChild(sec);
 
+const frTxt = () => { $("#st-fr").textContent = `بداية: ${intro ? "✓" : "—"} · نهاية: ${outro ? "✓" : "—"} (كل واحدة بتظهر حوالي 2.5 ثانية)`; };
+$("#st-own").onchange = e => { [...e.target.files].forEach(f => state.scenes.push({ narration: "", image_prompt: "", own: true, url: URL.createObjectURL(f), seed: 1 })); e.target.value = ""; render(); toast("اكتب تعليق لكل صورة (أو سيبه فاضي = صورة 3 ثواني من غير صوت)", 5000); };
+$("#st-in").onchange = e => { if (e.target.files[0]) { intro = URL.createObjectURL(e.target.files[0]); frTxt(); render(); } };
+$("#st-out").onchange = e => { if (e.target.files[0]) { outro = URL.createObjectURL(e.target.files[0]); frTxt(); render(); } };
 function render() {
-  $("#st-vid").classList.toggle("hide", !state.scenes.some(x => x.seed));
+  $("#st-vid").classList.toggle("hide", !state.scenes.some(x => x.seed) && !intro && !outro);
   const box = $("#st-scenes"); if (!state.scenes.length) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="box"><div class="lbl">المشاهد (${state.scenes.length}) <span>عدّل أي نص قبل الصور</span></div>` + state.scenes.map((s, i) => `
    <div class="box" data-i="${i}"><div class="lbl">مشهد ${i + 1}</div>
     <div style="display:flex;gap:10px"><div style="flex:1">
      <textarea class="st-nar" rows="2" placeholder="التعليق الصوتي">${esc(s.narration)}</textarea>
-     <textarea class="st-ip" rows="2" dir="ltr" placeholder="image prompt">${esc(s.image_prompt)}</textarea>
-     <div class="two"><button class="btn sm st-gen">${s.seed ? "صورة تانية" : "ولّد الصورة"}</button><a class="btn sm ${s.seed ? "" : "hide"}" target="_blank" rel="noopener" href="${s.seed ? imgUrl(s.image_prompt, s.seed) : "#"}">فتح/حفظ</a></div></div>
-     <div style="width:96px;aspect-ratio:${FMT[state.fmt||"vert"][1]}/${FMT[state.fmt||"vert"][2]};max-height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${s.seed ? `<img src="${imgUrl(s.image_prompt, s.seed)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
+     ${s.own ? "" : `<textarea class="st-ip" rows="2" dir="ltr" placeholder="image prompt">${esc(s.image_prompt)}</textarea>`}
+     <div class="two">${s.own ? "" : `<button class="btn sm st-gen">${s.seed ? "صورة تانية" : "ولّد الصورة"}</button>`}<button class="btn sm st-up">▲</button><button class="btn sm st-dn">▼</button><button class="btn sm st-del">حذف</button><a class="btn sm ${s.seed ? "" : "hide"}" target="_blank" rel="noopener" href="${s.seed ? src(s) : "#"}">فتح/حفظ</a></div></div>
+     <div style="width:96px;aspect-ratio:${FMT[state.fmt||"vert"][1]}/${FMT[state.fmt||"vert"][2]};max-height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${s.seed ? `<img src="${src(s)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
    `<button class="btn" id="st-all">ولّد كل الصور</button></div>`;
   box.querySelectorAll("[data-i]").forEach(el => { const i = +el.dataset.i;
     el.querySelector(".st-nar").oninput = e => { state.scenes[i].narration = e.target.value; save(); };
-    el.querySelector(".st-ip").oninput = e => { state.scenes[i].image_prompt = e.target.value; save(); };
-    el.querySelector(".st-gen").onclick = () => { state.scenes[i].seed = Math.floor(Math.random() * 1e6); save(); render(); }; });
-  $("#st-all").onclick = () => { state.scenes.forEach(s => { s.seed = Math.floor(Math.random() * 1e6); }); save(); render(); };
+    const ip = el.querySelector(".st-ip"); if (ip) ip.oninput = e => { state.scenes[i].image_prompt = e.target.value; save(); };
+    const gn = el.querySelector(".st-gen"); if (gn) gn.onclick = () => { state.scenes[i].seed = Math.floor(Math.random() * 1e6); save(); render(); };
+    const mv = d => { const j = i + d; if (j < 0 || j >= state.scenes.length) return; [state.scenes[i], state.scenes[j]] = [state.scenes[j], state.scenes[i]]; save(); render(); };
+    el.querySelector(".st-up").onclick = () => mv(-1); el.querySelector(".st-dn").onclick = () => mv(1);
+    el.querySelector(".st-del").onclick = () => { state.scenes.splice(i, 1); save(); render(); }; });
+  $("#st-all").onclick = () => { state.scenes.forEach(s => { if (!s.own) s.seed = Math.floor(Math.random() * 1e6); }); save(); render(); };
 }
 
 async function makeScenes() {
@@ -122,15 +135,16 @@ function wrap(ctx, text, maxW) { const words = text.split(/\s+/), lines = []; le
 
 async function makeVideo() {
   const btn = $("#st-mk"), prog = $("#st-prog"), voice = $("#st-voice").value, [W, H] = dims(), q = state.q || "std";
-  const sc = state.scenes.filter(x => x.seed); if (!sc.length) return toast("ولّد الصور الأول");
+  const sc = state.scenes.filter(x => x.seed); if (!sc.length && !intro && !outro) return toast("ولّد الصور أو ضيف صورك الأول");
   if (typeof MediaRecorder === "undefined") return toast("المتصفح ده مش بيدعم تصنيع الفيديو — جرّب Chrome أو Safari حديث", 7000);
   btn.disabled = true; $("#st-video").classList.add("hide"); $("#st-dl").classList.add("hide");
   try {
     const AC = window.AudioContext || window.webkitAudioContext, actx = new AC(); await actx.resume();
     const items = []; let noVoice = false;
-    for (let i = 0; i < sc.length; i++) { prog.textContent = `بحضّر المشهد ${i + 1} من ${sc.length} (صورة + صوت)…`;
-      const au = await tts(sc[i].narration, voice, actx), img = await bitmap(imgUrl(sc[i].image_prompt, sc[i].seed));
-      if (!au) noVoice = true; items.push({ img, au, text: sc[i].narration, dur: au ? au.duration + 0.5 : 4 }); }
+    const list = [...(intro ? [{ url: intro, text: $("#st-in-t").value.trim(), fixed: 2.5 }] : []), ...sc.map(x => ({ url: src(x), text: x.narration.trim(), voice: true })), ...(outro ? [{ url: outro, text: $("#st-out-t").value.trim(), fixed: 2.5 }] : [])];
+    for (let i = 0; i < list.length; i++) { prog.textContent = `بحضّر ${i + 1} من ${list.length} (صورة + صوت)…`; const L = list[i];
+      const au = L.voice && L.text ? await tts(L.text, voice, actx) : null, img = await bitmap(L.url);
+      if (L.voice && L.text && !au) noVoice = true; items.push({ img, au, text: L.text, dur: au ? au.duration + 0.5 : (L.fixed || 3) }); }
     const canvas = document.createElement("canvas"); canvas.width = W; canvas.height = H; const g = canvas.getContext("2d");
     const vs = canvas.captureStream(30), dest = actx.createMediaStreamDestination();
     const stream = new MediaStream([...vs.getVideoTracks(), ...dest.stream.getAudioTracks()]);
@@ -158,5 +172,5 @@ async function makeVideo() {
     prog.textContent = `خلص ✓ ${W}×${H} · ${Math.round(total)} ثانية · ${ext.toUpperCase()}${noVoice ? " · من غير صوت (محتاج مفتاح Gemini)" : ""}${ext === "webm" ? " — لو عايزه mp4 لتيك توك حوّله أو جرّب Chrome/Safari حديث" : ""}`;
   } catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 7000); } finally { btn.disabled = false; }
 }
-$("#st-mk").onclick = makeVideo;
+$("#st-mk").onclick = makeVideo; frTxt();
 })();
