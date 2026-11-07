@@ -331,8 +331,8 @@ setMode(MODES.includes(state.mode) ? state.mode : (state.mode === "aud" ? "voice
 // ---------------------------------------------------------------- audio mode: voice-over (Gemini TTS / OpenAI TTS) and songs/music (Lyria / fal.ai)
 var amode = "voice";
 function nicheVis() { $("#st-nichebox").classList.toggle("hide", state.mode === "song"); }
-const setA = a => { amode = a; nicheVis(); $("#st-atitle").textContent = a === "voice" ? "🎙 تعليق صوتي" : "🎵 أغنية / موسيقى"; $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
-  $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; };
+function setA(a) { amode = a; nicheVis(); $("#st-atitle").textContent = a === "voice" ? "🎙 تعليق صوتي" : "🎵 أغنية / موسيقى"; $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
+  $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; }
 const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
 $("#st-sm").onchange = () => $("#st-scustom").classList.toggle("hide", $("#st-sm").value !== "custom");
 function pcmWav(u8, rate) { const n = u8.length, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
