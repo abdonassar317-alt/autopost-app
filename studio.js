@@ -127,7 +127,8 @@ async function tts(text, voice, ctx) {
 }
 // Pollinations is free but rate-limited (answers 402/429 now and then) -> retry with a pause
 async function bitmap(url) { let last = "الصورة فشلت";
-  for (let a = 0; a < 6; a++) { try { const r = await fetch(url); const ct = r.headers.get("content-type") || "";
+  const alt = url.startsWith("blob:") ? [url] : [url, url.replace(/&model=\w+/, "") + (url.includes("&model=flux") ? "&model=turbo" : "&model=flux"), url.replace(/&model=\w+/, "")];
+  for (let a = 0; a < 8; a++) { try { const r = await fetch(alt[a % alt.length]); const ct = r.headers.get("content-type") || "";
       if (r.ok && ct.startsWith("image/")) return await createImageBitmap(await r.blob()); last = "خدمة الصور مشغولة (" + r.status + ")"; } catch (e) { last = "الصورة فشلت"; }
     await wait(2500 + a * 2500); }
   throw new Error(last + " — جرّب كمان شوية"); }
