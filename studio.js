@@ -6,9 +6,26 @@ const toast = (t, ms) => window.toast && window.toast(t, ms);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const STYLES = { re: "إعلان عقاري فاخر: لقطات سينمائية للمبنى والتشطيبات والإضاءة الطبيعية", kids: "قصة أطفال لطيفة بألوان زاهية ورسوم كرتونية بسيطة", tips: "نصائح تعليمية في التصوير والإضاءة بصور واقعية واضحة", free: "حسب الفكرة" };
 let state = (() => { try { return JSON.parse(ls.get("ap_studio")) || {}; } catch (e) { return {}; } })();
-state.scenes = (state.scenes || []).filter(x => !x.own); let intro = null, outro = null;
-const save = () => ls.set("ap_studio", JSON.stringify({ ...state, scenes: state.scenes.filter(x => !x.own) }));
-const src = s => s.own ? s.url : imgUrl(s.image_prompt, s.seed);
+state.scenes = (state.scenes || []).filter(x => !x.own).map(x => ({ ...x, url: undefined })); let intro = null, outro = null;
+const save = () => ls.set("ap_studio", JSON.stringify({ ...state, scenes: state.scenes.filter(x => !x.own).map(x => ({ ...x, url: undefined })) }));
+const IP = { pol: { n: "Pollinations (مجاني، من غير مفتاح)" }, hf: { n: "Hugging Face FLUX (رصيد مجاني شهري)", k: "ap_key_hf", link: "https://huggingface.co/settings/tokens" },
+  together: { n: "Together FLUX (مجاني/رخيص)", k: "ap_key_together", link: "https://api.together.ai/settings/api-keys" }, fal: { n: "fal.ai FLUX (رصيد تجريبي)", k: "ap_key_fal", link: "https://fal.ai/dashboard/keys" } };
+const ip = () => IP[state.ip] ? state.ip : "pol";
+const hasImg = s => s.own || (ip() === "pol" ? !!s.seed : !!s.url);
+const src = s => (s.own || s.url) ? s.url : imgUrl(s.image_prompt, s.seed);
+const b64blob = (b64, type) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type }); };
+// one image from a key-based provider -> blob url (kept in memory only)
+async function genKeyed(sc) { const p = ip(), key = ls.get(IP[p].k), [w, h] = dims(), r16 = n => Math.min(1440, Math.max(256, Math.round(n / 32) * 32)), W = r16(w), H = r16(h); if (!key) throw new Error("ضيف مفتاح " + IP[p].n.split(" ")[0]);
+  let blob;
+  if (p === "hf") { const r = await fetch("https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json", Accept: "image/png" }, body: JSON.stringify({ inputs: sc.image_prompt, parameters: { width: W, height: H } }) });
+    if (!r.ok) throw new Error("Hugging Face " + r.status + (r.status === 402 ? ": خلص الرصيد الشهري" : r.status === 401 ? ": المفتاح غلط" : "")); blob = await r.blob(); }
+  else if (p === "together") { const r = await fetch("https://api.together.xyz/v1/images/generations", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ model: "black-forest-labs/FLUX.1-schnell-Free", prompt: sc.image_prompt, width: W, height: H, steps: 4, n: 1, response_format: "b64_json" }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error("Together: " + (d.error?.message || r.status)); blob = b64blob(d.data[0].b64_json, "image/png"); }
+  else { const r = await fetch("https://fal.run/fal-ai/flux/schnell", { method: "POST", headers: { Authorization: "Key " + key, "Content-Type": "application/json" }, body: JSON.stringify({ prompt: sc.image_prompt, image_size: { width: W, height: H }, num_images: 1 }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error("fal.ai: " + (d.detail?.[0]?.msg || d.detail || r.status)); const ir = await fetch(d.images[0].url); blob = await ir.blob(); }
+  if (sc.url) URL.revokeObjectURL(sc.url); sc.url = URL.createObjectURL(blob); sc.seed = 1; }
+async function genScenes(list) { if (ip() === "pol") { list.forEach(x => { x.seed = Math.floor(Math.random() * 1e6); }); save(); render(); return; }
+  for (let k = 0; k < list.length; k++) { toast(`بولّد صورة ${k + 1} من ${list.length}…`, 60000); try { await genKeyed(list[k]); render(); } catch (e) { toast(e.message, 8000); return; } } toast("الصور خلصت", 2500); }
 // where the video will be used -> shape; quality -> size of the shortest edge
 const FMT = { vert: ["تيك توك / ريلز / شورتس (9:16)", 9, 16], wide: ["يوتيوب / فيديو عريض (16:9)", 16, 9], feed: ["إنستجرام فيد (4:5)", 4, 5], sq: ["مربع: فيسبوك / لينكدإن (1:1)", 1, 1] };
 const QUAL = { draft: ["مسودة سريعة (540)", 540], std: ["عادي (720)", 720], high: ["عالي (1080)", 1080] };
@@ -30,7 +47,10 @@ sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
  <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
  <div class="lbl">الجودة</div>
  <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
- <div class="lbl">موديل الصور</div>
+ <div class="lbl">مصدر الصور</div>
+ <select id="st-ip">${Object.entries(IP).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
+ <div class="two hide" id="st-ipk"><input id="st-ipkey" type="password" autocomplete="off" placeholder="المفتاح" dir="ltr"><a class="btn sm" id="st-iplink" target="_blank" rel="noopener">هات المفتاح</a></div>
+ <div class="lbl">موديل Pollinations</div>
  <select id="st-im">${Object.entries(IMGM).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
  <label class="chk"><input type="checkbox" id="st-dir" checked> مخرج AI يراجع السيناريو (فريقك كله يشتغل: واحد يكتب وواحد يراجع)</label>
  <p class="note" id="st-dim"></p>
@@ -52,24 +72,24 @@ $("#st-own").onchange = e => { [...e.target.files].forEach(f => state.scenes.pus
 $("#st-in").onchange = e => { if (e.target.files[0]) { intro = URL.createObjectURL(e.target.files[0]); frTxt(); render(); } };
 $("#st-out").onchange = e => { if (e.target.files[0]) { outro = URL.createObjectURL(e.target.files[0]); frTxt(); render(); } };
 function render() {
-  $("#st-vid").classList.toggle("hide", !state.scenes.some(x => x.seed) && !intro && !outro);
+  $("#st-vid").classList.toggle("hide", !state.scenes.some(hasImg) && !intro && !outro);
   const box = $("#st-scenes"); if (!state.scenes.length) { box.innerHTML = ""; return; }
   box.innerHTML = `<div class="box"><div class="lbl">المشاهد (${state.scenes.length}) <span>عدّل أي نص قبل الصور</span></div>` + state.scenes.map((s, i) => `
    <div class="box" data-i="${i}"><div class="lbl">مشهد ${i + 1}</div>
     <div style="display:flex;gap:10px"><div style="flex:1">
      <textarea class="st-nar" rows="2" placeholder="التعليق الصوتي">${esc(s.narration)}</textarea>
      ${s.own ? "" : `<textarea class="st-ip" rows="2" dir="ltr" placeholder="image prompt">${esc(s.image_prompt)}</textarea>`}
-     <div class="two">${s.own ? "" : `<button class="btn sm st-gen">${s.seed ? "صورة تانية" : "ولّد الصورة"}</button>`}<button class="btn sm st-up">▲</button><button class="btn sm st-dn">▼</button><button class="btn sm st-del">حذف</button><a class="btn sm ${s.seed ? "" : "hide"}" target="_blank" rel="noopener" href="${s.seed ? src(s) : "#"}">فتح/حفظ</a></div></div>
-     <div style="width:96px;aspect-ratio:${FMT[state.fmt||"vert"][1]}/${FMT[state.fmt||"vert"][2]};max-height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${s.seed ? `<img src="${src(s)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
+     <div class="two">${s.own ? "" : `<button class="btn sm st-gen">${hasImg(s) ? "صورة تانية" : "ولّد الصورة"}</button>`}<button class="btn sm st-up">▲</button><button class="btn sm st-dn">▼</button><button class="btn sm st-del">حذف</button><a class="btn sm ${hasImg(s) ? "" : "hide"}" target="_blank" rel="noopener" href="${hasImg(s) ? src(s) : "#"}">فتح/حفظ</a></div></div>
+     <div style="width:96px;aspect-ratio:${FMT[state.fmt||"vert"][1]}/${FMT[state.fmt||"vert"][2]};max-height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${hasImg(s) ? `<img src="${src(s)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
    `<button class="btn" id="st-all">ولّد كل الصور</button></div>`;
   box.querySelectorAll("[data-i]").forEach(el => { const i = +el.dataset.i;
     el.querySelector(".st-nar").oninput = e => { state.scenes[i].narration = e.target.value; save(); };
     const ip = el.querySelector(".st-ip"); if (ip) ip.oninput = e => { state.scenes[i].image_prompt = e.target.value; save(); };
-    const gn = el.querySelector(".st-gen"); if (gn) gn.onclick = () => { state.scenes[i].seed = Math.floor(Math.random() * 1e6); save(); render(); };
+    const gn = el.querySelector(".st-gen"); if (gn) gn.onclick = () => genScenes([state.scenes[i]]);
     const mv = d => { const j = i + d; if (j < 0 || j >= state.scenes.length) return; [state.scenes[i], state.scenes[j]] = [state.scenes[j], state.scenes[i]]; save(); render(); };
     el.querySelector(".st-up").onclick = () => mv(-1); el.querySelector(".st-dn").onclick = () => mv(1);
     el.querySelector(".st-del").onclick = () => { state.scenes.splice(i, 1); save(); render(); }; });
-  $("#st-all").onclick = () => { state.scenes.forEach(s => { if (!s.own) s.seed = Math.floor(Math.random() * 1e6); }); save(); render(); };
+  $("#st-all").onclick = () => genScenes(state.scenes.filter(x => !x.own));
 }
 
 async function makeScenes() {
@@ -101,10 +121,13 @@ $("#st-sug").onclick = async () => { const a = await suggest($("#st-sug"), "🎲
 // full auto: invent an idea, write the scenes, generate every image
 $("#st-auto").onclick = async () => { const a = await suggest($("#st-auto"), "⚡ فكرة ومشاهد لوحدك"); if (!a) return;
   const x = a[0]; useIdea(x); $("#st-ideas").innerHTML = ""; toast("الفكرة: " + x.title, 4000);
-  if (await makeScenes()) { state.scenes.forEach(s => { s.seed = Math.floor(Math.random() * 1e6); }); save(); render(); toast("جاهز — راجع المشاهد والصور قبل أي حاجة", 6000); } };
+  if (await makeScenes()) { await genScenes(state.scenes.filter(x => !x.own)); toast("جاهز — راجع المشاهد والصور قبل أي حاجة", 6000); } };
 const dimTxt = () => { const [w, h] = dims(); $("#st-dim").textContent = `المقاس: ${w}×${h}. لو غيّرته بعد توليد الصور، دوس «ولّد كل الصور» تاني.`; };
 $("#st-fmt").value = state.fmt || "vert"; $("#st-q").value = state.q || "std"; dimTxt();
 $("#st-fmt").onchange = () => { state.fmt = $("#st-fmt").value; save(); dimTxt(); render(); };
+const ipSync = () => { const p = ip(); $("#st-ipk").classList.toggle("hide", p === "pol"); if (p !== "pol") { $("#st-ipkey").value = ls.get(IP[p].k); $("#st-iplink").href = IP[p].link; } };
+$("#st-ip").value = ip(); ipSync(); $("#st-ip").onchange = () => { state.ip = $("#st-ip").value; save(); ipSync(); render(); };
+$("#st-ipkey").onchange = e => ls.set(IP[ip()].k, e.target.value.trim());
 $("#st-im").value = state.im === undefined ? "flux" : state.im; $("#st-im").onchange = () => { state.im = $("#st-im").value; save(); render(); };
 $("#st-q").onchange = () => { state.q = $("#st-q").value; save(); dimTxt(); render(); };
 if (state.idea) $("#st-idea").value = state.idea; render();
@@ -136,7 +159,7 @@ function wrap(ctx, text, maxW) { const words = text.split(/\s+/), lines = []; le
 
 async function makeVideo() {
   const btn = $("#st-mk"), prog = $("#st-prog"), voice = $("#st-voice").value, [W, H] = dims(), q = state.q || "std";
-  const sc = state.scenes.filter(x => x.seed); if (!sc.length && !intro && !outro) return toast("ولّد الصور أو ضيف صورك الأول");
+  const sc = state.scenes.filter(hasImg); if (!sc.length && !intro && !outro) return toast("ولّد الصور أو ضيف صورك الأول");
   if (typeof MediaRecorder === "undefined") return toast("المتصفح ده مش بيدعم تصنيع الفيديو — جرّب Chrome أو Safari حديث", 7000);
   btn.disabled = true; $("#st-video").classList.add("hide"); $("#st-dl").classList.add("hide");
   try {
