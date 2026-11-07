@@ -34,7 +34,7 @@ const IMGM = { flux: "Flux (أحسن جودة)", turbo: "Turbo (أسرع)", "": 
 const imgUrl = (p, seed) => { const [w, h] = dims(), m = state.im === undefined ? "flux" : state.im; return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}${m ? "&model=" + m : ""}`; };
 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
-sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-m="img">🖼 صور</button><button class="btn sm" data-m="vid">🎥 فيديو (AI)</button><button class="btn sm" data-m="show">🎞 صور ← فيديو</button></div>
+sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-m="img">🖼 صور</button><button class="btn sm" data-m="vid">🎥 فيديو (AI)</button><button class="btn sm" data-m="show">🎞 صور ← فيديو</button><button class="btn sm" data-m="aud">🎙 صوت وأغاني</button></div>
  <div class="box">
   <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
  <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
@@ -73,6 +73,23 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <video id="st-vout" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
   <a class="btn hide" id="st-vdl" target="_blank" rel="noopener" download>تحميل / فتح الفيديو</a></div></div>
 
+ <div id="m-aud" class="hide"><div class="box"><div class="lbl">صوت وأغاني</div>
+  <div class="two"><button class="btn sm pri" data-a="voice">🎙 تعليق صوتي</button><button class="btn sm" data-a="song">🎵 أغنية / موسيقى</button></div>
+  <textarea id="st-atx" rows="5" placeholder="اكتب النص اللي يتقال، أو وصف الأغنية (النوع، المزاج، اللغة)"></textarea>
+  <button class="btn sm" id="st-awrite">✍️ فريق الـAI يكتب النص / الكلمات</button>
+  <div id="a-voice"><div class="lbl">مين يقرا؟</div>
+   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <select id="st-avoice"><option value="Kore">Kore — هادي</option><option value="Puck">Puck — شبابي</option><option value="Charon">Charon — رصين</option><option value="Aoede">Aoede — ناعم</option></select>
+   <input id="st-astyle" placeholder="أسلوب الأداء (اختياري): حماسي / هادي / إعلان فخم" dir="rtl"></div>
+  <div id="a-song" class="hide"><div class="lbl">مين يولّد الموسيقى؟</div>
+   <select id="st-seng"><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
+   <div id="st-salt" class="hide"><select id="st-sm"><option value="fal-ai/stable-audio">Stable Audio — موسيقى</option><option value="fal-ai/minimax-music">MiniMax Music — أغنية بكلمات</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
+   <input id="st-scustom" class="hide" dir="ltr" placeholder="slug من fal.ai"><p class="note">مفتاح fal.ai هو نفسه اللي في وضع الفيديو.</p></div>
+   <p class="note">Lyria وfal مفيهمش حصة مجانية دايمة؛ لو الحساب مفيهوش رصيد هتظهر رسالة خطأ.</p></div>
+  <button class="btn pri" id="st-ago">▶ ولّد</button>
+  <p class="note" id="st-aprog"></p>
+  <audio id="st-aout" controls class="hide" style="width:100%"></audio>
+  <a class="btn hide" id="st-adl">تحميل</a></div></div>
  <div id="m-show" class="hide"><div class="box"><div class="lbl">الفكرة</div>
  <textarea id="st-idea" rows="3" placeholder="مثال: 5 نصايح للإضاءة الطبيعية في التصوير بالموبايل"></textarea>
  <div class="box" style="margin:8px 0"><div class="lbl">صورك أنت <span>اختياري — الصور مبتتخزنش بعد قفل الصفحة</span></div>
@@ -228,9 +245,9 @@ async function makeVideo() {
 $("#st-mk").onclick = makeVideo; frTxt();
 
 // ---------------------------------------------------------------- modes: images only / AI video only / images -> narrated video
-const MODES = ["img", "vid", "show"];
+const MODES = ["img", "vid", "show", "aud"];
 function setMode(m) { state.mode = m; save(); MODES.forEach(k => $("#m-" + k).classList.toggle("hide", k !== m));
-  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid"); }
+  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid" || m === "aud"); }
 document.querySelectorAll("#st-modes [data-m]").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 async function enhance(text, kind) { // AI turns a short idea into a detailed English prompt
@@ -287,4 +304,41 @@ $("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), prog
 
 $("#st-style").value = state.style || "tips"; $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); };
 setMode(MODES.includes(state.mode) ? state.mode : "img");
+
+// ---------------------------------------------------------------- audio mode: voice-over (Gemini TTS / OpenAI TTS) and songs/music (Lyria / fal.ai)
+let amode = "voice";
+const setA = a => { amode = a; document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song");
+  $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; };
+document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => setA(b.dataset.a));
+const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
+$("#st-sm").onchange = () => $("#st-scustom").classList.toggle("hide", $("#st-sm").value !== "custom");
+function pcmWav(u8, rate) { const n = u8.length, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); v.setUint32(4, 36 + n, true); w(8, "WAVEfmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n, true); new Uint8Array(b, 44).set(u8); return new Blob([b], { type: "audio/wav" }); }
+const b64u8 = b => Uint8Array.from(atob(b), c => c.charCodeAt(0));
+const audioBlob = (p) => { const u8 = b64u8(p.data); if (/l16|pcm/i.test(p.mimeType)) return pcmWav(u8, +(p.mimeType.match(/rate=(\d+)/)?.[1] || 24000)); return new Blob([u8], { type: p.mimeType.split(";")[0] }); };
+async function geminiAudio(model, parts, cfg) { const key = ls.get("ap_gemini"); if (!key) throw new Error("ضيف مفتاح Gemini في الإعدادات");
+  const c = new AbortController(), t = setTimeout(() => c.abort(), 120000);
+  try { const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-goog-api-key": key }, body: JSON.stringify({ contents: [{ parts }], generationConfig: cfg }) });
+    const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error((r.status === 429 ? "الحصة/الرصيد خلصت (" : "Google (") + (d.error?.message || r.status).toString().slice(0, 90) + ")");
+    const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData); if (!p) throw new Error("مفيش صوت في الرد"); return audioBlob(p.inlineData); }
+  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
+async function voiceOut(text) { const eng = $("#st-aeng").value, voice = $("#st-avoice").value, style = $("#st-astyle").value.trim(), line = style ? `${style}: ${text}` : text;
+  if (eng === "openai") { const key = ls.get("ap_key_openai"); if (!key) throw new Error("ضيف مفتاح OpenAI في الإعدادات"); const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: { Kore: "coral", Puck: "ash", Charon: "onyx", Aoede: "nova" }[voice] || "alloy", input: text, ...(style ? { instructions: style } : {}), response_format: "mp3" }) });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("OpenAI: " + (d.error?.code === "insufficient_quota" ? "رصيد الـAPI صفر" : d.error?.message || r.status)); } return await r.blob(); }
+  let last; for (const m of ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts"]) { try { return await geminiAudio(m, [{ text: line }], { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }); } catch (e) { last = e; } } throw last; }
+async function songOut(text) { const eng = $("#st-seng").value;
+  if (eng === "lyria") { let last; for (const m of ["lyria-3-clip-preview", "lyria-3.5", "lyria-3-pro-preview"]) { try { return await geminiAudio(m, [{ text }], { responseModalities: ["AUDIO", "TEXT"] }); } catch (e) { last = e; if (/الحصة|الرصيد/.test(e.message)) break; } } throw last; }
+  const key = ls.get("ap_key_fal"); if (!key) throw new Error("ضيف مفتاح fal.ai (في وضع الفيديو)"); const model = $("#st-sm").value === "custom" ? $("#st-scustom").value.trim() : $("#st-sm").value; if (!model) throw new Error("اكتب اسم الموديل");
+  const H = { Authorization: "Key " + key, "Content-Type": "application/json" }, body = /minimax-music/.test(model) ? { prompt: text.slice(0, 300), lyrics: text } : /stable-audio/.test(model) ? { prompt: text, seconds_total: 30 } : { prompt: text, lyrics: text };
+  const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: H, body: JSON.stringify(body) }); const q = await r.json().catch(() => ({})); if (!r.ok) throw new Error("fal.ai: " + (q.detail?.[0]?.msg || q.detail || r.status));
+  const t0 = Date.now(); let st = q; while (Date.now() - t0 < 600000) { await wait(4000); st = await (await fetch(q.status_url, { headers: H })).json().catch(() => ({})); $("#st-aprog").textContent = `بيتولّد… ${st.status || ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED") throw new Error("fal.ai: فشل التوليد"); }
+  if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني"); const res = await (await fetch(q.response_url, { headers: H })).json(); const url = res.audio_file?.url || res.audio?.url || res.audio_url || res.music?.url; if (!url) throw new Error("مفيش صوت في الرد: " + JSON.stringify(res).slice(0, 100)); return await (await fetch(url)).blob(); }
+$("#st-ago").onclick = async () => { const text = $("#st-atx").value.trim(), b = $("#st-ago"), pr = $("#st-aprog"); if (!text) return toast("اكتب النص أو وصف الأغنية"); b.disabled = true; $("#st-aout").classList.add("hide"); $("#st-adl").classList.add("hide"); pr.textContent = "بيشتغل…";
+  try { const blob = await (amode === "voice" ? voiceOut(text) : songOut(text)), url = URL.createObjectURL(blob), ext = /mpeg|mp3/.test(blob.type) ? "mp3" : /wav/.test(blob.type) ? "wav" : (blob.type.split("/")[1] || "audio");
+    const a = $("#st-aout"); a.src = url; a.classList.remove("hide"); const d = $("#st-adl"); d.href = url; d.download = "autopost-audio." + ext; d.classList.remove("hide"); pr.textContent = "خلص ✓"; a.play().catch(() => {}); }
+  catch (e) { pr.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
+$("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if (!t) return toast("اكتب فكرة الأول"); if (!window.APAI || !window.APAI.hasKey()) return toast("ضيف مفتاح AI في الإعدادات", 5000); const b = $("#st-awrite"); b.disabled = true;
+  try { const p = amode === "voice" ? `اكتب تعليق صوتي قصير بالعامية المصرية عن الفكرة دي، مناسب للقراءة بصوت (حوالي 20 ثانية)، من غير عناوين ولا علامات. النوع: ${STYLES[$("#st-style").value]}\nالفكرة: ${t}` : `اكتب كلمات أغنية قصيرة (مذهب وكوبليه) عن الفكرة دي، وفي أول سطر وصف الأسلوب الموسيقي بين أقواس. اللغة حسب الفكرة (عامية مصرية افتراضياً).\nالفكرة: ${t}`;
+    $("#st-atx").value = await window.APAI.ask([{ text: p }]); } catch (e) { toast(e.message, 6000); } finally { b.disabled = false; } };
+setA("voice");
 })();
