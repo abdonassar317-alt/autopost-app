@@ -45,18 +45,22 @@ async function models(key) {
       .map(m => m.name.replace("models/", "")).sort((a, b) => (parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || 0) - parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || 0)) || (/lite/.test(a) - /lite/.test(b)));
     return [...new Set([cached, ...ok.slice(0, 8), "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite"].filter(Boolean))]; } catch (e) { return [cached, "gemini-flash-latest"].filter(Boolean); } }
 // OpenAI-compatible providers (Groq / OpenRouter / OpenAI) — text only
-async function oai(p, parts, json) {
-  const P = PROV[p], key = ls.get(P.k); if (parts.some(x => x.inline_data)) throw new Error("التسجيل الصوتي شغال مع Gemini بس — اختار Gemini أو اكتب الفكرة نص");
+const PREF = { groq: [/llama-3\.3-70b/, /gpt-oss-120b/, /llama-4/, /llama-3\.1-8b/], cerebras: [/llama-3\.3-70b/, /gpt-oss/, /llama/, /qwen/], mistral: [/mistral-small/, /mistral-medium/, /ministral/], deepseek: [/deepseek-chat/], openai: [/gpt-4o-mini/, /gpt-4\.1-mini/, /gpt-5-mini/], openrouter: [/free/] };
+async function pickModel(p, key) { try { const base = PROV[p].url.replace(/\/chat\/completions$/, ""); const r = await fetch(base + "/models", { headers: { Authorization: "Bearer " + key } }); const ids = ((await r.json()).data || []).map(m => m.id).filter(i => !/whisper|guard|tts|embed|moderation|orpheus|playai|image|dall|audio|realtime|transcribe/i.test(i));
+    for (const re of PREF[p] || []) { const m = ids.find(i => re.test(i)); if (m) return m; } return ids[0] || null; } catch (e) { return null; } }
+async function oai(p, parts, json, retry) {
+  const P = PROV[p], key = ls.get(P.k), model = ls.get("ap_model_" + p) || P.model; if (parts.some(x => x.inline_data)) throw new Error("التسجيل الصوتي شغال مع Gemini بس — اختار Gemini أو اكتب الفكرة نص");
   const c = new AbortController(), t = setTimeout(() => c.abort(), 30000);
   const text = parts.map(x => x.text || "").join("\n");
   try { const r = p === "claude"
-      ? await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: P.model, max_tokens: 2000, temperature: 0.8, messages: [{ role: "user", content: text }] }) })
+      ? await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model, max_tokens: 2000, temperature: 0.8, messages: [{ role: "user", content: text }] }) })
       : await fetch(P.url, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
-      body: JSON.stringify({ model: P.model, temperature: 0.8, messages: [{ role: "user", content: text }], ...(json && ["groq", "openai", "mistral", "deepseek"].includes(p) ? { response_format: { type: "json_object" } } : {}) }) });
+      body: JSON.stringify({ model, temperature: 0.8, messages: [{ role: "user", content: text }], ...(json && ["groq", "openai", "mistral", "deepseek"].includes(p) ? { response_format: { type: "json_object" } } : {}) }) });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 429) throw new Error("خلصت الحصة المجانية — جرّب بعد شوية");
+    if (!r.ok && !retry && (r.status === 400 || r.status === 404) && /model/i.test(d.error?.message || "")) { const m = await pickModel(p, key); if (m && m !== model) { ls.set("ap_model_" + p, m); return oai(p, parts, json, true); } }
+    if (d.error?.code === "insufficient_quota" || r.status === 402) throw new Error(P.n.split(" ")[0] + ": رصيد الـAPI صفر — ضيف رصيد من Billing");
+    if (r.status === 429) throw new Error("خلصت الحصة أو الدقيقة دي — جرّب بعد شوية");
     if (r.status === 401) throw new Error("المفتاح غلط أو منتهي");
-    if (r.status === 402 || (r.status === 429 && p === "openai")) throw new Error("حسابك محتاج رصيد");
     if (!r.ok) throw new Error(P.n + ": " + (d.error?.message || r.status));
     const txt = (p === "claude" ? (d.content || []).map(x => x.text || "").join("") : (d.choices?.[0]?.message?.content || "")).trim(); if (!txt) throw new Error("رد فاضي"); return txt;
   } catch (e) { if (e.name === "AbortError") throw new Error(P.n + " بطيء — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
