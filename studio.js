@@ -60,11 +60,14 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
  <div id="m-vid" class="hide"><div class="box"><div class="lbl">توليد فيديو بالـAI <span>مدفوع غالباً (رصيد تجريبي عند التسجيل)</span></div>
   <textarea id="st-vpr" rows="3" placeholder="مثال: لقطة سينمائية بطيئة لغرفة معيشة فاخرة والستارة بتتحرك مع الهواء"></textarea>
   <label class="chk"><input type="checkbox" id="st-venh" checked> الـAI يحسّن البرومبت لوحده</label>
-  <div class="lbl">الموديل (fal.ai)</div>
+  <div class="lbl">مين يولّد الفيديو؟</div>
+  <select id="st-veng"><option value="fal">fal.ai (LTX وغيره) — رصيد تجريبي</option><option value="veo">Veo — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="sora">Sora — OpenAI / ChatGPT (مدفوع، بمفتاح OpenAI)</option></select>
+  <p class="note hide" id="st-vengnote"></p>
+  <div id="st-falbox"><div class="lbl">الموديل (fal.ai)</div>
   <select id="st-vm"><option value="fal-ai/ltx-video">LTX Video — نص ← فيديو (رخيص)</option><option value="fal-ai/ltx-video/image-to-video">LTX Video — صورة ← فيديو</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
   <input id="st-vcustom" class="hide" dir="ltr" placeholder="مثال: fal-ai/wan/v2.2-a14b/text-to-video">
   <div class="two"><input id="st-vkey" type="password" autocomplete="off" placeholder="مفتاح fal.ai" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://fal.ai/dashboard/keys">هات المفتاح</a></div>
-  <label class="btn sm" style="display:block;text-align:center">🖼 صورة بداية للفيديو (لموديلات صورة ← فيديو)<input type="file" id="st-vimg" accept="image/*" hidden></label>
+  <label class="btn sm" style="display:block;text-align:center">🖼 صورة بداية للفيديو (لموديلات صورة ← فيديو)<input type="file" id="st-vimg" accept="image/*" hidden></label></div>
   <button class="btn pri" id="st-vgo">🎥 ولّد الفيديو</button>
   <p class="note" id="st-vprog">التوليد بياخد دقيقة أو أكتر، وبيتحاسب على رصيد fal.ai. الفيديو الناتج قصير (كام ثانية).</p>
   <video id="st-vout" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
@@ -250,18 +253,36 @@ $("#st-i2v").onclick = () => { gallery.forEach(x => state.scenes.push({ narratio
 $("#st-vm").onchange = () => $("#st-vcustom").classList.toggle("hide", $("#st-vm").value !== "custom");
 $("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => ls.set("ap_key_fal", e.target.value.trim());
 const toData = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
-$("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), key = ls.get("ap_key_fal"), prog = $("#st-vprog"), b = $("#st-vgo");
-  let model = $("#st-vm").value === "custom" ? $("#st-vcustom").value.trim() : $("#st-vm").value; if (!raw && !$("#st-vimg").files[0]) return toast("اكتب برومبت الفيديو"); if (!key) return toast("ضيف مفتاح fal.ai الأول", 6000); if (!model) return toast("اكتب اسم الموديل");
+const ENG = { fal: "", veo: "بيستخدم مفتاح Gemini اللي في الإعدادات. Veo مفيهوش حصة مجانية، ولازم تفعّل الدفع في Google AI Studio، وبيظهر في حسابك بس لو متاح.", sora: "بيستخدم مفتاح OpenAI اللي في الإعدادات (خانة ChatGPT). Sora بيتحاسب بالثانية من رصيد الـAPI، ولازم الحساب يكون مسموح له بيه." };
+const engSync = () => { const e = $("#st-veng").value; $("#st-falbox").classList.toggle("hide", e !== "fal"); const n = $("#st-vengnote"); n.textContent = ENG[e]; n.classList.toggle("hide", !ENG[e]); };
+$("#st-veng").value = state.veng || "fal"; engSync(); $("#st-veng").onchange = () => { state.veng = $("#st-veng").value; save(); engSync(); };
+const vsize = () => { const f = state.fmt || "vert"; return f === "wide" ? ["1280x720", "16:9"] : f === "vert" ? ["720x1280", "9:16"] : ["720x1280", "9:16"]; };
+async function runFal(prompt, prog) { const key = ls.get("ap_key_fal"); let model = $("#st-vm").value === "custom" ? $("#st-vcustom").value.trim() : $("#st-vm").value; if (!key) throw new Error("ضيف مفتاح fal.ai الأول"); if (!model) throw new Error("اكتب اسم الموديل");
+  const body = { prompt }; const f = $("#st-vimg").files[0]; if (f) body.image_url = await toData(f); const H = { Authorization: "Key " + key, "Content-Type": "application/json" };
+  const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: H, body: JSON.stringify(body) }); const q = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error("fal.ai: " + (q.detail?.[0]?.msg || q.detail || r.status) + (r.status === 403 || r.status === 401 ? " (المفتاح أو الرصيد)" : ""));
+  const t0 = Date.now(); let st = q;
+  while (Date.now() - t0 < 600000) { await wait(4000); const sr = await fetch(q.status_url, { headers: H }); st = await sr.json().catch(() => ({})); prog.textContent = `بيتولّد… ${st.status || ""}${st.queue_position != null ? " (الدور " + st.queue_position + ")" : ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED" || (sr.status >= 400 && sr.status !== 429)) throw new Error("fal.ai: فشل التوليد"); }
+  if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني");
+  const res = await (await fetch(q.response_url, { headers: H })).json(); const url = res.video?.url || res.videos?.[0]?.url; if (!url) throw new Error("مفيش فيديو في الرد: " + JSON.stringify(res).slice(0, 120)); return url; }
+async function runVeo(prompt, prog) { const key = ls.get("ap_gemini"); if (!key) throw new Error("ضيف مفتاح Gemini في الإعدادات"); const H = { "x-goog-api-key": key, "Content-Type": "application/json" }, base = "https://generativelanguage.googleapis.com/v1beta/";
+  let model = "veo-3.1-generate-preview"; try { const l = await (await fetch(base + "models?pageSize=200", { headers: H })).json(); const v = (l.models || []).filter(m => /veo/i.test(m.name) && (m.supportedGenerationMethods || []).some(x => /predictLongRunning/i.test(x))).map(m => m.name.replace("models/", "")); if (v.length) model = v.find(x => /fast/.test(x)) || v[0]; } catch (e) {}
+  const r = await fetch(base + "models/" + model + ":predictLongRunning", { method: "POST", headers: H, body: JSON.stringify({ instances: [{ prompt }], parameters: { aspectRatio: vsize()[1] } }) }); const op = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error("Veo: " + (op.error?.message || r.status).toString().slice(0, 160)); const t0 = Date.now(); let d = op;
+  while (!d.done && Date.now() - t0 < 600000) { await wait(6000); d = await (await fetch(base + op.name, { headers: H })).json(); prog.textContent = `Veo بيولّد… ${Math.round((Date.now() - t0) / 1000)} ث`; if (d.error) throw new Error("Veo: " + d.error.message); }
+  if (!d.done) throw new Error("اتأخر — جرّب تاني"); const uri = d.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri || d.response?.videos?.[0]?.uri; if (!uri) throw new Error("Veo: مفيش فيديو في الرد (ممكن اتحجب)");
+  const vr = await fetch(uri, { headers: { "x-goog-api-key": key } }); if (!vr.ok) throw new Error("تحميل الفيديو فشل " + vr.status); return URL.createObjectURL(await vr.blob()); }
+async function runSora(prompt, prog) { const key = ls.get("ap_key_openai"); if (!key) throw new Error("ضيف مفتاح OpenAI في الإعدادات (خانة ChatGPT)"); const H = { Authorization: "Bearer " + key }, base = "https://api.openai.com/v1/videos";
+  const r = await fetch(base, { method: "POST", headers: { ...H, "Content-Type": "application/json" }, body: JSON.stringify({ model: "sora-2", prompt, size: vsize()[0], seconds: "8" }) }); const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error("Sora: " + (j.error?.message || r.status).toString().slice(0, 160)); const t0 = Date.now(); let d = j;
+  while (d.status !== "completed" && Date.now() - t0 < 900000) { if (d.status === "failed") throw new Error("Sora: " + (d.error?.message || "فشل التوليد")); await wait(6000); d = await (await fetch(base + "/" + j.id, { headers: H })).json(); prog.textContent = `Sora بيولّد… ${d.progress != null ? d.progress + "%" : d.status || ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; }
+  if (d.status !== "completed") throw new Error("اتأخر — جرّب تاني"); const vr = await fetch(base + "/" + j.id + "/content", { headers: H }); if (!vr.ok) throw new Error("تحميل الفيديو فشل " + vr.status); return URL.createObjectURL(await vr.blob()); }
+$("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), prog = $("#st-vprog"), b = $("#st-vgo"), eng = $("#st-veng").value;
+  if (!raw && !(eng === "fal" && $("#st-vimg").files[0])) return toast("اكتب برومبت الفيديو");
   b.disabled = true; $("#st-vout").classList.add("hide"); $("#st-vdl").classList.add("hide");
-  try { prog.textContent = "بجهّز البرومبت…"; const prompt = $("#st-venh").checked && raw ? await enhance(raw, "video") : raw; const body = { prompt }; const f = $("#st-vimg").files[0]; if (f) body.image_url = await toData(f);
-    const H = { Authorization: "Key " + key, "Content-Type": "application/json" };
-    const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: H, body: JSON.stringify(body) }); const q = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error("fal.ai: " + (q.detail?.[0]?.msg || q.detail || r.status) + (r.status === 403 || r.status === 401 ? " (المفتاح أو الرصيد)" : ""));
-    const t0 = Date.now(); let st = q;
-    while (Date.now() - t0 < 600000) { await wait(4000); const sr = await fetch(q.status_url, { headers: H }); st = await sr.json().catch(() => ({})); prog.textContent = `بيتولّد… ${st.status || ""}${st.queue_position != null ? " (الدور " + st.queue_position + ")" : ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED" || sr.status >= 400 && sr.status !== 429) throw new Error("fal.ai: فشل التوليد"); }
-    if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني");
-    const rr = await fetch(q.response_url, { headers: H }), res = await rr.json(); const url = res.video?.url || res.videos?.[0]?.url; if (!url) throw new Error("مفيش فيديو في الرد: " + JSON.stringify(res).slice(0, 120));
-    const v = $("#st-vout"); v.src = url; v.classList.remove("hide"); const a = $("#st-vdl"); a.href = url; a.classList.remove("hide"); prog.textContent = "خلص ✓ " + (prompt ? "— البرومبت: " + prompt.slice(0, 100) : ""); }
+  try { prog.textContent = "بجهّز البرومبت…"; const prompt = $("#st-venh").checked && raw ? await enhance(raw, "video") : raw;
+    const url = await (eng === "veo" ? runVeo : eng === "sora" ? runSora : runFal)(prompt, prog);
+    const v = $("#st-vout"); v.src = url; v.classList.remove("hide"); const a = $("#st-vdl"); a.href = url; a.setAttribute("download", "ai-video.mp4"); a.classList.remove("hide"); prog.textContent = "خلص ✓ " + (prompt ? "— البرومبت: " + prompt.slice(0, 100) : ""); }
   catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
 
 $("#st-style").value = state.style || "tips"; $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); };
