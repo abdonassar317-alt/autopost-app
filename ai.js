@@ -239,4 +239,5 @@ if (set) { const box = document.createElement("div"); box.className = "box";
 const css = document.createElement("style");
 css.textContent = `.aig{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.aig .btn{justify-content:center;font-size:13px}#ai-out textarea{width:100%}`;
 document.head.appendChild(css);
+window.APAI = { ask: (p, j) => ask(p, j), parseJSON: t => parseJSON(t), hasKey: () => hasKey() };
 })();
