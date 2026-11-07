@@ -43,7 +43,7 @@ async function models(key) {
   try { const r = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=200`)).json();
     const ok = (r.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp|omni/i.test(m.name))
       .map(m => m.name.replace("models/", "")).sort((a, b) => (parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || 0) - parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || 0)) || (/lite/.test(a) - /lite/.test(b)));
-    return [...new Set([cached, ...ok.slice(0, 8), "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite"].filter(Boolean))]; } catch (e) { return [cached, "gemini-flash-latest"].filter(Boolean); } }
+    return [...new Set([cached, "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite", ...ok.slice(0, 8)].filter(Boolean))]; } catch (e) { return [cached, "gemini-flash-latest"].filter(Boolean); } }
 // OpenAI-compatible providers (Groq / OpenRouter / OpenAI) — text only
 const PREF = { groq: [/llama-3\.3-70b/, /gpt-oss-120b/, /llama-4/, /llama-3\.1-8b/], cerebras: [/llama-3\.3-70b/, /gpt-oss/, /llama/, /qwen/], mistral: [/mistral-small/, /mistral-medium/, /ministral/], deepseek: [/deepseek-chat/], openai: [/gpt-4o-mini/, /gpt-4\.1-mini/, /gpt-5-mini/], openrouter: [/free/] };
 async function pickModel(p, key) { try { const base = PROV[p].url.replace(/\/chat\/completions$/, ""); const r = await fetch(base + "/models", { headers: { Authorization: "Bearer " + key } }); const ids = ((await r.json()).data || []).map(m => m.id).filter(i => !/whisper|guard|tts|embed|moderation|orpheus|playai|image|dall|audio|realtime|transcribe/i.test(i));
