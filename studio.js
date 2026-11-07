@@ -5,7 +5,7 @@ const $ = s => document.querySelector(s), ls = { get: (k, d = "") => { try { ret
 const toast = (t, ms) => window.toast && window.toast(t, ms);
 const pushKeys = () => { try { window.apSyncKeys && window.apSyncKeys.push().then(ok => ok && toast("المفتاح اتزامن لباقي أجهزتك ✓", 3000)).catch(() => {}); } catch (e) {} };
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const NICHES = { any: "أي مجال (عام)", ads: "إعلان منتج / خدمة", edu: "تعليمي ونصايح", re: "عقارات", food: "أكل ومطاعم", fit: "صحة ولياقة", beauty: "موضة وجمال", tech: "تقنية وذكاء اصطناعي", travel: "سفر وأماكن", kids: "أطفال وقصص", motiv: "تحفيز وتطوير ذات", fun: "كوميدي وترفيه", news: "أخبار وترند", custom: "مجال تاني (اكتبه)" };
+const NICHES = { any: "أي مجال (عام)", ads: "إعلان منتج / خدمة", edu: "تعليمي ونصايح", photo: "تصوير (فوتو وفيديو)", edit: "مونتاج وتحرير فيديو", photoedu: "تعليم التصوير", editedu: "تعليم المونتاج", re: "عقارات", food: "أكل ومطاعم", fit: "صحة ولياقة", beauty: "موضة وجمال", tech: "تقنية وذكاء اصطناعي", travel: "سفر وأماكن", kids: "أطفال وقصص", motiv: "تحفيز وتطوير ذات", fun: "كوميدي وترفيه", news: "أخبار وترند", custom: "مجال تاني (اكتبه)" };
 const niche = () => { const k = ($("#st-style") || {}).value || "any", c = ($("#st-niche") || {}).value || ""; return k === "custom" ? (c.trim() || "أي مجال") : k === "any" ? "أي مجال — نوّع الأفكار بين مجالات مختلفة ومتجددة" : NICHES[k]; };
 let state = (() => { try { return JSON.parse(ls.get("ap_studio")) || {}; } catch (e) { return {}; } })();
 state.scenes = (state.scenes || []).filter(x => !x.own).map(x => ({ ...x, url: undefined })); let intro = null, outro = null;
