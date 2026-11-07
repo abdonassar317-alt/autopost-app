@@ -8,11 +8,20 @@ const STYLES = { re: "إعلان عقاري فاخر: لقطات سينمائي�
 let state = (() => { try { return JSON.parse(ls.get("ap_studio")) || {}; } catch (e) { return {}; } })();
 state.scenes = state.scenes || [];
 const save = () => ls.set("ap_studio", JSON.stringify(state));
-const imgUrl = (p, seed) => `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=720&height=1280&nologo=true&seed=${seed}`;
+// where the video will be used -> shape; quality -> size of the shortest edge
+const FMT = { vert: ["تيك توك / ريلز / شورتس (9:16)", 9, 16], wide: ["يوتيوب / فيديو عريض (16:9)", 16, 9], feed: ["إنستجرام فيد (4:5)", 4, 5], sq: ["مربع: فيسبوك / لينكدإن (1:1)", 1, 1] };
+const QUAL = { draft: ["مسودة سريعة (540)", 540], std: ["عادي (720)", 720], high: ["عالي (1080)", 1080] };
+const dims = () => { const f = FMT[state.fmt || "vert"], q = QUAL[state.q || "std"][1], r16 = n => Math.round(n / 16) * 16, k = q / Math.min(f[1], f[2]); return [r16(f[1] * k), r16(f[2] * k)]; };
+const imgUrl = (p, seed) => { const [w, h] = dims(); return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}`; };
 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
 sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
  <textarea id="st-idea" rows="3" placeholder="مثال: فيديو 30 ثانية لشقة 3 غرف في التجمع الخامس، تشطيب سوبر لوكس"></textarea>
+ <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
+ <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+ <div class="lbl">الجودة</div>
+ <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+ <p class="note" id="st-dim"></p>
  <div class="two"><select id="st-style">${Object.entries({ re: "عقاري", kids: "أطفال", tips: "نصايح تصوير", free: "حر" }).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
  <select id="st-n">${[3, 4, 5, 6, 8].map(n => `<option ${n === 5 ? "selected" : ""}>${n}</option>`).join("")}</select></div>
  <button class="btn pri" id="st-go">اكتب المشاهد</button>
@@ -28,7 +37,7 @@ function render() {
      <textarea class="st-nar" rows="2" placeholder="التعليق الصوتي">${esc(s.narration)}</textarea>
      <textarea class="st-ip" rows="2" dir="ltr" placeholder="image prompt">${esc(s.image_prompt)}</textarea>
      <div class="two"><button class="btn sm st-gen">${s.seed ? "صورة تانية" : "ولّد الصورة"}</button><a class="btn sm ${s.seed ? "" : "hide"}" target="_blank" rel="noopener" href="${s.seed ? imgUrl(s.image_prompt, s.seed) : "#"}">فتح/حفظ</a></div></div>
-     <div style="width:96px;height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${s.seed ? `<img src="${imgUrl(s.image_prompt, s.seed)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
+     <div style="width:96px;aspect-ratio:${FMT[state.fmt||"vert"][1]}/${FMT[state.fmt||"vert"][2]};max-height:170px;border-radius:10px;background:#0002;overflow:hidden;flex:none">${s.seed ? `<img src="${imgUrl(s.image_prompt, s.seed)}" alt="" style="width:100%;height:100%;object-fit:cover" onerror="this.alt='فشلت — جرّب صورة تانية'">` : ""}</div></div></div>`).join("") +
    `<button class="btn" id="st-all">ولّد كل الصور</button></div>`;
   box.querySelectorAll("[data-i]").forEach(el => { const i = +el.dataset.i;
     el.querySelector(".st-nar").oninput = e => { state.scenes[i].narration = e.target.value; save(); };
@@ -47,5 +56,9 @@ $("#st-go").onclick = async () => {
     state.idea = idea; state.scenes = sc.map(x => ({ narration: String(x.narration), image_prompt: String(x.image_prompt || ""), seed: 0 })); save(); render(); }
   catch (e) { toast(e.message, 7000); } finally { b.disabled = false; b.textContent = "اكتب المشاهد"; }
 };
+const dimTxt = () => { const [w, h] = dims(); $("#st-dim").textContent = `المقاس: ${w}×${h}. لو غيّرته بعد توليد الصور، دوس «ولّد كل الصور» تاني.`; };
+$("#st-fmt").value = state.fmt || "vert"; $("#st-q").value = state.q || "std"; dimTxt();
+$("#st-fmt").onchange = () => { state.fmt = $("#st-fmt").value; save(); dimTxt(); render(); };
+$("#st-q").onchange = () => { state.q = $("#st-q").value; save(); dimTxt(); render(); };
 if (state.idea) $("#st-idea").value = state.idea; render();
 })();
