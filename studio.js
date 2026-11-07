@@ -43,9 +43,11 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
  <div class="lbl">الجودة</div>
  <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
 <p class="note" id="st-dim"></p>
+ <div id="st-nichebox">
  <div class="lbl">النوع <span>بيأثر على الأفكار والبرومبت</span></div>
  <select id="st-style">${Object.entries(NICHES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
  <input id="st-niche" class="hide" placeholder="اكتب مجالك: مثلاً مطعم كشري، عيادة أسنان، محل موبايلات…">
+ </div>
  <div id="st-provbox"> <div class="lbl">مصدر الصور</div>
  <select id="st-ip">${Object.entries(IP).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
  <div class="two hide" id="st-ipk"><input id="st-ipkey" type="password" autocomplete="off" placeholder="المفتاح" dir="ltr"><a class="btn sm" id="st-iplink" target="_blank" rel="noopener">هات المفتاح</a></div>
@@ -267,7 +269,7 @@ $("#st-mk").onclick = makeVideo; frTxt();
 // ---------------------------------------------------------------- modes: images only / AI video only / images -> narrated video
 const MODES = ["img", "vid", "show", "aud"];
 function setMode(m) { state.mode = m; save(); MODES.forEach(k => $("#m-" + k).classList.toggle("hide", k !== m));
-  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid" || m === "aud"); }
+  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid" || m === "aud"); nicheVis(); }
 document.querySelectorAll("#st-modes [data-m]").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 async function enhance(text, kind) { // AI turns a short idea into a detailed English prompt
@@ -327,8 +329,9 @@ $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); nS
 setMode(MODES.includes(state.mode) ? state.mode : "img");
 
 // ---------------------------------------------------------------- audio mode: voice-over (Gemini TTS / OpenAI TTS) and songs/music (Lyria / fal.ai)
-let amode = "voice";
-const setA = a => { amode = a; document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
+var amode = "voice";
+function nicheVis() { $("#st-nichebox").classList.toggle("hide", state.mode === "aud" && amode === "song"); }
+const setA = a => { amode = a; nicheVis(); document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
   $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; };
 document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => setA(b.dataset.a));
 const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
