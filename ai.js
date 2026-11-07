@@ -230,11 +230,22 @@ if (set) { const box = document.createElement("div"); box.className = "box";
    <select id="ai-prov"><option value="all">🤝 الكل مع بعض (أحسن نتيجة)</option>${Object.entries(PROV).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
    <div id="ai-keys">${Object.entries(PROV).map(([k, v]) => `<div class="two"><input class="aik" data-p="${k}" type="password" autocomplete="off" placeholder="مفتاح ${v.n}" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="${v.link}">هات المفتاح</a></div>`).join("")}</div>
    <button class="btn pri" id="ai-test">حفظ كل المفاتيح واختبار</button>
+   <div class="two"><button class="btn sm" id="ai-exp">📤 انقل المفاتيح لجهاز تاني</button><button class="btn sm" id="ai-imp">📥 استلم مفاتيح من جهاز تاني</button></div>
+   <p class="note">المفاتيح بتتحفظ على كل جهاز لوحده. «انقل» بيطلع كود مشفّر بكلمة سر من عندك، تلصقه على الجهاز التاني من «استلم».</p>
    <p class="note">ChatGPT وClaude مدفوعين (رصيد API منفصل عن اشتراك الشات). الباقي فيه مجاني. سيب فاضي أي واحد مش عايزه. التسجيل الصوتي بيشتغل مع Gemini بس.</p>`;
   set.insertBefore(box, set.children[1]);
   const kin = () => [...box.querySelectorAll(".aik")];
   kin().forEach(i => { i.value = ls.get(PROV[i.dataset.p].k); });
   $("#ai-prov").value = prov(); $("#ai-prov").onchange = () => ls.set("ap_ai_prov", $("#ai-prov").value);
+  const KEYS = () => Object.keys(localStorage).filter(k => /^ap_key_|^ap_gemini$/.test(k));
+  const enc = new TextEncoder(), dec = new TextDecoder(), b64 = u => btoa(String.fromCharCode(...u)), unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  const kdf = async (pw, salt) => crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 200000, hash: "SHA-256" }, await crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]), { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  $("#ai-exp").onclick = async () => { const pw = prompt("اكتب كلمة سر للكود (هتحتاجها على الجهاز التاني):"); if (!pw) return; const data = {}; KEYS().forEach(k => { if (ls.get(k)) data[k] = ls.get(k); }); if (!Object.keys(data).length) return toast("مفيش مفاتيح محفوظة");
+    const salt = crypto.getRandomValues(new Uint8Array(16)), iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await kdf(pw, salt), enc.encode(JSON.stringify(data))));
+    const code = "APK1." + b64(new Uint8Array([...salt, ...iv, ...ct])); try { await navigator.clipboard.writeText(code); toast("الكود اتنسخ — الصقه على الجهاز التاني (من غير ما تبعته لحد)", 7000); } catch (e) { prompt("انسخ الكود ده:", code); } };
+  $("#ai-imp").onclick = async () => { const code = (prompt("الصق الكود هنا:") || "").trim(); if (!code.startsWith("APK1.")) return code && toast("الكود مش صح"); const pw = prompt("كلمة السر:"); if (!pw) return;
+    try { const u = unb64(code.slice(5)), data = JSON.parse(dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: u.slice(16, 28) }, await kdf(pw, u.slice(0, 16)), u.slice(28)))); let n = 0; Object.entries(data).forEach(([k, v]) => { if (/^ap_key_|^ap_gemini$/.test(k) && typeof v === "string") { ls.set(k, v); n++; } }); kin().forEach(i => { i.value = ls.get(PROV[i.dataset.p].k); }); toast(`اتضافوا ${n} مفتاح ✓`, 5000); }
+    catch (e) { toast("كلمة السر غلط أو الكود تالف"); } };
   $("#ai-test").onclick = async () => { kin().forEach(i => { const v = i.value.trim(); if (v !== ls.get(PROV[i.dataset.p].k)) { ls.set(PROV[i.dataset.p].k, v); if (i.dataset.p === "gemini") ls.set("ap_gemini_model", ""); } });
     const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
     const res = await Promise.all(ks.map(p => oneTest(p)));

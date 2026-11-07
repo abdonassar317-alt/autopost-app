@@ -4,7 +4,8 @@
 const $ = s => document.querySelector(s), ls = { get: (k, d = "") => { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
 const toast = (t, ms) => window.toast && window.toast(t, ms);
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const STYLES = { re: "إعلان عقاري فاخر: لقطات سينمائية للمبنى والتشطيبات والإضاءة الطبيعية", kids: "قصة أطفال لطيفة بألوان زاهية ورسوم كرتونية بسيطة", tips: "نصائح تعليمية في التصوير والإضاءة بصور واقعية واضحة", free: "حسب الفكرة" };
+const NICHES = { any: "أي مجال (عام)", ads: "إعلان منتج / خدمة", edu: "تعليمي ونصايح", re: "عقارات", food: "أكل ومطاعم", fit: "صحة ولياقة", beauty: "موضة وجمال", tech: "تقنية وذكاء اصطناعي", travel: "سفر وأماكن", kids: "أطفال وقصص", motiv: "تحفيز وتطوير ذات", fun: "كوميدي وترفيه", news: "أخبار وترند", custom: "مجال تاني (اكتبه)" };
+const niche = () => { const k = ($("#st-style") || {}).value || "any", c = ($("#st-niche") || {}).value || ""; return k === "custom" ? (c.trim() || "أي مجال") : k === "any" ? "أي مجال — نوّع الأفكار بين مجالات مختلفة ومتجددة" : NICHES[k]; };
 let state = (() => { try { return JSON.parse(ls.get("ap_studio")) || {}; } catch (e) { return {}; } })();
 state.scenes = (state.scenes || []).filter(x => !x.own).map(x => ({ ...x, url: undefined })); let intro = null, outro = null;
 const save = () => ls.set("ap_studio", JSON.stringify({ ...state, scenes: state.scenes.filter(x => !x.own).map(x => ({ ...x, url: undefined })) }));
@@ -42,7 +43,8 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
  <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
 <p class="note" id="st-dim"></p>
  <div class="lbl">النوع <span>بيأثر على الأفكار والبرومبت</span></div>
- <select id="st-style">${Object.entries({ tips: "نصايح تصوير", re: "عقاري", kids: "أطفال", free: "حر" }).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+ <select id="st-style">${Object.entries(NICHES).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+ <input id="st-niche" class="hide" placeholder="اكتب مجالك: مثلاً مطعم كشري، عيادة أسنان، محل موبايلات…">
  <div id="st-provbox"> <div class="lbl">مصدر الصور</div>
  <select id="st-ip">${Object.entries(IP).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
  <div class="two hide" id="st-ipk"><input id="st-ipkey" type="password" autocomplete="off" placeholder="المفتاح" dir="ltr"><a class="btn sm" id="st-iplink" target="_blank" rel="noopener">هات المفتاح</a></div>
@@ -51,14 +53,14 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
 </div></div>
 
  <div id="m-img"><div class="box"><div class="lbl">برومبت الصور</div>
-  <textarea id="st-ipr" rows="3" placeholder="مثال: إضاءة النافذة الجانبية في تصوير بورتريه"></textarea>
+  <textarea id="st-ipr" rows="3" placeholder="اوصف الصورة اللي عايزها (أي مجال)، بالعربي أو الإنجليزي"></textarea>
   <label class="chk"><input type="checkbox" id="st-enh" checked> الـAI يحسّن البرومبت لوحده (بالإنجليزي، تفاصيل أكتر)</label>
   <div class="two"><select id="st-icount">${[1, 2, 3, 4, 6].map(n => `<option ${n === 2 ? "selected" : ""}>${n}</option>`).join("")}</select><button class="btn pri" id="st-igo">🖼 ولّد الصور</button></div>
   <div id="st-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px"></div>
   <button class="btn hide" id="st-i2v">🎞 حوّل الصور دي لفيديو بصوت</button></div></div>
 
  <div id="m-vid" class="hide"><div class="box"><div class="lbl">توليد فيديو بالـAI <span>مدفوع غالباً (رصيد تجريبي عند التسجيل)</span></div>
-  <textarea id="st-vpr" rows="3" placeholder="مثال: لقطة سينمائية بطيئة لغرفة معيشة فاخرة والستارة بتتحرك مع الهواء"></textarea>
+  <textarea id="st-vpr" rows="3" placeholder="اوصف المشهد: الحركة، الكاميرا، الإضاءة. بأي مجال"></textarea>
   <label class="chk"><input type="checkbox" id="st-venh" checked> الـAI يحسّن البرومبت لوحده</label>
   <div class="lbl">مين يولّد الفيديو؟</div>
   <select id="st-veng"><option value="fal">fal.ai (LTX وغيره) — رصيد تجريبي</option><option value="veo">Veo — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="sora">Sora — OpenAI / ChatGPT (مدفوع، بمفتاح OpenAI)</option></select>
@@ -75,10 +77,12 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
 
  <div id="m-aud" class="hide"><div class="box"><div class="lbl">صوت وأغاني</div>
   <div class="two"><button class="btn sm pri" data-a="voice">🎙 تعليق صوتي</button><button class="btn sm" data-a="song">🎵 أغنية / موسيقى</button></div>
+  <div id="a-purpose" class="hide"><div class="lbl">الغرض من الأغنية</div><select id="st-apurp"><option value="">عامة</option><option value="jingle">جِنجل / أغنية إعلان لبراند</option><option value="kids">أغنية أطفال تعليمية</option><option value="motiv">أغنية تحفيزية</option><option value="bg">موسيقى خلفية للفيديو (من غير كلام)</option><option value="intro">إنترو / أوتـرو لقناة</option><option value="love">رومانسية</option><option value="fun">كوميدي / ساخرة</option><option value="mahraganat">مهرجانات</option><option value="shaabi">شعبي</option></select></div>
   <textarea id="st-atx" rows="5" placeholder="اكتب النص اللي يتقال، أو وصف الأغنية (النوع، المزاج، اللغة)"></textarea>
   <button class="btn sm" id="st-awrite">✍️ فريق الـAI يكتب النص / الكلمات</button>
   <div id="a-voice"><div class="lbl">مين يقرا؟</div>
-   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="eleven">ElevenLabs — رصيد مجاني شهري (للاستخدام غير التجاري)</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <div class="two hide" id="st-akbox"><input id="st-akey" type="password" autocomplete="off" placeholder="مفتاح ElevenLabs" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://elevenlabs.io/app/settings/api-keys">هات المفتاح</a></div>
    <select id="st-avoice"><option value="Kore">Kore — هادي</option><option value="Puck">Puck — شبابي</option><option value="Charon">Charon — رصين</option><option value="Aoede">Aoede — ناعم</option></select>
    <input id="st-astyle" placeholder="أسلوب الأداء (اختياري): حماسي / هادي / إعلان فخم" dir="rtl"></div>
   <div id="a-song" class="hide"><div class="lbl">مين يولّد الموسيقى؟</div>
@@ -90,8 +94,23 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <p class="note" id="st-aprog"></p>
   <audio id="st-aout" controls class="hide" style="width:100%"></audio>
   <a class="btn hide" id="st-adl">تحميل</a></div></div>
+
+ <details class="box" id="st-free"><summary class="lbl" style="cursor:pointer">🎁 فرص مجانية وبرامج للمطورين</summary>
+  <p class="note">اتجمعت من مواقع تجميع وصفحات الشركات في نوفمبر 2026، والشروط بتتغيّر، فاتأكد منها قبل ما تبني عليها.</p>
+  <ul class="note" style="line-height:1.9;padding-inline-start:18px">
+   <li><b>Gemini API</b> — مستوى مجاني للنصوص والصوت. <a target="_blank" rel="noopener" href="https://aistudio.google.com/apikey">مفتاح</a></li>
+   <li><b>Groq / Cerebras</b> — موديلات نصوص مجانية وسريعة. <a target="_blank" rel="noopener" href="https://console.groq.com/keys">Groq</a> · <a target="_blank" rel="noopener" href="https://cloud.cerebras.ai/platform">Cerebras</a></li>
+   <li><b>OpenRouter</b> — موديلات مجانية بحد يومي صغير. <a target="_blank" rel="noopener" href="https://openrouter.ai/keys">مفتاح</a></li>
+   <li><b>fal.ai</b> — رصيد تجريبي عند التسجيل للصور والفيديو والصوت، وصفحات بتذكر فيديو مجاني يومي لموديل MiniMax (غير مؤكد). <a target="_blank" rel="noopener" href="https://fal.ai/dashboard/keys">مفتاح</a></li>
+   <li><b>ElevenLabs</b> — 10 آلاف رصيد شهرياً مجاناً (غير تجاري)، وفيه منح للشركات الناشئة. <a target="_blank" rel="noopener" href="https://elevenlabs.io/startup-grants">المنح</a></li>
+   <li><b>Runware</b> — منحة للناشئين تصل لـ1000$ رصيد صور وفيديو. <a target="_blank" rel="noopener" href="https://runware.ai">الموقع</a></li>
+   <li><b>Replicate · Stability AI</b> — حصص تجريبية صغيرة للصور والفيديو والموسيقى. <a target="_blank" rel="noopener" href="https://replicate.com">Replicate</a> · <a target="_blank" rel="noopener" href="https://platform.stability.ai">Stability</a></li>
+   <li><b>Claude for Startups</b> — رصيد API للناشئين، والمؤسسين من غير تمويل ممكن يتقدموا. <a target="_blank" rel="noopener" href="https://claude.com/programs/startups">التفاصيل</a></li>
+   <li><b>Google Cloud / NVIDIA Inception / Microsoft for Startups</b> — برامج رصيد سحابة ودعم للناشئين.</li>
+   <li><b>Higgsfield API</b> — بيتحاسب بالاستخدام مش اشتراك. <a target="_blank" rel="noopener" href="https://higgsfield.ai/pricing">الصفحة</a></li>
+  </ul></details>
  <div id="m-show" class="hide"><div class="box"><div class="lbl">الفكرة</div>
- <textarea id="st-idea" rows="3" placeholder="مثال: 5 نصايح للإضاءة الطبيعية في التصوير بالموبايل"></textarea>
+ <textarea id="st-idea" rows="3" placeholder="اكتب فكرتك في أي مجال، أو دوس «اقترح أفكار» وهو يختارلك"></textarea>
  <div class="box" style="margin:8px 0"><div class="lbl">صورك أنت <span>اختياري — الصور مبتتخزنش بعد قفل الصفحة</span></div>
   <label class="btn sm" style="display:block;text-align:center">➕ أضف صور ليك كمشاهد<input type="file" id="st-own" accept="image/*" multiple hidden></label>
   <div class="two"><label class="btn sm" style="text-align:center">🎞 صورة البداية<input type="file" id="st-in" accept="image/*" hidden></label><input id="st-in-t" placeholder="عنوان على البداية (اختياري)"></div>
@@ -141,7 +160,7 @@ function render() {
 async function makeScenes() {
   const idea = $("#st-idea").value.trim(); if (!idea) return toast("اكتب الفكرة الأول");
   if (!window.APAI || !window.APAI.hasKey()) return toast("ضيف مفتاح AI في الإعدادات الأول (Gemini مجاني)", 6000);
-  const n = +$("#st-n").value, style = STYLES[$("#st-style").value], b = $("#st-go"); b.disabled = true; b.textContent = "بيكتب…";
+  const n = +$("#st-n").value, style = niche(), b = $("#st-go"); b.disabled = true; b.textContent = "بيكتب…";
   const prompt = `اكتب سيناريو فيديو قصير من ${n} مشاهد بالظبط. شكل الفيديو: ${FMT[state.fmt || "vert"][0]}.\nالفكرة: ${idea}\nالنوع: ${style}\nلكل مشهد: "narration" جملة أو جملتين بالعامية المصرية البسيطة تتقال بصوت (حوالي 5 ثواني)، و"image_prompt" وصف بصري بالإنجليزي واضح ومحدد للصورة (العناصر، الإضاءة، زاوية الكاميرا، الأسلوب) من غير نصوص مكتوبة داخل الصورة. أول مشهد لازم يشد الانتباه في أول ثانيتين، وآخر مشهد فيه دعوة لتصرف (CTA).\nرجّع JSON فقط بالشكل: {"scenes":[{"narration":"...","image_prompt":"..."}]}`;
   try { const t = await window.APAI.ask([{ text: prompt }], true); const j = window.APAI.parseJSON(t); const sc = (j.scenes || j).filter(x => x && x.narration);
     if (!sc.length) throw new Error("الرد مش بالشكل المطلوب — جرّب تاني");
@@ -154,7 +173,7 @@ async function makeScenes() {
 $("#st-go").onclick = makeScenes;
 async function suggest(btn, label) {
   if (!window.APAI || !window.APAI.hasKey()) { toast("ضيف مفتاح AI في الإعدادات الأول (Gemini مجاني)", 6000); return null; }
-  const hint = $("#st-idea").value.trim(), style = STYLES[$("#st-style").value]; btn.disabled = true; btn.textContent = "بيفكر…";
+  const hint = $("#st-idea").value.trim(), style = niche(); btn.disabled = true; btn.textContent = "بيفكر…";
   const used = (state.used || []).slice(-15).join(" | ");
   const prompt = `اقترح 5 أفكار فيديوهات قصيرة مختلفة ومبتكرة ومناسبة للنشر على السوشيال ميديا في مصر.\nالنوع: ${style}\n${hint ? "اتجاه من المستخدم: " + hint + "\n" : ""}${used ? "أفكار اتعملت قبل كده (متكررهاش): " + used + "\n" : ""}كل فكرة لازم يكون ليها هوك قوي في أول ثانيتين. لكل فكرة: "title" عنوان قصير، و"idea" وصف في جملتين.\nرجّع JSON فقط: {"ideas":[{"title":"...","idea":"..."}]}`;
   try { const j = window.APAI.parseJSON(await window.APAI.ask([{ text: prompt }], true)); const a = (j.ideas || j).filter(x => x && x.idea); if (!a.length) throw new Error("مفيش أفكار — جرّب تاني"); return a; }
@@ -252,7 +271,7 @@ document.querySelectorAll("#st-modes [data-m]").forEach(b => b.onclick = () => s
 
 async function enhance(text, kind) { // AI turns a short idea into a detailed English prompt
   if (!window.APAI || !window.APAI.hasKey()) return text;
-  try { const t = await window.APAI.ask([{ text: `حوّل الفكرة دي لبرومبت إنجليزي واحد مفصّل ${kind === "video" ? "لتوليد فيديو قصير (حركة الكاميرا، الحركة في المشهد، الإضاءة، الأسلوب)" : "لتوليد صورة (العناصر، الإضاءة، زاوية الكاميرا، الأسلوب، الألوان)"}، من غير أي نص مكتوب داخل الصورة.\nنوع المحتوى: ${STYLES[$("#st-style").value]}\nالشكل: ${FMT[state.fmt || "vert"][0]}\nالفكرة: ${text}\nرجّع البرومبت بس من غير شرح ولا علامات.` }]); return t.replace(/^["'`\s]+|["'`\s]+$/g, "") || text; }
+  try { const t = await window.APAI.ask([{ text: `حوّل الفكرة دي لبرومبت إنجليزي واحد مفصّل ${kind === "video" ? "لتوليد فيديو قصير (حركة الكاميرا، الحركة في المشهد، الإضاءة، الأسلوب)" : "لتوليد صورة (العناصر، الإضاءة، زاوية الكاميرا، الأسلوب، الألوان)"}، من غير أي نص مكتوب داخل الصورة.\nنوع المحتوى: ${niche()}\nالشكل: ${FMT[state.fmt || "vert"][0]}\nالفكرة: ${text}\nرجّع البرومبت بس من غير شرح ولا علامات.` }]); return t.replace(/^["'`\s]+|["'`\s]+$/g, "") || text; }
   catch (e) { return text; } }
 
 // -------- images only
@@ -302,12 +321,13 @@ $("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), prog
     const v = $("#st-vout"); v.src = url; v.classList.remove("hide"); const a = $("#st-vdl"); a.href = url; a.setAttribute("download", "ai-video.mp4"); a.classList.remove("hide"); prog.textContent = "خلص ✓ " + (prompt ? "— البرومبت: " + prompt.slice(0, 100) : ""); }
   catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
 
-$("#st-style").value = state.style || "tips"; $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); };
+$("#st-style").value = state.style || "any"; const nSync = () => $("#st-niche").classList.toggle("hide", $("#st-style").value !== "custom");
+$("#st-style").onchange = () => { state.style = $("#st-style").value; save(); nSync(); }; nSync(); $("#st-niche").value = state.niche || ""; $("#st-niche").oninput = () => { state.niche = $("#st-niche").value; save(); };
 setMode(MODES.includes(state.mode) ? state.mode : "img");
 
 // ---------------------------------------------------------------- audio mode: voice-over (Gemini TTS / OpenAI TTS) and songs/music (Lyria / fal.ai)
 let amode = "voice";
-const setA = a => { amode = a; document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song");
+const setA = a => { amode = a; document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
   $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; };
 document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => setA(b.dataset.a));
 const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
@@ -323,6 +343,9 @@ async function geminiAudio(model, parts, cfg) { const key = ls.get("ap_gemini");
     const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData); if (!p) throw new Error("مفيش صوت في الرد"); return audioBlob(p.inlineData); }
   catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
 async function voiceOut(text) { const eng = $("#st-aeng").value, voice = $("#st-avoice").value, style = $("#st-astyle").value.trim(), line = style ? `${style}: ${text}` : text;
+  if (eng === "eleven") { const key = ls.get("ap_key_eleven"); if (!key) throw new Error("ضيف مفتاح ElevenLabs"); const vid = { Kore: "21m00Tcm4TlvDq8ikWAM", Puck: "pNInz6obpgDQGcFmaJgB", Charon: "ErXwobaMiAZAvYXQzNvP", Aoede: "21m00Tcm4TlvDq8ikWAM" }[voice];
+    const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + vid + "?output_format=mp3_44100_128", { method: "POST", headers: { "xi-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }) });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("ElevenLabs: " + (d.detail?.message || d.detail?.status || r.status)); } return await r.blob(); }
   if (eng === "openai") { const key = ls.get("ap_key_openai"); if (!key) throw new Error("ضيف مفتاح OpenAI في الإعدادات"); const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: { Kore: "coral", Puck: "ash", Charon: "onyx", Aoede: "nova" }[voice] || "alloy", input: text, ...(style ? { instructions: style } : {}), response_format: "mp3" }) });
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("OpenAI: " + (d.error?.code === "insufficient_quota" ? "رصيد الـAPI صفر" : d.error?.message || r.status)); } return await r.blob(); }
   let last; for (const m of ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts"]) { try { return await geminiAudio(m, [{ text: line }], { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }); } catch (e) { last = e; } } throw last; }
@@ -334,11 +357,13 @@ async function songOut(text) { const eng = $("#st-seng").value;
   const t0 = Date.now(); let st = q; while (Date.now() - t0 < 600000) { await wait(4000); st = await (await fetch(q.status_url, { headers: H })).json().catch(() => ({})); $("#st-aprog").textContent = `بيتولّد… ${st.status || ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED") throw new Error("fal.ai: فشل التوليد"); }
   if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني"); const res = await (await fetch(q.response_url, { headers: H })).json(); const url = res.audio_file?.url || res.audio?.url || res.audio_url || res.music?.url; if (!url) throw new Error("مفيش صوت في الرد: " + JSON.stringify(res).slice(0, 100)); return await (await fetch(url)).blob(); }
 $("#st-ago").onclick = async () => { const text = $("#st-atx").value.trim(), b = $("#st-ago"), pr = $("#st-aprog"); if (!text) return toast("اكتب النص أو وصف الأغنية"); b.disabled = true; $("#st-aout").classList.add("hide"); $("#st-adl").classList.add("hide"); pr.textContent = "بيشتغل…";
-  try { const blob = await (amode === "voice" ? voiceOut(text) : songOut(text)), url = URL.createObjectURL(blob), ext = /mpeg|mp3/.test(blob.type) ? "mp3" : /wav/.test(blob.type) ? "wav" : (blob.type.split("/")[1] || "audio");
+  try { const purp = { jingle: "أغنية إعلانية قصيرة جذابة لبراند", kids: "أغنية أطفال تعليمية مرحة", motiv: "أغنية تحفيزية", bg: "موسيقى خلفية بدون كلام", intro: "إنترو قصير لقناة", love: "أغنية رومانسية", fun: "أغنية كوميدية ساخرة", mahraganat: "مهرجان مصري", shaabi: "أغنية شعبي مصري" }[$("#st-apurp").value], blob = await (amode === "voice" ? voiceOut(text) : songOut(purp ? `النوع: ${purp}. ${text}` : text)), url = URL.createObjectURL(blob), ext = /mpeg|mp3/.test(blob.type) ? "mp3" : /wav/.test(blob.type) ? "wav" : (blob.type.split("/")[1] || "audio");
     const a = $("#st-aout"); a.src = url; a.classList.remove("hide"); const d = $("#st-adl"); d.href = url; d.download = "autopost-audio." + ext; d.classList.remove("hide"); pr.textContent = "خلص ✓"; a.play().catch(() => {}); }
   catch (e) { pr.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
 $("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if (!t) return toast("اكتب فكرة الأول"); if (!window.APAI || !window.APAI.hasKey()) return toast("ضيف مفتاح AI في الإعدادات", 5000); const b = $("#st-awrite"); b.disabled = true;
-  try { const p = amode === "voice" ? `اكتب تعليق صوتي قصير بالعامية المصرية عن الفكرة دي، مناسب للقراءة بصوت (حوالي 20 ثانية)، من غير عناوين ولا علامات. النوع: ${STYLES[$("#st-style").value]}\nالفكرة: ${t}` : `اكتب كلمات أغنية قصيرة (مذهب وكوبليه) عن الفكرة دي، وفي أول سطر وصف الأسلوب الموسيقي بين أقواس. اللغة حسب الفكرة (عامية مصرية افتراضياً).\nالفكرة: ${t}`;
+  try { const p = amode === "voice" ? `اكتب تعليق صوتي قصير بالعامية المصرية عن الفكرة دي، مناسب للقراءة بصوت (حوالي 20 ثانية)، من غير عناوين ولا علامات. المجال: ${niche()}\nالفكرة: ${t}` : `اكتب كلمات أغنية قصيرة (مذهب وكوبليه) عن الفكرة دي، ${$("#st-apurp").selectedOptions[0].text !== "عامة" ? "الغرض: " + $("#st-apurp").selectedOptions[0].text + "،" : ""} وفي أول سطر وصف الأسلوب الموسيقي بين أقواس. اللغة حسب الفكرة (عامية مصرية افتراضياً).\nالفكرة: ${t}`;
     $("#st-atx").value = await window.APAI.ask([{ text: p }]); } catch (e) { toast(e.message, 6000); } finally { b.disabled = false; } };
+$("#st-akey").value = ls.get("ap_key_eleven"); $("#st-akey").onchange = e => ls.set("ap_key_eleven", e.target.value.trim());
+const aeSync = () => $("#st-akbox").classList.toggle("hide", $("#st-aeng").value !== "eleven"); $("#st-aeng").onchange = aeSync; aeSync();
 setA("voice");
 })();
