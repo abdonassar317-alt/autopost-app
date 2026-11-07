@@ -36,7 +36,7 @@ const IMGM = { flux: "Flux (أحسن جودة)", turbo: "Turbo (أسرع)", "": 
 const imgUrl = (p, seed) => { const [w, h] = dims(), m = state.im === undefined ? "flux" : state.im; return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}${m ? "&model=" + m : ""}`; };
 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
-sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-m="img">🖼 صور</button><button class="btn sm" data-m="vid">🎥 فيديو (AI)</button><button class="btn sm" data-m="show">🎞 صور ← فيديو</button><button class="btn sm" data-m="aud">🎙 صوت وأغاني</button></div>
+sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-m="img">🖼 صور</button><button class="btn sm" data-m="vid">🎥 فيديو (AI)</button><button class="btn sm" data-m="show">🎞 صور ← فيديو</button><button class="btn sm" data-m="voice">🎙 صوت</button><button class="btn sm" data-m="song">🎵 أغاني</button></div>
  <div class="box">
   <div class="lbl">الفيديو لإيه؟ <span>بيحدد المقاس</span></div>
  <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
@@ -78,9 +78,8 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <video id="st-vout" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
   <a class="btn hide" id="st-vdl" target="_blank" rel="noopener" download>تحميل / فتح الفيديو</a></div></div>
 
- <div id="m-aud" class="hide"><div class="box"><div class="lbl">صوت وأغاني</div>
-  <div class="two"><button class="btn sm pri" data-a="voice">🎙 تعليق صوتي</button><button class="btn sm" data-a="song">🎵 أغنية / موسيقى</button></div>
-  <div id="a-purpose" class="hide"><div class="lbl">الغرض من الأغنية</div><select id="st-apurp"><option value="">عامة</option><option value="jingle">جِنجل / أغنية إعلان لبراند</option><option value="kids">أغنية أطفال تعليمية</option><option value="motiv">أغنية تحفيزية</option><option value="bg">موسيقى خلفية للفيديو (من غير كلام)</option><option value="intro">إنترو / أوتـرو لقناة</option><option value="love">رومانسية</option><option value="fun">كوميدي / ساخرة</option><option value="mahraganat">مهرجانات</option><option value="shaabi">شعبي</option></select></div>
+ <div id="m-aud" class="hide"><div class="box"><div class="lbl" id="st-atitle">تعليق صوتي</div>
+  <div id="a-purpose" class="hide"><div class="lbl">الغرض من الأغنية</div><select id="st-apurp"><option value="">عامة</option><option value="jingle">جِنجل / أغنية إعلان لبراند</option><option value="kids">أغنية أطفال تعليمية</option><option value="motiv">أغنية تحفيزية</option><option value="bg">موسيقى خلفية للفيديو (من غير كلام)</option><option value="intro">إنترو / أوتـرو لقناة</option><option value="love">رومانسية</option><option value="fun">كوميدي / ساخرة</option><option value="mahraganat">مهرجانات</option><option value="shaabi">شعبي</option><option value="bday">عيد ميلاد / حفلة</option><option value="wedding">زفاف / خطوبة</option><option value="ramadan">رمضان / عيد</option><option value="nation">وطنية</option><option value="sport">رياضية / تشجيع</option><option value="game">ألعاب / جيمنج</option><option value="calm">هادية للنوم / تأمل</option><option value="rap">راب</option></select></div>
   <textarea id="st-atx" rows="5" placeholder="اكتب النص اللي يتقال، أو وصف الأغنية (النوع، المزاج، اللغة)"></textarea>
   <button class="btn sm" id="st-awrite">✍️ فريق الـAI يكتب النص / الكلمات</button>
   <div id="a-voice"><div class="lbl">مين يقرا؟</div>
@@ -267,9 +266,10 @@ async function makeVideo() {
 $("#st-mk").onclick = makeVideo; frTxt();
 
 // ---------------------------------------------------------------- modes: images only / AI video only / images -> narrated video
-const MODES = ["img", "vid", "show", "aud"];
-function setMode(m) { state.mode = m; save(); MODES.forEach(k => $("#m-" + k).classList.toggle("hide", k !== m));
-  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid" || m === "aud"); nicheVis(); }
+const MODES = ["img", "vid", "show", "voice", "song"];
+const SEC = m => (m === "voice" || m === "song") ? "aud" : m;
+function setMode(m) { state.mode = m; save(); ["img", "vid", "show", "aud"].forEach(k => $("#m-" + k).classList.toggle("hide", k !== SEC(m)));
+  document.querySelectorAll("#st-modes [data-m]").forEach(b => b.classList.toggle("pri", b.dataset.m === m)); $("#st-provbox").classList.toggle("hide", m === "vid" || SEC(m) === "aud"); if (SEC(m) === "aud") setA(m); nicheVis(); }
 document.querySelectorAll("#st-modes [data-m]").forEach(b => b.onclick = () => setMode(b.dataset.m));
 
 async function enhance(text, kind) { // AI turns a short idea into a detailed English prompt
@@ -326,14 +326,13 @@ $("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), prog
 
 $("#st-style").value = state.style || "any"; const nSync = () => $("#st-niche").classList.toggle("hide", $("#st-style").value !== "custom");
 $("#st-style").onchange = () => { state.style = $("#st-style").value; save(); nSync(); }; nSync(); $("#st-niche").value = state.niche || ""; $("#st-niche").oninput = () => { state.niche = $("#st-niche").value; save(); };
-setMode(MODES.includes(state.mode) ? state.mode : "img");
+setMode(MODES.includes(state.mode) ? state.mode : (state.mode === "aud" ? "voice" : "img"));
 
 // ---------------------------------------------------------------- audio mode: voice-over (Gemini TTS / OpenAI TTS) and songs/music (Lyria / fal.ai)
 var amode = "voice";
-function nicheVis() { $("#st-nichebox").classList.toggle("hide", state.mode === "aud" && amode === "song"); }
-const setA = a => { amode = a; nicheVis(); document.querySelectorAll("[data-a]").forEach(b => b.classList.toggle("pri", b.dataset.a === a)); $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
+function nicheVis() { $("#st-nichebox").classList.toggle("hide", state.mode === "song"); }
+const setA = a => { amode = a; nicheVis(); $("#st-atitle").textContent = a === "voice" ? "🎙 تعليق صوتي" : "🎵 أغنية / موسيقى"; $("#a-voice").classList.toggle("hide", a !== "voice"); $("#a-song").classList.toggle("hide", a !== "song"); $("#a-purpose").classList.toggle("hide", a !== "song");
   $("#st-atx").placeholder = a === "voice" ? "اكتب النص اللي يتقال بصوت" : "وصف الأغنية: النوع، المزاج، اللغة، وكلماتها لو عندك"; };
-document.querySelectorAll("[data-a]").forEach(b => b.onclick = () => setA(b.dataset.a));
 const seSync = () => { $("#st-salt").classList.toggle("hide", $("#st-seng").value !== "fal"); }; $("#st-seng").onchange = seSync; seSync();
 $("#st-sm").onchange = () => $("#st-scustom").classList.toggle("hide", $("#st-sm").value !== "custom");
 function pcmWav(u8, rate) { const n = u8.length, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
@@ -361,7 +360,7 @@ async function songOut(text) { const eng = $("#st-seng").value;
   const t0 = Date.now(); let st = q; while (Date.now() - t0 < 600000) { await wait(4000); st = await (await fetch(q.status_url, { headers: H })).json().catch(() => ({})); $("#st-aprog").textContent = `بيتولّد… ${st.status || ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; if (st.status === "COMPLETED") break; if (st.status === "FAILED") throw new Error("fal.ai: فشل التوليد"); }
   if (st.status !== "COMPLETED") throw new Error("اتأخر — جرّب تاني"); const res = await (await fetch(q.response_url, { headers: H })).json(); const url = res.audio_file?.url || res.audio?.url || res.audio_url || res.music?.url; if (!url) throw new Error("مفيش صوت في الرد: " + JSON.stringify(res).slice(0, 100)); return await (await fetch(url)).blob(); }
 $("#st-ago").onclick = async () => { const text = $("#st-atx").value.trim(), b = $("#st-ago"), pr = $("#st-aprog"); if (!text) return toast("اكتب النص أو وصف الأغنية"); b.disabled = true; $("#st-aout").classList.add("hide"); $("#st-adl").classList.add("hide"); pr.textContent = "بيشتغل…";
-  try { const purp = { jingle: "أغنية إعلانية قصيرة جذابة لبراند", kids: "أغنية أطفال تعليمية مرحة", motiv: "أغنية تحفيزية", bg: "موسيقى خلفية بدون كلام", intro: "إنترو قصير لقناة", love: "أغنية رومانسية", fun: "أغنية كوميدية ساخرة", mahraganat: "مهرجان مصري", shaabi: "أغنية شعبي مصري" }[$("#st-apurp").value], blob = await (amode === "voice" ? voiceOut(text) : songOut(purp ? `النوع: ${purp}. ${text}` : text)), url = URL.createObjectURL(blob), ext = /mpeg|mp3/.test(blob.type) ? "mp3" : /wav/.test(blob.type) ? "wav" : (blob.type.split("/")[1] || "audio");
+  try { const purp = { jingle: "أغنية إعلانية قصيرة جذابة لبراند", kids: "أغنية أطفال تعليمية مرحة", motiv: "أغنية تحفيزية", bg: "موسيقى خلفية بدون كلام", intro: "إنترو قصير لقناة", love: "أغنية رومانسية", fun: "أغنية كوميدية ساخرة", mahraganat: "مهرجان مصري", shaabi: "أغنية شعبي مصري", bday: "أغنية عيد ميلاد وحفلة", wedding: "أغنية زفاف", ramadan: "أغنية رمضان وعيد", nation: "أغنية وطنية", sport: "أغنية تشجيع رياضية", game: "موسيقى ألعاب", calm: "موسيقى هادية للنوم والتأمل", rap: "راب" }[$("#st-apurp").value], blob = await (amode === "voice" ? voiceOut(text) : songOut(purp ? `النوع: ${purp}. ${text}` : text)), url = URL.createObjectURL(blob), ext = /mpeg|mp3/.test(blob.type) ? "mp3" : /wav/.test(blob.type) ? "wav" : (blob.type.split("/")[1] || "audio");
     const a = $("#st-aout"); a.src = url; a.classList.remove("hide"); const d = $("#st-adl"); d.href = url; d.download = "autopost-audio." + ext; d.classList.remove("hide"); pr.textContent = "خلص ✓"; a.play().catch(() => {}); }
   catch (e) { pr.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
 $("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if (!t) return toast("اكتب فكرة الأول"); if (!window.APAI || !window.APAI.hasKey()) return toast("ضيف مفتاح AI في الإعدادات", 5000); const b = $("#st-awrite"); b.disabled = true;
@@ -369,5 +368,4 @@ $("#st-awrite").onclick = async () => { const t = $("#st-atx").value.trim(); if 
     $("#st-atx").value = await window.APAI.ask([{ text: p }]); } catch (e) { toast(e.message, 6000); } finally { b.disabled = false; } };
 $("#st-akey").value = ls.get("ap_key_eleven"); $("#st-akey").onchange = e => { ls.set("ap_key_eleven", e.target.value.trim()); pushKeys(); };
 const aeSync = () => $("#st-akbox").classList.toggle("hide", $("#st-aeng").value !== "eleven"); $("#st-aeng").onchange = aeSync; aeSync();
-setA("voice");
 })();
