@@ -12,7 +12,8 @@ const save = () => ls.set("ap_studio", JSON.stringify(state));
 const FMT = { vert: ["تيك توك / ريلز / شورتس (9:16)", 9, 16], wide: ["يوتيوب / فيديو عريض (16:9)", 16, 9], feed: ["إنستجرام فيد (4:5)", 4, 5], sq: ["مربع: فيسبوك / لينكدإن (1:1)", 1, 1] };
 const QUAL = { draft: ["مسودة سريعة (540)", 540], std: ["عادي (720)", 720], high: ["عالي (1080)", 1080] };
 const dims = () => { const f = FMT[state.fmt || "vert"], q = QUAL[state.q || "std"][1], r16 = n => Math.round(n / 16) * 16, k = q / Math.min(f[1], f[2]); return [r16(f[1] * k), r16(f[2] * k)]; };
-const imgUrl = (p, seed) => { const [w, h] = dims(); return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}`; };
+const IMGM = { flux: "Flux (أحسن جودة)", turbo: "Turbo (أسرع)", "": "تلقائي" };
+const imgUrl = (p, seed) => { const [w, h] = dims(), m = state.im === undefined ? "flux" : state.im; return `https://image.pollinations.ai/prompt/${encodeURIComponent(p)}?width=${w}&height=${h}&nologo=true&seed=${seed}${m ? "&model=" + m : ""}`; };
 
 const sec = document.createElement("section"); sec.id = "studio"; sec.className = "hide";
 sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
@@ -23,6 +24,9 @@ sec.innerHTML = `<div class="box"><div class="lbl">الفكرة</div>
  <select id="st-fmt">${Object.entries(FMT).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
  <div class="lbl">الجودة</div>
  <select id="st-q">${Object.entries(QUAL).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join("")}</select>
+ <div class="lbl">موديل الصور</div>
+ <select id="st-im">${Object.entries(IMGM).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
+ <label class="chk"><input type="checkbox" id="st-dir" checked> مخرج AI يراجع السيناريو (فريقك كله يشتغل: واحد يكتب وواحد يراجع)</label>
  <p class="note" id="st-dim"></p>
  <div class="two"><select id="st-style">${Object.entries({ re: "عقاري", kids: "أطفال", tips: "نصايح تصوير", free: "حر" }).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select>
  <select id="st-n">${[3, 4, 5, 6, 8].map(n => `<option ${n === 5 ? "selected" : ""}>${n}</option>`).join("")}</select></div>
@@ -62,7 +66,10 @@ async function makeScenes() {
   const prompt = `اكتب سيناريو فيديو قصير من ${n} مشاهد بالظبط. شكل الفيديو: ${FMT[state.fmt || "vert"][0]}.\nالفكرة: ${idea}\nالنوع: ${style}\nلكل مشهد: "narration" جملة أو جملتين بالعامية المصرية البسيطة تتقال بصوت (حوالي 5 ثواني)، و"image_prompt" وصف بصري بالإنجليزي واضح ومحدد للصورة (العناصر، الإضاءة، زاوية الكاميرا، الأسلوب) من غير نصوص مكتوبة داخل الصورة. أول مشهد لازم يشد الانتباه في أول ثانيتين، وآخر مشهد فيه دعوة لتصرف (CTA).\nرجّع JSON فقط بالشكل: {"scenes":[{"narration":"...","image_prompt":"..."}]}`;
   try { const t = await window.APAI.ask([{ text: prompt }], true); const j = window.APAI.parseJSON(t); const sc = (j.scenes || j).filter(x => x && x.narration);
     if (!sc.length) throw new Error("الرد مش بالشكل المطلوب — جرّب تاني");
-    state.idea = idea; state.scenes = sc.map(x => ({ narration: String(x.narration), image_prompt: String(x.image_prompt || ""), seed: 0 })); save(); render(); return true; }
+    let fin = sc;
+    if ($("#st-dir").checked) { b.textContent = "المخرج بيراجع…"; try { const rv = await window.APAI.ask([{ text: `إنت مخرج فيديوهات سوشيال ميديا محترف. راجع السيناريو ده وحسّنه: خلّي التعليق الصوتي أقصر وأقوى وأطبيعي بالعامية المصرية (جملة أو جملتين لكل مشهد، حوالي 5 ثواني)، وزوّد تفاصيل بصرية في image_prompt (إضاءة، زاوية، حركة) وخلّي الصور متناسقة في الأسلوب والألوان، ومتغيّرش عدد المشاهد (${sc.length}). الفكرة: ${idea}\nالسيناريو الحالي:\n${JSON.stringify({ scenes: sc })}\nرجّع JSON بنفس الشكل فقط.` }], true);
+        const j2 = window.APAI.parseJSON(rv), s2 = (j2.scenes || j2).filter(x => x && x.narration); if (s2.length === sc.length) fin = s2; } catch (e) { toast("المراجعة فشلت، هستخدم النسخة الأولى", 4000); } }
+    state.idea = idea; state.scenes = fin.map(x => ({ narration: String(x.narration), image_prompt: String(x.image_prompt || ""), seed: 0 })); save(); render(); return true; }
   catch (e) { toast(e.message, 7000); return false; } finally { b.disabled = false; b.textContent = "اكتب المشاهد"; }
 }
 $("#st-go").onclick = makeScenes;
@@ -85,6 +92,7 @@ $("#st-auto").onclick = async () => { const a = await suggest($("#st-auto"), "�
 const dimTxt = () => { const [w, h] = dims(); $("#st-dim").textContent = `المقاس: ${w}×${h}. لو غيّرته بعد توليد الصور، دوس «ولّد كل الصور» تاني.`; };
 $("#st-fmt").value = state.fmt || "vert"; $("#st-q").value = state.q || "std"; dimTxt();
 $("#st-fmt").onchange = () => { state.fmt = $("#st-fmt").value; save(); dimTxt(); render(); };
+$("#st-im").value = state.im === undefined ? "flux" : state.im; $("#st-im").onchange = () => { state.im = $("#st-im").value; save(); render(); };
 $("#st-q").onchange = () => { state.q = $("#st-q").value; save(); dimTxt(); render(); };
 if (state.idea) $("#st-idea").value = state.idea; render();
 
