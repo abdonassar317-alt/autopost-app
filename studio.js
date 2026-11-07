@@ -66,8 +66,9 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <textarea id="st-vpr" rows="3" placeholder="اوصف المشهد: الحركة، الكاميرا، الإضاءة. بأي مجال"></textarea>
   <label class="chk"><input type="checkbox" id="st-venh" checked> الـAI يحسّن البرومبت لوحده</label>
   <div class="lbl">مين يولّد الفيديو؟</div>
-  <select id="st-veng"><option value="fal">fal.ai (LTX وغيره) — رصيد تجريبي</option><option value="veo">Veo — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="sora">Sora — OpenAI / ChatGPT (مدفوع، بمفتاح OpenAI)</option></select>
+  <select id="st-veng"><option value="hf">مفتوح المصدر — Hugging Face (LTX / Wan) — مجاني</option><option value="fal">fal.ai (LTX وغيره) — رصيد تجريبي</option><option value="veo">Veo — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="sora">Sora — OpenAI / ChatGPT (مدفوع، بمفتاح OpenAI)</option></select>
   <p class="note hide" id="st-vengnote"></p>
+  <div id="st-hfbox"><div class="lbl">الموديل (مفتوح المصدر)</div><select id="st-hfm"><option value="ltx">LTX-Video — نص أو صورة ← فيديو (سريع)</option><option value="wan">Wan 2.2 — صورة ← فيديو (جودة أعلى، لازم صورة بداية)</option></select><div class="two"><input id="st-hftok" type="password" autocomplete="off" placeholder="توكن Hugging Face (اختياري — بيزوّد الحصة)" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://huggingface.co/settings/tokens">هات التوكن</a></div></div>
   <div id="st-falbox"><div class="lbl">الموديل (fal.ai)</div>
   <select id="st-vm"><option value="fal-ai/ltx-video">LTX Video — نص ← فيديو (رخيص)</option><option value="fal-ai/ltx-video/image-to-video">LTX Video — صورة ← فيديو</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
   <input id="st-vcustom" class="hide" dir="ltr" placeholder="مثال: fal-ai/wan/v2.2-a14b/text-to-video">
@@ -83,7 +84,7 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <textarea id="st-atx" rows="5" placeholder="اكتب النص اللي يتقال، أو وصف الأغنية (النوع، المزاج، اللغة)"></textarea>
   <button class="btn sm" id="st-awrite">✍️ فريق الـAI يكتب النص / الكلمات</button>
   <div id="a-voice"><div class="lbl">مين يقرا؟</div>
-   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="eleven">ElevenLabs — رصيد مجاني شهري (للاستخدام غير التجاري)</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
+   <select id="st-aeng"><option value="gemini">Gemini (Google AI Studio) — مجاني</option><option value="cb">Chatterbox (مفتوح المصدر، عربي) — مجاني</option><option value="om">OmniVoice (مفتوح المصدر، عربي مصري) — مجاني</option><option value="eleven">ElevenLabs — رصيد مجاني شهري (للاستخدام غير التجاري)</option><option value="openai">OpenAI TTS (ChatGPT) — مدفوع</option></select>
    <div class="two hide" id="st-akbox"><input id="st-akey" type="password" autocomplete="off" placeholder="مفتاح ElevenLabs" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://elevenlabs.io/app/settings/api-keys">هات المفتاح</a></div>
    <select id="st-avoice"><option value="Kore">Kore — هادي</option><option value="Puck">Puck — شبابي</option><option value="Charon">Charon — رصين</option><option value="Aoede">Aoede — ناعم</option></select>
    <input id="st-astyle" placeholder="أسلوب الأداء (اختياري): حماسي / هادي / إعلان فخم" dir="rtl"></div>
@@ -107,7 +108,7 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
    <input id="st-sg-extra" placeholder="ملاحظات زيادة (اختياري): زي مرجع مشابه أو كلمة لازم تتكرر" dir="rtl">
   </div>
    <div class="lbl">مين يولّد الموسيقى؟</div>
-   <select id="st-seng"><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
+   <select id="st-seng"><option value="mm">MiniMax Music 3 (مفتوح/مجاني، أغنية بصوت مغني) — HF</option><option value="mg">MusicGen (مفتوح المصدر، موسيقى بدون غنا) — HF</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
    <div id="st-salt" class="hide"><select id="st-sm"><option value="fal-ai/stable-audio">Stable Audio — موسيقى</option><option value="fal-ai/minimax-music">MiniMax Music — أغنية بكلمات</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
    <input id="st-scustom" class="hide" dir="ltr" placeholder="slug من fal.ai"><p class="note">مفتاح fal.ai هو نفسه اللي في وضع الفيديو.</p></div>
    <p class="note">Lyria وfal مفيهمش حصة مجانية دايمة؛ لو الحساب مفيهوش رصيد هتظهر رسالة خطأ.</p></div>
@@ -311,10 +312,33 @@ $("#st-i2v").onclick = () => { gallery.forEach(x => state.scenes.push({ narratio
 $("#st-vm").onchange = () => $("#st-vcustom").classList.toggle("hide", $("#st-vm").value !== "custom");
 $("#st-vkey").value = ls.get("ap_key_fal"); $("#st-vkey").onchange = e => { ls.set("ap_key_fal", e.target.value.trim()); pushKeys(); };
 const toData = f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
-const ENG = { fal: "", veo: "بيستخدم مفتاح Gemini اللي في الإعدادات. Veo مفيهوش حصة مجانية، ولازم تفعّل الدفع في Google AI Studio، وبيظهر في حسابك بس لو متاح.", sora: "بيستخدم مفتاح OpenAI اللي في الإعدادات (خانة ChatGPT). Sora بيتحاسب بالثانية من رصيد الـAPI، ولازم الحساب يكون مسموح له بيه." };
-const engSync = () => { const e = $("#st-veng").value; $("#st-falbox").classList.toggle("hide", e !== "fal"); const n = $("#st-vengnote"); n.textContent = ENG[e]; n.classList.toggle("hide", !ENG[e]); };
-$("#st-veng").value = state.veng || "fal"; engSync(); $("#st-veng").onchange = () => { state.veng = $("#st-veng").value; save(); engSync(); };
+const ENG = { hf: "مجاني ومن غير مفتاح. بيشتغل على سيرفرات Hugging Face العامة (ZeroGPU)، وليك حصة GPU يومية صغيرة (حوالي دقيقتين بدون حساب، وأكتر بتوكن مجاني). ممكن تستنى في الدور، والفيديو قصير (2–4 ثواني).", fal: "", veo: "بيستخدم مفتاح Gemini اللي في الإعدادات. Veo مفيهوش حصة مجانية، ولازم تفعّل الدفع في Google AI Studio، وبيظهر في حسابك بس لو متاح.", sora: "بيستخدم مفتاح OpenAI اللي في الإعدادات (خانة ChatGPT). Sora بيتحاسب بالثانية من رصيد الـAPI، ولازم الحساب يكون مسموح له بيه." };
+const engSync = () => { const e = $("#st-veng").value; $("#st-falbox").classList.toggle("hide", e !== "fal"); $("#st-hfbox").classList.toggle("hide", e !== "hf"); const n = $("#st-vengnote"); n.textContent = ENG[e]; n.classList.toggle("hide", !ENG[e]); };
+$("#st-hftok").value = ls.get("ap_key_hf"); $("#st-hftok").onchange = e => { ls.set("ap_key_hf", e.target.value.trim()); pushKeys(); };
+$("#st-veng").value = state.veng || "hf"; engSync(); $("#st-veng").onchange = () => { state.veng = $("#st-veng").value; save(); engSync(); };
 const vsize = () => { const f = state.fmt || "vert"; return f === "wide" ? ["1280x720", "16:9"] : f === "vert" ? ["720x1280", "9:16"] : ["720x1280", "9:16"]; };
+// -------- Open-source models via Hugging Face Spaces (Gradio REST API)
+const HFS = { ltx: "Lightricks/ltx-video-distilled", wan: "zerogpu-aoti/wan2-2-fp8da-aoti-faster", mm: "MiniMaxAI/MiniMax-Music3", mg: "facebook/MusicGen", cb: "ResembleAI/Chatterbox-Multilingual-TTS", om: "k2-fsa/OmniVoice" };
+const hfBase = id => "https://" + id.replace("/", "-").replace(/[._]/g, "-").toLowerCase() + ".hf.space";
+const hfH = () => { const t = ls.get("ap_key_hf"); return t ? { Authorization: "Bearer " + t } : {}; };
+async function hfUpload(id, blob) { const fd = new FormData(); fd.append("files", blob, "in.png"); const r = await fetch(hfBase(id) + "/gradio_api/upload", { method: "POST", headers: hfH(), body: fd }); if (!r.ok) throw new Error("رفع الصورة فشل " + r.status); const j = await r.json(); return { path: j[0], meta: { _type: "gradio.FileData" } }; }
+function hfFind(x, re) { if (!x || typeof x !== "object") return null; if (typeof x.url === "string" && (!re || re.test(x.url))) return x.url; if (typeof x.path === "string" && (!re || re.test(x.path)) && !x.url) return { path: x.path }; for (const k of Object.keys(x)) { const f = hfFind(x[k], re); if (f) return f; } return null; }
+async function hfCall(id, api, data, prog, label, re) { const base = hfBase(id), H = { ...hfH(), "Content-Type": "application/json" }, t0 = Date.now();
+  prog.textContent = label + " — بيتصل بالسيرفر…"; const r = await fetch(base + "/gradio_api/call/" + api, { method: "POST", headers: H, body: JSON.stringify({ data }) }); const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.event_id) throw new Error("Hugging Face: " + (j.detail || j.error || r.status).toString().slice(0, 140) + (r.status === 404 || r.status >= 500 ? " (السيرفر نايم أو واقع — جرّب بعد شوية)" : ""));
+  const tick = setInterval(() => { prog.textContent = `${label} — بيتولّد (ممكن يستنى في الدور)… ${Math.round((Date.now() - t0) / 1000)} ث`; }, 1000);
+  try { const c = new AbortController(), to = setTimeout(() => c.abort(), 600000); let txt; try { txt = await (await fetch(base + "/gradio_api/call/" + api + "/" + j.event_id, { headers: hfH(), signal: c.signal })).text(); } finally { clearTimeout(to); }
+    const ev = [...txt.matchAll(/event: (\w+)\s*\ndata: ([^\n]*)/g)].pop(); if (!ev) throw new Error("رد فاضي من السيرفر");
+    if (ev[1] === "error") { let m = ev[2]; try { m = JSON.parse(m); } catch (e) {} const ms = (typeof m === "string" ? m : JSON.stringify(m)); throw new Error(/quota|GPU|exceeded/i.test(ms) ? "حصة الـGPU المجانية خلصت النهارده — حط توكن Hugging Face أو جرّب بكره" : "Hugging Face: " + (ms === "null" ? "فشل التوليد (السيرفر مشغول؟)" : ms.slice(0, 160))); }
+    const out = JSON.parse(ev[2]), f = hfFind(out, re); if (!f) throw new Error("مفيش ملف في الرد: " + ev[2].slice(0, 100)); const url = typeof f === "string" ? f : base + "/gradio_api/file=" + f.path; return url; }
+  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearInterval(tick); } }
+const hfBlob = async url => { const r = await fetch(url, { headers: hfH() }); if (!r.ok) throw new Error("تحميل الملف فشل " + r.status); return await r.blob(); };
+async function runHF(prompt, prog) { const m = $("#st-hfm").value, f = $("#st-vimg").files[0], tall = (state.fmt || "vert") !== "wide", NEG = "worst quality, inconsistent motion, blurry, jittery, distorted", V = /\.(mp4|webm|mov)/i;
+  if (m === "wan") { if (!f) throw new Error("Wan بيحتاج صورة بداية — ارفع صورة فوق"); const img = await hfUpload(HFS.wan, f);
+    return await hfBlob(await hfCall(HFS.wan, "generate_video", [img, prompt || "make this image come alive, cinematic motion, smooth animation", 6, NEG, 3.5, 1, 1, 42, true], prog, "Wan 2.2", V)).then(b => URL.createObjectURL(b)); }
+  const h = tall ? 704 : 512, w = tall ? 512 : 704;
+  if (f) { const img = await hfUpload(HFS.ltx, f); return await hfBlob(await hfCall(HFS.ltx, "image_to_video", [prompt || "the scene starts to move, cinematic", NEG, img, null, h, w, "image-to-video", 3, 9, 42, true, 1, true], prog, "LTX-Video", V)).then(b => URL.createObjectURL(b)); }
+  return await hfBlob(await hfCall(HFS.ltx, "text_to_video", [prompt, NEG, null, null, h, w, "text-to-video", 3, 9, 42, true, 1, true], prog, "LTX-Video", V)).then(b => URL.createObjectURL(b)); }
 async function runFal(prompt, prog) { const key = ls.get("ap_key_fal"); let model = $("#st-vm").value === "custom" ? $("#st-vcustom").value.trim() : $("#st-vm").value; if (!key) throw new Error("ضيف مفتاح fal.ai الأول"); if (!model) throw new Error("اكتب اسم الموديل");
   const body = { prompt }; const f = $("#st-vimg").files[0]; if (f) body.image_url = await toData(f); const H = { Authorization: "Key " + key, "Content-Type": "application/json" };
   const r = await fetch("https://queue.fal.run/" + model, { method: "POST", headers: H, body: JSON.stringify(body) }); const q = await r.json().catch(() => ({}));
@@ -336,10 +360,10 @@ async function runSora(prompt, prog) { const key = ls.get("ap_key_openai"); if (
   while (d.status !== "completed" && Date.now() - t0 < 900000) { if (d.status === "failed") throw new Error("Sora: " + (d.error?.message || "فشل التوليد")); await wait(6000); d = await (await fetch(base + "/" + j.id, { headers: H })).json(); prog.textContent = `Sora بيولّد… ${d.progress != null ? d.progress + "%" : d.status || ""} — ${Math.round((Date.now() - t0) / 1000)} ث`; }
   if (d.status !== "completed") throw new Error("اتأخر — جرّب تاني"); const vr = await fetch(base + "/" + j.id + "/content", { headers: H }); if (!vr.ok) throw new Error("تحميل الفيديو فشل " + vr.status); return URL.createObjectURL(await vr.blob()); }
 $("#st-vgo").onclick = async () => { const raw = $("#st-vpr").value.trim(), prog = $("#st-vprog"), b = $("#st-vgo"), eng = $("#st-veng").value;
-  if (!raw && !(eng === "fal" && $("#st-vimg").files[0])) return toast("اكتب برومبت الفيديو");
+  if (!raw && !((eng === "fal" || eng === "hf") && $("#st-vimg").files[0])) return toast("اكتب برومبت الفيديو");
   b.disabled = true; $("#st-vout").classList.add("hide"); $("#st-vdl").classList.add("hide");
   try { prog.textContent = "بجهّز البرومبت…"; const prompt = $("#st-venh").checked && raw ? await enhance(raw, "video") : raw;
-    const url = await (eng === "veo" ? runVeo : eng === "sora" ? runSora : runFal)(prompt, prog);
+    const url = await (eng === "veo" ? runVeo : eng === "sora" ? runSora : eng === "hf" ? runHF : runFal)(prompt, prog);
     const v = $("#st-vout"); v.src = url; v.classList.remove("hide"); const a = $("#st-vdl"); a.href = url; a.setAttribute("download", "ai-video.mp4"); a.classList.remove("hide"); prog.textContent = "خلص ✓ " + (prompt ? "— البرومبت: " + prompt.slice(0, 100) : ""); }
   catch (e) { prog.textContent = "فشل: " + e.message; toast(e.message, 8000); } finally { b.disabled = false; } };
 
@@ -375,13 +399,18 @@ async function geminiAudio(model, parts, cfg) { const key = ls.get("ap_gemini");
     const p = (d.candidates?.[0]?.content?.parts || []).find(x => x.inlineData); if (!p) throw new Error("مفيش صوت في الرد"); return audioBlob(p.inlineData); }
   catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearTimeout(t); } }
 async function voiceOut(text) { const eng = $("#st-aeng").value, voice = $("#st-avoice").value, style = $("#st-astyle").value.trim(), line = style ? `${style}: ${text}` : text;
+  if (eng === "cb" || eng === "om") { const pr = $("#st-aprog"), V = /\.(wav|mp3|flac|ogg|m4a)/i, fem = /Kore|Aoede/.test(voice);
+    const u = eng === "cb" ? await hfCall(HFS.cb, "generate_tts_audio", [text, "ar", null, 0.5, 0.8, 0, 0.5], pr, "Chatterbox", V) : await hfCall(HFS.om, "_design_fn", [text, "Egyptian Arabic", 32, 2, true, 1, null, true, true, fem ? "Female / 女" : "Male / 男", "Auto", "Auto", "Auto", "Auto", "Auto"], pr, "OmniVoice", V); return await hfBlob(u); }
   if (eng === "eleven") { const key = ls.get("ap_key_eleven"); if (!key) throw new Error("ضيف مفتاح ElevenLabs"); const vid = { Kore: "21m00Tcm4TlvDq8ikWAM", Puck: "pNInz6obpgDQGcFmaJgB", Charon: "ErXwobaMiAZAvYXQzNvP", Aoede: "21m00Tcm4TlvDq8ikWAM" }[voice];
     const r = await fetch("https://api.elevenlabs.io/v1/text-to-speech/" + vid + "?output_format=mp3_44100_128", { method: "POST", headers: { "xi-api-key": key, "Content-Type": "application/json" }, body: JSON.stringify({ text, model_id: "eleven_multilingual_v2" }) });
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("ElevenLabs: " + (d.detail?.message || d.detail?.status || r.status)); } return await r.blob(); }
   if (eng === "openai") { const key = ls.get("ap_key_openai"); if (!key) throw new Error("ضيف مفتاح OpenAI في الإعدادات"); const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" }, body: JSON.stringify({ model: "gpt-4o-mini-tts", voice: { Kore: "coral", Puck: "ash", Charon: "onyx", Aoede: "nova" }[voice] || "alloy", input: text, ...(style ? { instructions: style } : {}), response_format: "mp3" }) });
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("OpenAI: " + (d.error?.code === "insufficient_quota" ? "رصيد الـAPI صفر" : d.error?.message || r.status)); } return await r.blob(); }
   let last; for (const m of ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts"]) { try { return await geminiAudio(m, [{ text: line }], { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }); } catch (e) { last = e; } } throw last; }
-async function songOut(text) { const eng = $("#st-seng").value;
+async function songOut(text) { const eng = $("#st-seng").value, pr = $("#st-aprog"), A = /\.(wav|mp3|flac|ogg|m4a)/i;
+  if (eng === "mg") return await hfBlob(await hfCall(HFS.mg, "predict_batched", [songSpec() + ". " + text.replace(/\n\[مواصفات:[\s\S]*$/, "").slice(0, 200), null], pr, "MusicGen", A));
+  if (eng === "mm") { const lyr = text.replace(/\n\[مواصفات:[\s\S]*$/, "").replace(/^النوع:[^.]*\.\s*/, ""), st = JSON.stringify({ mode: "simple", description: songSpec() + ". " + (text.match(/^النوع:[^.]*/) || [""])[0], instrumental: /بدون كلام|موسيقى/.test(text), title: "", lyrics: lyr, global_meta: "", vocals: "", arrangement: "" });
+    return await hfBlob(await hfCall(HFS.mm, "simple_generate", [st, +SG("dur") || 30, 0, true, 0, 30, 1.7], pr, "MiniMax Music 3", A)); }
   if (eng === "lyria") { let last; for (const m of ["lyria-3-clip-preview", "lyria-3.5", "lyria-3-pro-preview"]) { try { return await geminiAudio(m, [{ text }], { responseModalities: ["AUDIO", "TEXT"] }); } catch (e) { last = e; if (/الحصة|الرصيد/.test(e.message)) break; } } throw last; }
   const key = ls.get("ap_key_fal"); if (!key) throw new Error("ضيف مفتاح fal.ai (في وضع الفيديو)"); const model = $("#st-sm").value === "custom" ? $("#st-scustom").value.trim() : $("#st-sm").value; if (!model) throw new Error("اكتب اسم الموديل");
   const H = { Authorization: "Key " + key, "Content-Type": "application/json" }, body = /minimax-music/.test(model) ? { prompt: songSpec().slice(0, 300) || text.slice(0, 300), lyrics: text.replace(/\n\[مواصفات:[\s\S]*$/, "") } : /stable-audio/.test(model) ? { prompt: text.replace(/\n\[مواصفات:/, " (").replace(/\]$/, ")"), seconds_total: Math.min(47, +SG("dur") || 30) } : { prompt: text, lyrics: text };
