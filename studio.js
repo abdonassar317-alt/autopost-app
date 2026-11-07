@@ -104,7 +104,12 @@ async function tts(text, voice, ctx) {
     } catch (e) {} }
   return null;
 }
-async function bitmap(url) { const r = await fetch(url, { mode: "cors" }); if (!r.ok) throw new Error("الصورة فشلت"); return await createImageBitmap(await r.blob()); }
+// Pollinations is free but rate-limited (answers 402/429 now and then) -> retry with a pause
+async function bitmap(url) { let last = "الصورة فشلت";
+  for (let a = 0; a < 6; a++) { try { const r = await fetch(url); const ct = r.headers.get("content-type") || "";
+      if (r.ok && ct.startsWith("image/")) return await createImageBitmap(await r.blob()); last = "خدمة الصور مشغولة (" + r.status + ")"; } catch (e) { last = "الصورة فشلت"; }
+    await wait(2500 + a * 2500); }
+  throw new Error(last + " — جرّب كمان شوية"); }
 function wrap(ctx, text, maxW) { const words = text.split(/\s+/), lines = []; let cur = ""; for (const w of words) { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur); return lines; }
 
 async function makeVideo() {
@@ -116,7 +121,7 @@ async function makeVideo() {
     const AC = window.AudioContext || window.webkitAudioContext, actx = new AC(); await actx.resume();
     const items = []; let noVoice = false;
     for (let i = 0; i < sc.length; i++) { prog.textContent = `بحضّر المشهد ${i + 1} من ${sc.length} (صورة + صوت)…`;
-      const [img, au] = await Promise.all([bitmap(imgUrl(sc[i].image_prompt, sc[i].seed)), tts(sc[i].narration, voice, actx)]);
+      const au = await tts(sc[i].narration, voice, actx), img = await bitmap(imgUrl(sc[i].image_prompt, sc[i].seed));
       if (!au) noVoice = true; items.push({ img, au, text: sc[i].narration, dur: au ? au.duration + 0.5 : 4 }); }
     const canvas = document.createElement("canvas"); canvas.width = W; canvas.height = H; const g = canvas.getContext("2d");
     const vs = canvas.captureStream(30), dest = actx.createMediaStreamDestination();
