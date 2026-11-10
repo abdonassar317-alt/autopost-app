@@ -17,7 +17,8 @@ const PROV = { openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai",
   openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" } };
 const prov = () => (PROV[ls.get("ap_ai_prov")] || ls.get("ap_ai_prov") === "all") ? ls.get("ap_ai_prov") : "gemini";
 const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
-const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);\nconst hasAI = () => hasKey() || !!window.puter;
+const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);
+const hasAI = () => hasKey() || !!window.puter;
 
 // ------------------------------------------------------------------ style memory (examples the user picks, per account; stored in config/library.json)
 let lib = null;
