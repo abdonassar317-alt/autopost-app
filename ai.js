@@ -17,7 +17,7 @@ const PROV = { openai: { n: "ChatGPT / OpenAI (مدفوع)", k: "ap_key_openai",
   openrouter: { n: "OpenRouter (موديلات مجانية)", k: "ap_key_openrouter", link: "https://openrouter.ai/keys", url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/free" } };
 const prov = () => (PROV[ls.get("ap_ai_prov")] || ls.get("ap_ai_prov") === "all") ? ls.get("ap_ai_prov") : "gemini";
 const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
-const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);
+const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);\nconst hasAI = () => hasKey() || !!window.puter;
 
 // ------------------------------------------------------------------ style memory (examples the user picks, per account; stored in config/library.json)
 let lib = null;
@@ -82,7 +82,15 @@ async function team(parts, json) {
   return ok[0][1];
 }
 const oneTest = async p => { try { await one(p, [{ text: "رد بكلمة واحدة: تمام" }]); return PROV[p].n.split(" ")[0] + " ✓"; } catch (e) { return PROV[p].n.split(" ")[0] + " ✗ " + e.message.slice(0, 40); } };
-const ask = (parts, json) => prov() === "all" ? team(parts, json) : one(prov(), parts, json);
+async function puterAsk(parts, json) {
+  if (!window.puter) throw new Error("خدمة AI لسه بتتحمّل — جرّب بعد ثواني");
+  if (parts.some(x => x.inline_data)) throw new Error("التسجيل الصوتي محتاج مفتاح Gemini، لكن الكتابة شغالة من غير مفتاح");
+  if (!puter.auth.isSignedIn()) await puter.auth.signIn();
+  let prompt = parts.map(x => x.text || "").join("\n"); if (json) prompt += "\nرجّع JSON صالح فقط من غير شرح أو علامات كود.";
+  const r = await puter.ai.chat(prompt, { model: "gpt-5-nano", normalize: true });
+  const t = typeof r === "string" ? r : (r?.message?.content || r?.text || ""); if (!t) throw new Error("خدمة AI رجّعت رد فاضي"); return t;
+}
+const ask = (parts, json) => hasKey() ? (prov() === "all" ? team(parts, json) : one(prov(), parts, json)) : puterAsk(parts, json);
 // tries newest first; a model that hangs (>12s) or is unavailable is skipped, and the first one that answers is remembered
 async function gemini(parts, json) {
   const key = ls.get("ap_gemini"); let last = null;
@@ -110,7 +118,7 @@ function run(task, onResult) {
   const out = $("#ai-out");
   const go = async () => {
     const prompt = await task.prompt();
-    if (hasKey() && !task.forceCopy) { out.innerHTML = '<p class="hint">بيكتب…</p>';
+    if (hasAI() && !task.forceCopy) { out.innerHTML = '<p class="hint">بيكتب…</p>';
       try { const t = await ask([...(task.parts || []), { text: prompt }], task.json); onResult(task.json ? parseJSON(t) : t, t); }
       catch (e) { out.innerHTML = `<p class="hint" style="color:var(--bad)">${esc(e.message)}</p>`; } return; }
     out.innerHTML = `<div class="lbl f">1. انسخ الطلب ده وافتح أي شات مجاني</div><textarea rows="4" readonly id="ai-p">${esc(prompt)}</textarea>
@@ -267,5 +275,5 @@ if (set) { const box = document.createElement("div"); box.className = window.HOS
 const css = document.createElement("style");
 css.textContent = `.aig{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.aig .btn{justify-content:center;font-size:13px}#ai-out textarea{width:100%}`;
 document.head.appendChild(css);
-window.APAI = { ask: (p, j) => ask(p, j), parseJSON: t => parseJSON(t), hasKey: () => hasKey() };
+window.APAI = { ask: (p, j) => ask(p, j), parseJSON: t => parseJSON(t), hasKey: () => hasAI() };
 })();
