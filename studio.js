@@ -385,7 +385,10 @@ async function hfUpload(id, blob) { const fd = new FormData(); fd.append("files"
 function hfFind(x, re) { if (!x || typeof x !== "object") return null; if (typeof x.url === "string" && (!re || re.test(x.url))) return x.url; if (typeof x.path === "string" && (!re || re.test(x.path)) && !x.url) return { path: x.path }; for (const k of Object.keys(x)) { const f = hfFind(x[k], re); if (f) return f; } return null; }
 async function hfCall(id, api, data, prog, label, re) { const base = hfBase(id), H = { ...hfH(), "Content-Type": "application/json" }, t0 = Date.now();
   prog.textContent = label + " — بيتصل بالسيرفر…"; const r = await fetch(base + "/gradio_api/call/" + api, { method: "POST", headers: H, body: JSON.stringify({ data }) }); const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.event_id) throw new Error("Hugging Face: " + (j.detail || j.error || r.status).toString().slice(0, 140) + (r.status === 404 || r.status >= 500 ? " (السيرفر نايم أو واقع — جرّب بعد شوية)" : ""));
+  if (!r.ok || !j.event_id) { const raw = (j.detail || j.error || r.status).toString();
+    if (r.status === 401 || r.status === 403) throw new Error("Hugging Face: التوكن غلط أو مش مسموح له بالموديل");
+    if (r.status === 402 || r.status === 429 || /quota|GPU|exceeded|rate.?limit/i.test(raw)) throw new Error("حصة Hugging Face خلصت مؤقتًا — جرّب بعد شوية، أو حط توكن صالح، أو اختار مزود تاني");
+    throw new Error("Hugging Face: " + raw.slice(0, 140) + (r.status === 404 || r.status >= 500 ? " (السيرفر نايم أو واقع — جرّب بعد شوية)" : "")); }
   const tick = setInterval(() => { prog.textContent = `${label} — بيتولّد (ممكن يستنى في الدور)… ${Math.round((Date.now() - t0) / 1000)} ث`; }, 1000);
   try { const c = new AbortController(), to = setTimeout(() => c.abort(), 600000); let txt; try { txt = await (await fetch(base + "/gradio_api/call/" + api + "/" + j.event_id, { headers: hfH(), signal: c.signal })).text(); } finally { clearTimeout(to); }
     const ev = [...txt.matchAll(/event: (\w+)\s*\ndata: ([^\n]*)/g)].pop(); if (!ev) throw new Error("رد فاضي من السيرفر");
