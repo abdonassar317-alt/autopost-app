@@ -11,6 +11,12 @@ const SERVER = ls.get("ap_server") || DEF_SERVER;
 window.AP_SERVER = SERVER;
 const L = (ar, en) => (window.apLang === "ar" ? ar : en);
 const isDemo = /[?&]demo\b/.test(location.search);
+// Owner-only entry point. It is intentionally absent from the customer UI.
+// Opening ?owner=1 once switches this device to the direct administration mode.
+if (new URLSearchParams(location.search).get("owner") === "1") {
+  ls.set("ap_mode", "github");
+  history.replaceState(null, "", location.pathname + location.hash);
+}
 const api = async (body) => { const r = await fetch(SERVER, { method: "POST", body: JSON.stringify(body) }); if (!r.ok) throw new Error("server " + r.status); return r.json(); };
 window.apApi = api;
 
@@ -152,14 +158,12 @@ function screen(view = "signup", st = {}) {
       <div class="alt"><span></span><a data-v="signin">${L("رجوع", "Back")}</a></div>`,
   };
   el.innerHTML = `<div class="in"><div class="brand"><i></i>AutoPost<span style="flex:1"></span><button id="a-lang" style="border:1px solid var(--line);background:var(--s);color:var(--ink);border-radius:8px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer">${window.apLang === "ar" ? "EN" : "ع"}</button></div>${V[view]}
-    <div class="foot">${L("عايز تتفرج الأول؟", "Want to look around first?")} <a href="?demo">${L("جرّب الأداة ببيانات تجريبية", "Try it with sample data")}</a><br>
-    <a id="a-gh">${L("للمطورين: استخدم حساب GitHub بتاعك", "For developers: use your own GitHub")}</a></div></div>`;
+    <div class="foot">${L("عايز تتفرج الأول؟", "Want to look around first?")} <a href="?demo">${L("جرّب الأداة ببيانات تجريبية", "Try it with sample data")}</a></div></div>`;
   document.dir = window.apLang === "ar" ? "rtl" : "ltr";
   const $ = (s) => el.querySelector(s), err = (t) => ($("#a-err").textContent = t || "");
   el.querySelectorAll("[data-v]").forEach((a) => (a.onclick = () => screen(a.dataset.v, { email: $("#a-email")?.value || st.email })));
   el.querySelectorAll("[data-eye]").forEach((b) => (b.onclick = () => { const i = $("#" + b.dataset.eye); i.type = i.type === "password" ? "text" : "password"; b.textContent = i.type === "password" ? L("إظهار", "Show") : L("إخفاء", "Hide"); }));
   $("#a-lang").onclick = () => { ls.set("ap_lang", window.apLang === "ar" ? "en" : "ar"); location.reload(); };
-  $("#a-gh").onclick = () => { ls.set("ap_mode", "github"); location.reload(); };
   const busy = async (fn) => { const b = $("#a-go"), t = b.textContent; b.disabled = true; b.textContent = L("لحظة…", "One moment…"); err("");
     try { await fn(); } catch (e) { err(ERRS()[e.message] || (/fetch|network|server/i.test(e.message) ? L("مفيش اتصال — اتأكد من النت وجرّب تاني", "No connection — check your internet and try again") : e.message)); }
     finally { if (document.body.contains(b)) { b.disabled = false; b.textContent = t; } } };
@@ -208,10 +212,9 @@ function settingsBoxes() {
   const set = document.getElementById("settings"); if (!set) return;
   if (window.HOST) {
     ls.set("ap_known", "1");
-    // things that only make sense with your own GitHub
-    ["#wake-box", "#act-settings"].forEach((s) => document.querySelector(s)?.classList.add("hide"));
-    document.getElementById("setup-link")?.closest(".box")?.classList.add("hide");
-    document.getElementById("s-owner")?.closest(".box")?.classList.add("hide");
+    // Owner infrastructure never appears in a customer's account.
+    document.querySelectorAll("[data-owner-only]").forEach((el) => el.classList.add("hide"));
+    document.querySelector("#act-settings")?.classList.add("hide");
     if (!document.getElementById("acct-box")) {
       const b = document.createElement("div"); b.className = "box"; b.id = "acct-box"; b.setAttribute("data-i18n-skip", "");
       const u = HOST.user, esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => "&#" + c.charCodeAt(0) + ";");
