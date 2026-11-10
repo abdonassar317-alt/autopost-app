@@ -156,11 +156,60 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <a class="btn hide" id="st-dl">تحميل الفيديو</a></div></div>`;
 const host = document.querySelector("main") || document.body; host.appendChild(sec);
 if (window.HOST) {
-  sec.innerHTML = `<div class="box" style="text-align:center;padding:38px 22px">
-    <div style="font-size:42px;margin-bottom:10px">✨</div>
-    <h2 style="margin:0 0 8px;font-size:22px">استوديو AutoPost قيد التطوير</h2>
-    <p class="note" style="max-width:430px;margin:0 auto;line-height:1.9">نعمل حاليًا على تجهيز تجربة متكاملة لإنشاء الصور والفيديو والصوت بالذكاء الاصطناعي، من دون إعدادات تقنية. ستتوفر الميزة في تحديث قريب.</p>
+  sec.innerHTML = `<div class="box">
+    <div class="lbl">استوديو الذكاء الاصطناعي <span>يعمل بحساب المستخدم</span></div>
+    <p class="note">سجّل الدخول مرة واحدة، ثم استخدم أقوى النماذج المتاحة من دون نسخ مفاتيح أو استهلاك رصيد مالك AutoPost. قد يحصل الحساب الجديد على استخدام مجاني محدود، وأي استخدام إضافي يكون على حساب المستخدم لدى الخدمة.</p>
+    <button class="btn pri" id="st-p-login" style="width:100%;justify-content:center">متابعة بحساب AI</button>
+    <div id="st-p-ready" class="hide">
+      <div class="seg" id="st-p-mode"><button class="on" data-v="text">كتابة محتوى</button><button data-v="image">إنشاء صورة</button></div>
+      <div class="lbl f">اكتب ما تريد إنشاءه</div>
+      <textarea id="st-p-prompt" rows="5" placeholder="مثال: اكتب منشورًا إعلانيًا قصيرًا لمطعم مصري عن عرض نهاية الأسبوع"></textarea>
+      <button class="btn pri" id="st-p-go" style="width:100%;justify-content:center;margin-top:10px">إنشاء</button>
+      <p class="note" id="st-p-status"></p>
+      <div id="st-p-result"></div>
+    </div>
   </div>`;
+  const login = sec.querySelector("#st-p-login"), ready = sec.querySelector("#st-p-ready"), status = sec.querySelector("#st-p-status"), result = sec.querySelector("#st-p-result");
+  let mode = "text";
+  const connected = () => {
+    const ok = !!window.puter?.auth?.isSignedIn?.();
+    login.textContent = ok ? "حساب AI متصل ✓" : "متابعة بحساب AI";
+    ready.classList.toggle("hide", !ok);
+    return ok;
+  };
+  login.onclick = async () => {
+    if (!window.puter) return toast("تعذر تحميل خدمة AI — حدّث الصفحة وحاول مرة أخرى", 6000);
+    if (connected()) return;
+    login.disabled = true;
+    try { await puter.auth.signIn(); connected(); }
+    catch (e) { toast("لم يكتمل تسجيل الدخول", 5000); }
+    finally { login.disabled = false; }
+  };
+  sec.querySelectorAll("#st-p-mode button").forEach(b => b.onclick = () => {
+    mode = b.dataset.v; sec.querySelectorAll("#st-p-mode button").forEach(x => x.classList.toggle("on", x === b));
+    sec.querySelector("#st-p-prompt").placeholder = mode === "text" ? "مثال: اكتب منشورًا إعلانيًا قصيرًا لمطعم مصري عن عرض نهاية الأسبوع" : "مثال: صورة إعلانية احترافية لوجبة مصرية، إضاءة دافئة، من دون كتابة داخل الصورة";
+  });
+  sec.querySelector("#st-p-go").onclick = async e => {
+    if (!connected()) return login.click();
+    const prompt = sec.querySelector("#st-p-prompt").value.trim(); if (!prompt) return toast("اكتب وصفًا أولًا");
+    const btn = e.currentTarget; btn.disabled = true; result.innerHTML = ""; status.textContent = mode === "text" ? "جارٍ إعداد المحتوى بأفضل نموذج متاح…" : "جارٍ إنشاء الصورة بأعلى جودة متاحة…";
+    try {
+      if (mode === "text") {
+        const full = `اكتب محتوى سوشيال ميديا احترافيًا بالعربية المصرية الطبيعية. لا تخترع أسعارًا أو معلومات غير موجودة. ابدأ بجملة جذابة، ثم الفكرة بوضوح، واختم بدعوة مناسبة للتفاعل. الطلب: ${prompt}`;
+        const r = await puter.ai.chat(full, { model: "gpt-6-luna", normalize: true, reasoning_effort: "medium" });
+        const text = typeof r === "string" ? r : (r?.message?.content || r?.text || ""); if (!text) throw new Error("empty");
+        result.innerHTML = `<textarea rows="10" id="st-p-text"></textarea><button class="btn" id="st-p-copy" style="margin-top:8px">نسخ النتيجة</button>`;
+        result.querySelector("#st-p-text").value = text; result.querySelector("#st-p-copy").onclick = () => navigator.clipboard.writeText(result.querySelector("#st-p-text").value).then(() => toast("تم النسخ"));
+      } else {
+        const img = await puter.ai.txt2img(prompt, { model: "gpt-image-2.5-sunburst", quality: "high" });
+        img.alt = "صورة مولدة بالذكاء الاصطناعي"; img.style = "width:100%;border-radius:12px;display:block"; result.appendChild(img);
+        const a = document.createElement("a"); a.className = "btn"; a.textContent = "فتح الصورة وحفظها"; a.target = "_blank"; a.rel = "noopener"; a.href = img.src; a.style.marginTop = "8px"; result.appendChild(a);
+      }
+      status.textContent = "اكتمل ✓ — راجع النتيجة قبل استخدامها";
+    } catch (err) { status.textContent = "تعذر التنفيذ. تأكد من رصيد حساب AI أو حاول مرة أخرى."; toast(status.textContent, 7000); }
+    finally { btn.disabled = false; }
+  };
+  setTimeout(connected, 500);
   return;
 }
 
