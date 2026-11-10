@@ -38,7 +38,14 @@ window.apApi = api;
 // ---------------------------------------------------------------- session
 let sess = null; try { sess = JSON.parse(ls.get("ap_session") || "null"); } catch (e) {}
 if (isDemo) sess = null;
-const logout = () => { ls.set("ap_session", null); ls.set("ap_fc_" + (sess?.user?.id || ""), null); location.href = location.pathname; };
+const logout = async () => {
+  const id = sess?.user?.id || "";
+  ls.set("ap_session", null);
+  ls.set("ap_fc_" + id, null);
+  // Customer media is cached for speed; remove it when the account signs out.
+  try { await caches.delete("ap-media"); } catch (e) {}
+  location.href = location.pathname;
+};
 
 // ---------------------------------------------------------------- hosted mode: answer the app's GitHub calls through the gateway
 if (sess?.s && sess?.user?.id) {
