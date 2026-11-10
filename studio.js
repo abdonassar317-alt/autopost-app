@@ -109,7 +109,7 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
    <input id="st-sg-extra" placeholder="ملاحظات زيادة (اختياري): زي مرجع مشابه أو كلمة لازم تتكرر" dir="rtl">
   </div>
    <div class="lbl">مين يولّد الموسيقى؟</div>
-   <select id="st-seng"><option value="mm">MiniMax Music 3 (مفتوح/مجاني، أغنية بصوت مغني) — HF</option><option value="mg">MusicGen (مفتوح المصدر، موسيقى بدون غنا) — HF</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
+   <select id="st-seng"><option value="mm">MiniMax Music 3 (Hugging Face — حسب الحصة المتاحة، أغنية بصوت مغني)</option><option value="mg">MusicGen (Hugging Face — حسب الحصة المتاحة، موسيقى بدون غنا)</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
    <div class="two hide" id="st-shfbox"><input class="hftok2" type="password" autocomplete="off" placeholder="توكن Hugging Face مجاني (بيزوّد الحصة)" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://huggingface.co/settings/tokens">هات التوكن</a></div>
    <div id="st-salt" class="hide"><select id="st-sm"><option value="fal-ai/stable-audio">Stable Audio — موسيقى</option><option value="fal-ai/minimax-music">MiniMax Music — أغنية بكلمات</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
    <input id="st-scustom" class="hide" dir="ltr" placeholder="slug من fal.ai"><p class="note">مفتاح fal.ai هو نفسه اللي في وضع الفيديو.</p></div>
@@ -468,7 +468,7 @@ async function voiceOut(text) { const eng = $("#st-aeng").value, voice = $("#st-
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("OpenAI: " + (d.error?.code === "insufficient_quota" ? "رصيد الـAPI صفر" : d.error?.message || r.status)); } return await r.blob(); }
   let last; for (const m of ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts"]) { try { return await geminiAudio(m, [{ text: line }], { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }); } catch (e) { last = e; } } throw last; }
 async function songOut(text) { let eng = $("#st-seng").value; const pr = $("#st-aprog"), A = /\.(wav|mp3|flac|ogg|m4a)/i;
-  if (eng === "lyria" && !ls.get("ap_gemini")) { eng = "mm"; $("#st-seng").value = "mm"; seSync(); toast("مفيش مفتاح Gemini — حوّلت تلقائيًا للموديل المجاني MiniMax", 5000); }
+  if (eng === "lyria" && !ls.get("ap_gemini")) throw new Error("مفتاح Gemini مش موجود. ضيف مفتاح صالح في الإعدادات أو اختار مزود موسيقى تاني بنفسك.");
   if (eng === "mg") return await hfBlob(await hfCall(HFS.mg, "predict_batched", [songSpec() + ". " + text.replace(/\n\[مواصفات:[\s\S]*$/, "").slice(0, 200), null], pr, "MusicGen", A));
   if (eng === "mm") { const lyr = text.replace(/\n\[مواصفات:[\s\S]*$/, "").replace(/^النوع:[^.]*\.\s*/, ""), st = { mode: "simple", description: songSpec() + ". " + (text.match(/^النوع:[^.]*/) || [""])[0], instrumental: /بدون كلام|موسيقى/.test(text), title: "", lyrics: lyr, global_meta: "", vocals: "", arrangement: "" };
     return await hfBlob(await hfCall(HFS.mm, "simple_generate", [st, +SG("dur") || 30, 0, true, 0, 30, 1.7], pr, "MiniMax Music 3", A)); }
