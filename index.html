@@ -197,17 +197,17 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
   <p class="note">ثبّت AutoPost على جهازك عشان يفتح زي أي تطبيق — أندرويد، آيفون، ويندوز وماك.</p>
   <button class="btn" id="install-btn" style="width:100%">تثبيت على الجهاز ده</button>
  </div>
- <div class="box" id="wake-box">
+ <div class="box" id="wake-box" data-owner-only>
   <div class="lbl">منبّه النشر في ميعاده (مجاني)</div>
   <p class="note">GitHub لوحده ممكن يتأخر ساعات. منبّه جوجل بيشيّك كل 5 دقايق وبيشغّل النشر في ميعاده بالظبط.</p>
   <button class="btn" id="wake-btn" style="width:100%">إعداد المنبّه</button>
  </div>
- <div class="box">
+ <div class="box" data-owner-only>
   <div class="lbl">جهاز جديد</div>
   <p class="note">اعمل رابط إعداد محمي بكلمة سر، افتحه على الجهاز التاني واكتب كلمة السر — من غير ما تعمل توكن تاني.</p>
   <button class="btn" id="setup-link" style="width:100%">اعمل رابط إعداد</button>
  </div>
- <div class="box">
+ <div class="box" id="github-box" data-owner-only>
   <div class="lbl">الربط بـ GitHub</div>
   <p class="note">البوستات بتتحفظ في ريبو خاص بيك على GitHub. <a href="#" id="gh-help">إزاي أعمل التوكن؟</a></p>
   <div class="lbl f">اسم حسابك على GitHub</div><input id="s-owner" placeholder="username" dir="ltr">
