@@ -155,6 +155,14 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
   <video id="st-video" controls playsinline class="hide" style="width:100%;max-height:420px;border-radius:10px"></video>
   <a class="btn hide" id="st-dl">تحميل الفيديو</a></div></div>`;
 const host = document.querySelector("main") || document.body; host.appendChild(sec);
+if (window.HOST) {
+  sec.innerHTML = `<div class="box" style="text-align:center;padding:38px 22px">
+    <div style="font-size:42px;margin-bottom:10px">✨</div>
+    <h2 style="margin:0 0 8px;font-size:22px">استوديو AutoPost قيد التطوير</h2>
+    <p class="note" style="max-width:430px;margin:0 auto;line-height:1.9">نعمل حاليًا على تجهيز تجربة متكاملة لإنشاء الصور والفيديو والصوت بالذكاء الاصطناعي، من دون إعدادات تقنية. ستتوفر الميزة في تحديث قريب.</p>
+  </div>`;
+  return;
+}
 
 const frTxt = () => { $("#st-fr").textContent = `بداية: ${intro ? "✓" : "—"} · نهاية: ${outro ? "✓" : "—"} (كل واحدة بتظهر حوالي 2.5 ثانية)`; };
 $("#st-own").onchange = e => { [...e.target.files].forEach(f => state.scenes.push({ narration: "", image_prompt: "", own: true, url: URL.createObjectURL(f), seed: 1 })); e.target.value = ""; render(); toast("اكتب تعليق لكل صورة (أو سيبه فاضي = صورة 3 ثواني من غير صوت)", 5000); };
