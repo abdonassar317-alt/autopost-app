@@ -20,6 +20,14 @@ const keyed = () => Object.keys(PROV).filter(p => ls.get(PROV[p].k));
 const hasKey = () => prov() === "all" ? keyed().length > 0 : !!ls.get(PROV[prov()].k);
 const hasAI = () => hasKey() || !!window.puter;
 
+function apiError(name, status, d = {}) {
+  const raw = String(d.error?.message || d.message || d.detail || status || "خطأ غير معروف");
+  if (status === 401 || status === 403 || /api key not valid|invalid api key|invalid.*key|unauthenticated/i.test(raw)) return new Error(`${name}: المفتاح غير صالح أو موقوف — اعمل مفتاح جديد وتأكد إن الـAPI مفعّل`);
+  if (status === 429 || /quota|rate.?limit|resource_exhausted/i.test(raw)) return new Error(`${name}: الحصة خلصت مؤقتًا — جرّب بعد شوية أو اختار مزود تاني`);
+  if (status === 402 || /billing|insufficient_quota|payment/i.test(raw)) return new Error(`${name}: مفيش رصيد API كفاية`);
+  return new Error(`${name}: ${raw.slice(0, 180)}`);
+}
+
 // ------------------------------------------------------------------ style memory (examples the user picks, per account; stored in config/library.json)
 let lib = null;
 async function loadLib() { if (lib) return lib; try { lib = JSON.parse(await readFile("config/library.json")); } catch (e) { lib = {}; } lib.styles ||= {}; return lib; }
@@ -41,10 +49,12 @@ async function context(extra = "") {
 // ------------------------------------------------------------------ Gemini (free key) — picks the newest free "flash" text model available to the key
 async function models(key) {
   const cached = ls.get("ap_gemini_model");
-  try { const r = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=200`)).json();
+  try { const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}&pageSize=200`), r = await res.json().catch(() => ({}));
+    if (!res.ok) throw apiError("Gemini", res.status, r);
     const ok = (r.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent") && /flash/i.test(m.name) && !/image|tts|audio|live|thinking|exp|omni/i.test(m.name))
       .map(m => m.name.replace("models/", "")).sort((a, b) => (parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || 0) - parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || 0)) || (/lite/.test(a) - /lite/.test(b)));
-    return [...new Set([cached, "gemini-3.5-flash", "gemini-3-flash-preview", "gemini-3.1-flash-lite", ...ok.slice(0, 8)].filter(Boolean))]; } catch (e) { return [cached, "gemini-flash-latest"].filter(Boolean); } }
+    return [...new Set([cached, ...ok.slice(0, 8), "gemini-flash-latest"].filter(Boolean))];
+  } catch (e) { if (/المفتاح غير صالح|الحصة|رصيد/.test(e.message)) throw e; return [cached, "gemini-flash-latest"].filter(Boolean); } }
 // OpenAI-compatible providers (Groq / OpenRouter / OpenAI) — text only
 const PREF = { groq: [/llama-3\.3-70b/, /gpt-oss-120b/, /llama-4/, /llama-3\.1-8b/], cerebras: [/llama-3\.3-70b/, /gpt-oss/, /llama/, /qwen/], mistral: [/mistral-small/, /mistral-medium/, /ministral/], deepseek: [/deepseek-chat/], openai: [/gpt-4o-mini/, /gpt-4\.1-mini/, /gpt-5-mini/], openrouter: [/free/] };
 async function pickModel(p, key) { try { const base = PROV[p].url.replace(/\/chat\/completions$/, ""); const r = await fetch(base + "/models", { headers: { Authorization: "Bearer " + key } }); const ids = ((await r.json()).data || []).map(m => m.id).filter(i => !/whisper|guard|tts|embed|moderation|orpheus|playai|image|dall|audio|realtime|transcribe/i.test(i));
@@ -101,8 +111,7 @@ async function gemini(parts, json) {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`, { method: "POST", signal: c.signal, headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature: 0.8, ...(json ? { responseMimeType: "application/json" } : {}) } }) });
       const d = await r.json(); clearTimeout(t);
-      if (r.status === 429) throw new Error("خلصت الحصة المجانية للنهارده أو الدقيقة دي — جرّب كمان شوية أو استخدم «انسخ الـprompt»");
-      if (!r.ok) { last = new Error("Gemini: " + (d.error?.message || r.status)); if (r.status === 404 || r.status === 503 || r.status >= 500) { if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw last; }
+      if (!r.ok) { last = apiError("Gemini", r.status, d); if (r.status === 404 || r.status === 503 || r.status >= 500) { if (ls.get("ap_gemini_model") === m) ls.set("ap_gemini_model", ""); continue; } throw last; }
       const txt = (d.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("").trim();
       if (!txt) { last = new Error("Gemini رجّع رد فاضي"); continue; }
       ls.set("ap_gemini_model", m); return txt;
@@ -269,9 +278,10 @@ if (set) { const box = document.createElement("div"); box.className = window.HOS
   window.apSyncKeys = { push: syncPush, pull: syncPull };
   setTimeout(async () => { const n = await syncPull(); if (n > 0) toast(`اتجابوا ${n} مفتاح AI من حسابك ✓`, 5000); else if (n < 0) toast("مفاتيح AI المتزامنة اتحفظت بتوكن تاني — استخدم «استلم مفاتيح» بكلمة السر", 7000); }, 2500);
   $("#ai-test").onclick = async () => { kin().forEach(i => { const v = i.value.trim(); if (v !== ls.get(PROV[i.dataset.p].k)) { ls.set(PROV[i.dataset.p].k, v); if (i.dataset.p === "gemini") ls.set("ap_gemini_model", ""); } });
-    const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); syncPush().then(ok => ok && toast("المفاتيح اتزامنت لباقي أجهزتك ✓", 3500)).catch(() => {}); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
+    const sel = $("#ai-prov").value; ls.set("ap_ai_prov", sel); const ks = keyed(); if (!ks.length) return toast("هيشتغل من غير مفتاح (نسخ ولصق)");
     const res = await Promise.all(ks.map(p => oneTest(p)));
-    toast(res.join("  ·  "), 9000); }; }
+    toast(res.join("  ·  "), 9000);
+    if (res.every(x => x.includes("✓"))) syncPush().then(ok => ok && toast("المفاتيح الصالحة اتزامنت لباقي أجهزتك ✓", 3500)).catch(() => {}); }; }
 
 const css = document.createElement("style");
 css.textContent = `.aig{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.aig .btn{justify-content:center;font-size:13px}#ai-out textarea{width:100%}`;

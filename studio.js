@@ -109,7 +109,7 @@ sec.innerHTML = `<div class="two" id="st-modes"><button class="btn sm pri" data-
    <input id="st-sg-extra" placeholder="ملاحظات زيادة (اختياري): زي مرجع مشابه أو كلمة لازم تتكرر" dir="rtl">
   </div>
    <div class="lbl">مين يولّد الموسيقى؟</div>
-   <select id="st-seng"><option value="mm">MiniMax Music 3 (مفتوح/مجاني، أغنية بصوت مغني) — HF</option><option value="mg">MusicGen (مفتوح المصدر، موسيقى بدون غنا) — HF</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
+   <select id="st-seng"><option value="mm">MiniMax Music 3 (Hugging Face — حسب الحصة المتاحة، أغنية بصوت مغني)</option><option value="mg">MusicGen (Hugging Face — حسب الحصة المتاحة، موسيقى بدون غنا)</option><option value="lyria">Lyria — Google AI Studio (مدفوع، بمفتاح Gemini)</option><option value="fal">fal.ai (Stable Audio / MiniMax Music …)</option></select>
    <div class="two hide" id="st-shfbox"><input class="hftok2" type="password" autocomplete="off" placeholder="توكن Hugging Face مجاني (بيزوّد الحصة)" dir="ltr"><a class="btn sm" target="_blank" rel="noopener" href="https://huggingface.co/settings/tokens">هات التوكن</a></div>
    <div id="st-salt" class="hide"><select id="st-sm"><option value="fal-ai/stable-audio">Stable Audio — موسيقى</option><option value="fal-ai/minimax-music">MiniMax Music — أغنية بكلمات</option><option value="custom">موديل تاني (اكتب الاسم)</option></select>
    <input id="st-scustom" class="hide" dir="ltr" placeholder="slug من fal.ai"><p class="note">مفتاح fal.ai هو نفسه اللي في وضع الفيديو.</p></div>
@@ -385,13 +385,18 @@ async function hfUpload(id, blob) { const fd = new FormData(); fd.append("files"
 function hfFind(x, re) { if (!x || typeof x !== "object") return null; if (typeof x.url === "string" && (!re || re.test(x.url))) return x.url; if (typeof x.path === "string" && (!re || re.test(x.path)) && !x.url) return { path: x.path }; for (const k of Object.keys(x)) { const f = hfFind(x[k], re); if (f) return f; } return null; }
 async function hfCall(id, api, data, prog, label, re) { const base = hfBase(id), H = { ...hfH(), "Content-Type": "application/json" }, t0 = Date.now();
   prog.textContent = label + " — بيتصل بالسيرفر…"; const r = await fetch(base + "/gradio_api/call/" + api, { method: "POST", headers: H, body: JSON.stringify({ data }) }); const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.event_id) throw new Error("Hugging Face: " + (j.detail || j.error || r.status).toString().slice(0, 140) + (r.status === 404 || r.status >= 500 ? " (السيرفر نايم أو واقع — جرّب بعد شوية)" : ""));
+  if (!r.ok || !j.event_id) { const raw = (j.detail || j.error || r.status).toString();
+    if (r.status === 401 || r.status === 403) throw new Error("Hugging Face: التوكن غلط أو مش مسموح له بالموديل");
+    if (r.status === 402 || r.status === 429 || /quota|GPU|exceeded|rate.?limit/i.test(raw)) throw new Error("حصة Hugging Face خلصت مؤقتًا — جرّب بعد شوية، أو حط توكن صالح، أو اختار مزود تاني");
+    throw new Error("Hugging Face: " + raw.slice(0, 140) + (r.status === 404 || r.status >= 500 ? " (السيرفر نايم أو واقع — جرّب بعد شوية)" : "")); }
   const tick = setInterval(() => { prog.textContent = `${label} — بيتولّد (ممكن يستنى في الدور)… ${Math.round((Date.now() - t0) / 1000)} ث`; }, 1000);
   try { const c = new AbortController(), to = setTimeout(() => c.abort(), 600000); let txt; try { txt = await (await fetch(base + "/gradio_api/call/" + api + "/" + j.event_id, { headers: hfH(), signal: c.signal })).text(); } finally { clearTimeout(to); }
     const ev = [...txt.matchAll(/event: (\w+)\s*\ndata: ([^\n]*)/g)].pop(); if (!ev) throw new Error("رد فاضي من السيرفر");
     if (ev[1] === "error") { let m = ev[2]; try { m = JSON.parse(m); } catch (e) {} const ms = (typeof m === "string" ? m : JSON.stringify(m)); throw new Error(/quota|GPU|exceeded/i.test(ms) ? "حصة الـGPU المجانية خلصت النهارده — حط توكن Hugging Face أو جرّب بكره" : "Hugging Face: " + (ms === "null" ? "السيرفر رفض — غالباً حصة الـGPU المجانية للزوار خلصت. حط توكن Hugging Face مجاني (من خانة التوكن) وجرّب تاني" : ms.slice(0, 160))); }
     const out = JSON.parse(ev[2]), f = hfFind(out, re); if (!f) throw new Error("مفيش ملف في الرد: " + ev[2].slice(0, 100)); const url = typeof f === "string" ? f : base + "/gradio_api/file=" + f.path; return url; }
-  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearInterval(tick); } }
+  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني");
+    if (/failed to fetch|networkerror|load failed/i.test(e.message || "")) throw new Error("الاتصال بسيرفر Hugging Face اتقطع أو السيرفر قفل الطلب — جرّب بعد شوية، أو حط توكن صالح، أو اختار مزود تاني");
+    throw e; } finally { clearInterval(tick); } }
 const hfBlob = async url => { const r = await fetch(url, { headers: hfH() }); if (!r.ok) throw new Error("تحميل الملف فشل " + r.status); const b = await r.blob(), m = (url.match(/\.(wav|mp3|flac|ogg|m4a|mp4|webm|mov)(\?|$)/i) || [])[1]; return m ? new Blob([b], { type: ({ wav: "audio/wav", mp3: "audio/mpeg", flac: "audio/flac", ogg: "audio/ogg", m4a: "audio/mp4", mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime" })[m.toLowerCase()] }) : b; };
 async function runHF(prompt, prog) { const m = $("#st-hfm").value, f = $("#st-vimg").files[0], tall = (state.fmt || "vert") !== "wide", NEG = "worst quality, inconsistent motion, blurry, jittery, distorted", V = /\.(mp4|webm|mov)/i;
   if (m === "wan") { if (!f) throw new Error("Wan بيحتاج صورة بداية — ارفع صورة فوق"); const img = await hfUpload(HFS.wan, f);
@@ -468,7 +473,7 @@ async function voiceOut(text) { const eng = $("#st-aeng").value, voice = $("#st-
     if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error("OpenAI: " + (d.error?.code === "insufficient_quota" ? "رصيد الـAPI صفر" : d.error?.message || r.status)); } return await r.blob(); }
   let last; for (const m of ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash-tts"]) { try { return await geminiAudio(m, [{ text: line }], { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } }); } catch (e) { last = e; } } throw last; }
 async function songOut(text) { let eng = $("#st-seng").value; const pr = $("#st-aprog"), A = /\.(wav|mp3|flac|ogg|m4a)/i;
-  if (eng === "lyria" && !ls.get("ap_gemini")) { eng = "mm"; $("#st-seng").value = "mm"; seSync(); toast("مفيش مفتاح Gemini — حوّلت تلقائيًا للموديل المجاني MiniMax", 5000); }
+  if (eng === "lyria" && !ls.get("ap_gemini")) throw new Error("مفتاح Gemini مش موجود. ضيف مفتاح صالح في الإعدادات أو اختار مزود موسيقى تاني بنفسك.");
   if (eng === "mg") return await hfBlob(await hfCall(HFS.mg, "predict_batched", [songSpec() + ". " + text.replace(/\n\[مواصفات:[\s\S]*$/, "").slice(0, 200), null], pr, "MusicGen", A));
   if (eng === "mm") { const lyr = text.replace(/\n\[مواصفات:[\s\S]*$/, "").replace(/^النوع:[^.]*\.\s*/, ""), st = { mode: "simple", description: songSpec() + ". " + (text.match(/^النوع:[^.]*/) || [""])[0], instrumental: /بدون كلام|موسيقى/.test(text), title: "", lyrics: lyr, global_meta: "", vocals: "", arrangement: "" };
     return await hfBlob(await hfCall(HFS.mm, "simple_generate", [st, +SG("dur") || 30, 0, true, 0, 30, 1.7], pr, "MiniMax Music 3", A)); }
