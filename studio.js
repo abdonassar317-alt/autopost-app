@@ -394,7 +394,9 @@ async function hfCall(id, api, data, prog, label, re) { const base = hfBase(id),
     const ev = [...txt.matchAll(/event: (\w+)\s*\ndata: ([^\n]*)/g)].pop(); if (!ev) throw new Error("رد فاضي من السيرفر");
     if (ev[1] === "error") { let m = ev[2]; try { m = JSON.parse(m); } catch (e) {} const ms = (typeof m === "string" ? m : JSON.stringify(m)); throw new Error(/quota|GPU|exceeded/i.test(ms) ? "حصة الـGPU المجانية خلصت النهارده — حط توكن Hugging Face أو جرّب بكره" : "Hugging Face: " + (ms === "null" ? "السيرفر رفض — غالباً حصة الـGPU المجانية للزوار خلصت. حط توكن Hugging Face مجاني (من خانة التوكن) وجرّب تاني" : ms.slice(0, 160))); }
     const out = JSON.parse(ev[2]), f = hfFind(out, re); if (!f) throw new Error("مفيش ملف في الرد: " + ev[2].slice(0, 100)); const url = typeof f === "string" ? f : base + "/gradio_api/file=" + f.path; return url; }
-  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني"); throw e; } finally { clearInterval(tick); } }
+  catch (e) { if (e.name === "AbortError") throw new Error("اتأخر — جرّب تاني");
+    if (/failed to fetch|networkerror|load failed/i.test(e.message || "")) throw new Error("الاتصال بسيرفر Hugging Face اتقطع أو السيرفر قفل الطلب — جرّب بعد شوية، أو حط توكن صالح، أو اختار مزود تاني");
+    throw e; } finally { clearInterval(tick); } }
 const hfBlob = async url => { const r = await fetch(url, { headers: hfH() }); if (!r.ok) throw new Error("تحميل الملف فشل " + r.status); const b = await r.blob(), m = (url.match(/\.(wav|mp3|flac|ogg|m4a|mp4|webm|mov)(\?|$)/i) || [])[1]; return m ? new Blob([b], { type: ({ wav: "audio/wav", mp3: "audio/mpeg", flac: "audio/flac", ogg: "audio/ogg", m4a: "audio/mp4", mp4: "video/mp4", webm: "video/webm", mov: "video/quicktime" })[m.toLowerCase()] }) : b; };
 async function runHF(prompt, prog) { const m = $("#st-hfm").value, f = $("#st-vimg").files[0], tall = (state.fmt || "vert") !== "wide", NEG = "worst quality, inconsistent motion, blurry, jittery, distorted", V = /\.(mp4|webm|mov)/i;
   if (m === "wan") { if (!f) throw new Error("Wan بيحتاج صورة بداية — ارفع صورة فوق"); const img = await hfUpload(HFS.wan, f);
