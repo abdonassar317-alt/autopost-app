@@ -224,7 +224,7 @@ async function openIdeaAI(mode) {
 
 // ------------------------------------------------------------------ settings: AI box
 const set = $("#settings");
-if (set) { const box = document.createElement("div"); box.className = "box";
+if (set) { const box = document.createElement("div"); box.className = window.HOST ? "box hide" : "box";
   box.innerHTML = `<div class="lbl">الذكاء الاصطناعي <span>اختياري وببلاش</span></div>
    <p class="note">من غير مفتاح: المساعد بيجهّز الطلب وانت تلصقه في أي شات مجاني. بمفتاح Gemini مجاني من <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> بيكتب جوه الأداة على طول. المفتاح بيتحفظ على الجهاز ده بس. اللي بتبعته بيروح لجوجل، وفي الخطة المجانية جوجل ممكن تستخدمه لتحسين منتجاتها — ماتحطش بيانات سرية.</p>
    <select id="ai-prov"><option value="all">🤝 الكل مع بعض (أحسن نتيجة)</option>${Object.entries(PROV).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join("")}</select>
