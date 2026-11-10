@@ -110,11 +110,11 @@ async function kdf(pass, email) {
   return [...new Uint8Array(bits)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 const ERRS = () => ({
-  bad_email: L("الإيميل مش مظبوط", "That e-mail doesn't look right"), bad_name: L("اكتب اسمك أو اسم البراند", "Enter your name or brand"),
+  bad_email: L("أدخل بريدًا إلكترونيًا صحيحًا", "That e-mail doesn't look right"), bad_name: L("أدخل اسمك أو اسم العلامة التجارية", "Enter your name or brand"),
   exists: L("الإيميل ده عليه حساب بالفعل — سجّل دخول", "This e-mail already has an account — sign in"), wrong_login: L("الإيميل أو كلمة السر غلط", "Wrong e-mail or password"),
-  code_wrong: L("الكود غلط", "Wrong code"), code_expired: L("الكود خلص — اطلب كود جديد", "Code expired — ask for a new one"),
-  too_many: L("طلبت أكواد كتير — استنى ساعة", "Too many codes — wait an hour"), locked: L("محاولات كتير — استنى 15 دقيقة", "Too many attempts — wait 15 minutes"),
-  not_ready: L("التسجيل هيفتح قريب — كلمنا على واتساب", "Sign-ups open soon — message us on WhatsApp"), mail_quota: L("مش قادرين نبعت إيميلات النهارده — جرّب بكرة", "We can't send e-mails today — try tomorrow"),
+  code_wrong: L("رمز التحقق غير صحيح", "Wrong code"), code_expired: L("انتهت صلاحية الرمز — اطلب رمزًا جديدًا", "Code expired — ask for a new one"),
+  too_many: L("تم طلب رموز كثيرة — حاول بعد ساعة", "Too many codes — wait an hour"), locked: L("محاولات كثيرة — حاول بعد 15 دقيقة", "Too many attempts — wait 15 minutes"),
+  not_ready: L("التسجيل غير متاح حاليًا — تواصل معنا عبر واتساب", "Sign-ups open soon — message us on WhatsApp"), mail_quota: L("تعذر إرسال البريد حاليًا — حاول لاحقًا", "We can't send e-mails today — try tomorrow"),
   disabled: L("الحساب ده متوقف — كلمنا", "This account is paused — contact us"), bad_pass: L("كلمة السر مش مقبولة", "Password not accepted"),
 });
 const css = `#auth{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;display:flex;justify-content:center}
@@ -134,38 +134,38 @@ function screen(view = "signup", st = {}) {
   const pw = (id, ph) => `<div class="pw"><input id="${id}" type="password" autocomplete="${view === "signin" ? "current-password" : "new-password"}" placeholder="${ph}" dir="ltr"><button type="button" data-eye="${id}">${L("إظهار", "Show")}</button></div>`;
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const V = {
-    signup: `<h2>${L("اعمل حسابك", "Create your account")}</h2><div class="sub">${L("أول شهر مجانًا، وبعده 37 جنيه بس في الشهر — من غير فيزا.", "First month free, then just 37 EGP a month — no card.")}</div>
+    signup: `<h2>${L("أنشئ حسابك", "Create your account")}</h2><div class="sub">${L("الشهر الأول مجانًا، ثم 37 جنيهًا شهريًا — من دون بطاقة بنكية.", "First month free, then just 37 EGP a month — no card.")}</div>
       <div class="lbl">${L("الاسم أو اسم البراند", "Name or brand")}</div><input id="a-name" autocomplete="name">
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
       <div class="lbl">${L("كلمة السر", "Password")} <span>${L("8 حروف على الأقل", "8+ characters")}</span></div>${pw("a-pass", "")}
-      <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("اعمل الحساب", "Create account")}</button>
+      <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("إنشاء الحساب", "Create account")}</button>
       <div class="alt"><span>${L("عندك حساب؟", "Have an account?")}</span><a data-v="signin">${L("سجّل دخول", "Sign in")}</a></div>
       <div class="trust">🔒 ${L("حساباتك في أمان: مش بنطلب ولا بنحفظ باسورد فيسبوك أو إنستجرام أو أي منصة. الربط بيتم من صفحة المنصة نفسها، وتقدر تلغيه في أي وقت. كلمة سر AutoPost بتتشفّر على جهازك قبل ما تتبعت.", "Your accounts are safe: we never ask for or store your Facebook, Instagram or any platform password. You connect on the platform's own page and can remove access any time. Your AutoPost password is encrypted on your device before it's sent.")} <a href="privacy.html" target="_blank" rel="noopener">${L("الخصوصية", "Privacy")}</a></div>
       <ul class="perks"><li>${L("انشر على إنستجرام وفيسبوك ولينكدإن ويوتيوب وتيك توك وأكتر", "Post to Instagram, Facebook, LinkedIn, YouTube, TikTok and more")}</li><li>${L("جدولة، تقويم، مسودات، وموافقة العميل", "Scheduling, calendar, drafts and client approval")}</li><li>${L("بعد أول شهر: 37 جنيه بس في الشهر", "After the first month: just 37 EGP/month")}</li></ul>`,
-    signin: `<h2>${L("أهلاً بيك تاني", "Welcome back")}</h2><div class="sub">${L("سجّل دخول بإيميلك", "Sign in with your e-mail")}</div>
+    signin: `<h2>${L("مرحبًا بعودتك", "Welcome back")}</h2><div class="sub">${L("سجّل الدخول باستخدام بريدك الإلكتروني", "Sign in with your e-mail")}</div>
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
       <div class="lbl">${L("كلمة السر", "Password")}</div>${pw("a-pass", "")}
       <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("دخول", "Sign in")}</button>
       <div class="alt"><a data-v="forgot">${L("نسيت كلمة السر؟", "Forgot password?")}</a><a data-v="signup">${L("حساب جديد", "New account")}</a></div>`,
-    code: `<h2>${L("اكتب الكود", "Enter the code")}</h2><div class="sub">${L("بعتنا كود من 6 أرقام على", "We sent a 6-digit code to")} <b dir="ltr">${esc(st.email)}</b>. ${L("بص في Spam لو مش لاقيه.", "Check Spam if you can't find it.")}</div>
+    code: `<h2>${L("أدخل رمز التحقق", "Enter the code")}</h2><div class="sub">${L("أرسلنا رمزًا من 6 أرقام إلى", "We sent a 6-digit code to")} <b dir="ltr">${esc(st.email)}</b>. ${L("تحقق من مجلد الرسائل غير المرغوب فيها إذا لم تجده.", "Check Spam if you can't find it.")}</div>
       <input id="a-code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••">
       ${st.reset ? `<div class="lbl">${L("كلمة السر الجديدة", "New password")}</div>${pw("a-pass", "")}` : ""}
       <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${st.reset ? L("غيّر كلمة السر", "Change password") : L("تأكيد", "Confirm")}</button>
       <div class="alt"><a id="a-resend">${L("ابعت كود تاني", "Send a new code")}</a><a data-v="${st.reset ? "signin" : "signup"}">${L("رجوع", "Back")}</a></div>`,
-    forgot: `<h2>${L("نسيت كلمة السر", "Forgot password")}</h2><div class="sub">${L("هنبعتلك كود على إيميلك تغيّر بيه كلمة السر.", "We'll e-mail you a code to set a new password.")}</div>
+    forgot: `<h2>${L("نسيت كلمة المرور", "Forgot password")}</h2><div class="sub">${L("سنرسل إلى بريدك رمزًا لإنشاء كلمة مرور جديدة.", "We'll e-mail you a code to set a new password.")}</div>
       <div class="lbl">${L("الإيميل", "E-mail")}</div><input id="a-email" type="email" autocomplete="email" dir="ltr" value="${esc(st.email || "")}">
       <div class="err" id="a-err"></div><button class="btn pri go" id="a-go">${L("ابعت الكود", "Send code")}</button>
       <div class="alt"><span></span><a data-v="signin">${L("رجوع", "Back")}</a></div>`,
   };
   el.innerHTML = `<div class="in"><div class="brand"><i></i>AutoPost<span style="flex:1"></span><button id="a-lang" style="border:1px solid var(--line);background:var(--s);color:var(--ink);border-radius:8px;padding:2px 9px;font:inherit;font-size:12px;cursor:pointer">${window.apLang === "ar" ? "EN" : "ع"}</button></div>${V[view]}
-    <div class="foot">${L("عايز تتفرج الأول؟", "Want to look around first?")} <a href="?demo">${L("جرّب الأداة ببيانات تجريبية", "Try it with sample data")}</a></div></div>`;
+    <div class="foot">${L("تريد استكشاف البرنامج أولًا؟", "Want to look around first?")} <a href="?demo">${L("جرّب النسخة التجريبية", "Try it with sample data")}</a></div></div>`;
   document.dir = window.apLang === "ar" ? "rtl" : "ltr";
   const $ = (s) => el.querySelector(s), err = (t) => ($("#a-err").textContent = t || "");
   el.querySelectorAll("[data-v]").forEach((a) => (a.onclick = () => screen(a.dataset.v, { email: $("#a-email")?.value || st.email })));
   el.querySelectorAll("[data-eye]").forEach((b) => (b.onclick = () => { const i = $("#" + b.dataset.eye); i.type = i.type === "password" ? "text" : "password"; b.textContent = i.type === "password" ? L("إظهار", "Show") : L("إخفاء", "Hide"); }));
   $("#a-lang").onclick = () => { ls.set("ap_lang", window.apLang === "ar" ? "en" : "ar"); location.reload(); };
-  const busy = async (fn) => { const b = $("#a-go"), t = b.textContent; b.disabled = true; b.textContent = L("لحظة…", "One moment…"); err("");
-    try { await fn(); } catch (e) { err(ERRS()[e.message] || (/fetch|network|server/i.test(e.message) ? L("مفيش اتصال — اتأكد من النت وجرّب تاني", "No connection — check your internet and try again") : e.message)); }
+  const busy = async (fn) => { const b = $("#a-go"), t = b.textContent; b.disabled = true; b.textContent = L("جارٍ التنفيذ…", "One moment…"); err("");
+    try { await fn(); } catch (e) { err(ERRS()[e.message] || (/fetch|network|server/i.test(e.message) ? L("تعذر الاتصال — تحقق من الإنترنت وحاول مرة أخرى", "No connection — check your internet and try again") : e.message)); }
     finally { if (document.body.contains(b)) { b.disabled = false; b.textContent = t; } } };
   const call = async (o) => { const r = await api(o); if (r.error) throw new Error(r.error); return r; };
   const done = (r) => { ls.set("ap_session", JSON.stringify({ s: r.session, user: r.user })); ls.set("ap_mode", null); location.href = location.pathname; };
