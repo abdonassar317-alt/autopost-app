@@ -145,7 +145,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 
 <div class="top">
  <div class="row1"><div class="word"><i></i>AutoPost</div><div class="acct" id="who"></div></div>
- <h1 id="ttl">بوست جديد</h1>
+ <h1 id="ttl">منشور جديد</h1>
 </div>
 
 <main>
@@ -155,24 +155,24 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
   <select id="c-brand"></select>
  </div>
  <div class="box">
-  <div class="lbl">الميديا <span>الترتيب هو ترتيب الكاروسيل</span></div>
-  <label class="drop"><input type="file" id="c-files" accept="image/*,video/*" multiple><svg class="i"><use href="#i-up"/></svg><b>اختار صور أو فيديو</b>لحد 10 صور، أو فيديو واحد</label>
+  <div class="lbl">الصور والفيديو <span>يمكنك ترتيبها بالسحب</span></div>
+  <label class="drop"><input type="file" id="c-files" accept="image/*,video/*" multiple><svg class="i"><use href="#i-up"/></svg><b>اختر صورًا أو فيديو</b>حتى 10 صور، أو فيديو واحد</label>
   <div class="grid" id="c-thumbs"></div>
  </div>
  <div class="box">
-  <div class="lbl">الكابشن <span id="c-count">0</span></div>
-  <textarea id="c-caption" placeholder="اكتب الكابشن هنا"></textarea>
-  <details id="c-per-wrap" class="f"><summary class="hint" style="cursor:pointer">كابشن مختلف لمنصة معينة (اختياري)</summary><div id="c-per"></div></details>
+  <div class="lbl">النص <span id="c-count">0</span></div>
+  <textarea id="c-caption" placeholder="اكتب نص المنشور هنا"></textarea>
+  <details id="c-per-wrap" class="f"><summary class="hint" style="cursor:pointer">نص مختلف لمنصة محددة (اختياري)</summary><div id="c-per"></div></details>
   <div id="c-title-wrap" class="f hide"><div class="lbl">عنوان الفيديو على يوتيوب</div><input id="c-title"></div>
  </div>
  <div class="box">
-  <div class="lbl">الميعاد</div>
+  <div class="lbl">موعد النشر</div>
   <div class="two"><input type="date" id="c-date"><input type="time" id="c-hour"></div>
  </div>
  <div class="box">
   <div class="lbl">المنصات</div>
   <div class="chips" id="c-plats"></div>
-  <p class="hint">المنصات المكتوب جنبها «تذكير» هيوصلك على تليجرام في الميعاد الصور والكابشن جاهزين تنزلهم بنفسك.</p>
+  <p class="hint">للمنصات التي تحمل علامة «تذكير»، سيصلك إشعار على تيليجرام في الموعد المحدد مع الصور والنص جاهزين للنشر.</p>
  </div>
  <div class="box hide" id="c-tt"></div>
  <div class="box hide" id="c-check"></div>
@@ -181,8 +181,8 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 
 <section id="list" class="hide">
  <div id="now-panel"></div>
- <input id="l-search" type="search" placeholder="بحث في البوستات…" style="margin-top:12px" autocomplete="off">
- <div class="seg" id="l-seg"><button data-v="upcoming" class="on">الجاي</button><button data-v="cal">تقويم</button><button data-v="drafts">مسودات</button><button data-v="past">اتنشر</button><button data-v="all">الكل</button></div>
+ <input id="l-search" type="search" placeholder="البحث في المنشورات…" style="margin-top:12px" autocomplete="off">
+ <div class="seg" id="l-seg"><button data-v="upcoming" class="on">القادمة</button><button data-v="cal">التقويم</button><button data-v="drafts">المسودات</button><button data-v="past">المنشورة</button><button data-v="all">الكل</button></div>
  <div id="l-items"></div>
 </section>
 
@@ -255,7 +255,7 @@ code{font-family:PlexL;background:var(--soft);border-radius:5px;padding:1px 5px;
 const PLATS=[["instagram","إنستجرام","#c13584"],["facebook","صفحة فيسبوك","#1877f2"],["linkedin","لينكدإن","#0a66c2"],["youtube","يوتيوب","#ff0000"],["pinterest","بنترست","#e60023"],["tiktok","تيك توك","#111"],["snapchat","سناب شات","#f7d000"],["x","X","#111"]];
 const MANUAL=new Set(["tiktok","snapchat","x"]);
 const NAMES={...Object.fromEntries(PLATS.map(p=>[p[0],p[1]])),facebook_profile:"فيسبوك (بروفايلك)"};
-const TITLES={compose:"بوست جديد",list:"المجدول",brands:"الحسابات",settings:"الإعدادات",studio:"استوديو"};
+const TITLES={compose:"منشور جديد",list:"المنشورات",brands:"الحسابات",settings:"الإعدادات",studio:"الاستوديو"};
 const $=s=>document.querySelector(s);
 const ic=n=>`<svg class="i"><use href="#i-${n}"/></svg>`;
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -326,7 +326,7 @@ function capOf(b,k){b=b||{};const has=n=>hasSecret(b,n);
  if(k==="tiktok")return has("TT_REFRESH_TOKEN")&&b.tiktok?.audited?"auto":"manual";
  if(k==="pinterest")return has("PIN_REFRESH_TOKEN")&&b.pinterest?.board_id&&b.pinterest?.approved?"auto":(b.pinterest_wait?"wait":"manual");
  return "manual"}
-const CAPTXT={auto:"",manual:"تذكير",off:"مش متصل",wait:"بعد موافقة بنترست"};
+const CAPTXT={auto:"",manual:"تذكير",off:"غير متصل",wait:"بانتظار موافقة Pinterest"};
 function renderChips(){const b=brands[$("#c-brand")?.value||curBrand];
  if(b?.pinterest_wait&&!localStorage.getItem("ap_pin_added")){sel.add("pinterest");localStorage.setItem("ap_pin_added","1");localStorage.setItem("ap_sel",JSON.stringify([...sel]))}
  $("#c-plats").innerHTML=PLATS.map(([k,n,c])=>{const cp=secretNames?capOf(b,k):(MANUAL.has(k)?"manual":"");return `<div class="chip${sel.has(k)?" on":""}" data-k="${k}" title="${cp==="auto"?"بينزل لوحده":cp==="manual"?"بيوصلك على تليجرام تنشره بضغطة":cp==="off"?"اربطه من الحسابات":""}"><span class="d" style="background:${c}"></span>${n}${CAPTXT[cp]?` <small>${CAPTXT[cp]}</small>`:""}</div>`}).join("");
@@ -350,15 +350,15 @@ async function save(now,draft){
  const plats=PLATS.map(p=>p[0]).filter(k=>sel.has(k));
  const hasVid=files.some(f=>f.video);
  if(!files.length)return toast("ضيف صور أو فيديو");
- if(!plats.length)return toast("اختار منصة واحدة على الأقل");
+ if(!plats.length)return toast("اختر منصة واحدة على الأقل");
  if(hasVid&&files.length>1)return toast("الفيديو لازم يبقى لوحده في البوست");
  if(files.length>10&&plats.includes("instagram"))return toast("إنستجرام بيقبل لحد 10 صور");
  if(!draft&&window.checkBlock){const m=await checkBlock(plats);if(m)return toast(m,7000)}
  const tt=!draft&&window.ttCollect?ttCollect(plats):null;if(tt&&tt.err)return toast(tt.err,7000);
  let when=now?new Date(Date.now()-60e3):new Date(`${$("#c-date").value}T${$("#c-hour").value||"00:00"}`);
  if(draft&&isNaN(when))when=new Date(Date.now()+864e5);
- if(isNaN(when))return toast("اختار الميعاد");
- if(!now&&!draft&&when<Date.now()-60e3)return toast("الميعاد ده فات");
+ if(isNaN(when))return toast("اختر موعد النشر");
+ if(!now&&!draft&&when<Date.now()-60e3)return toast("هذا الموعد قد مضى");
  const pid=when.toISOString().replace(/[-:]/g,"").slice(0,13).replace("T","-")+"-"+Math.random().toString(36).slice(2,7);
  const bar=$("#c-bar"),setP=p=>bar.firstElementChild.style.width=(p*100)+"%";bar.style.display="block";
  $("#c-save").disabled=$("#c-now").disabled=true;
@@ -429,7 +429,7 @@ function renderList(){
    <div class="sub">${esc(brands[p.brand]?.name||p.brand)} · ${p.kind==="video"?"فيديو":p.media.length+" صور"}</div><div class="st">${st}</div>${window.metricsLine?metricsLine(x):""}</div>
    ${manualBtn(x)}<button class="more" onclick="menu('${id}')" aria-label="خيارات">${ic("dots")}</button></div>`;
  }
- $("#l-items").innerHTML=h||`<div class="empty">${q?"مفيش نتايج":"مفيش بوستات هنا"}</div>`;fillThumbs();
+ $("#l-items").innerHTML=h||`<div class="empty">${q?"لا توجد نتائج":"لا توجد منشورات هنا"}</div>`;fillThumbs();
 }
 $("#l-search").oninput=e=>{window.listQ=e.target.value;renderList()};
 // ---- one-tap posting for platforms without an open API (TikTok, Snapchat, X)
@@ -471,7 +471,7 @@ window.editCap=id=>{const x=items.find(i=>i.id===id);
  sheet(`<div style="padding:10px"><div class="lbl">الكابشن</div><textarea id="e-c">${esc(x.p.caption)}</textarea><div class="two" style="margin-top:12px"><button class="btn pri" id="e-ok" style="justify-content:center">حفظ</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);
  $("#e-ok").onclick=()=>{const v=$("#e-c").value;closeSheet();updatePost(id,p=>p.caption=v,"edit caption "+id).catch(e=>toast(e.message))}};
 window.retry=async id=>{closeSheet();const x=items.find(i=>i.id===id);for(const k in x.s)if(!x.s[k].ok&&!x.s[k].skipped)delete x.s[k];try{await commit([{path:`posts/${id}/status.json`,b64:utf8b64(JSON.stringify(x.s,null,2))}],"retry "+id);await runNow();renderList();toast("هيتجرب تاني خلال دقايق")}catch(e){toast(e.message)}};
-window.del=id=>{sheet(`<div style="padding:12px"><div class="lbl">تحذف البوست ده؟</div><p class="note">مش هتقدر ترجّعه بعد الحذف.</p><div class="two"><button class="btn" id="e-ok" style="background:var(--bad);color:#fff;border-color:var(--bad)">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);$("#e-ok").onclick=()=>reallyDel(id)};
+window.del=id=>{sheet(`<div style="padding:12px"><div class="lbl">هل تريد حذف هذا المنشور؟</div><p class="note">لا يمكن استعادة المنشور بعد حذفه.</p><div class="two"><button class="btn" id="e-ok" style="background:var(--bad);color:#fff;border-color:var(--bad)">حذف</button><button class="btn" onclick="closeSheet()">إلغاء</button></div></div>`);$("#e-ok").onclick=()=>reallyDel(id)};
 async function reallyDel(id){closeSheet();try{const tree=await gh(`${R()}/git/trees/${cfg.branch}?recursive=1`);await commit(tree.tree.filter(t=>t.type==="blob"&&t.path.startsWith(`posts/${id}/`)).map(t=>({path:t.path,del:true})),"delete "+id);items=items.filter(i=>i.id!==id);renderList();toast("اتحذف")}catch(e){toast(e.message)}}
 
 // ---------- brands / connections
